@@ -1,4 +1,5 @@
-import { text } from 'drizzle-orm/sqlite-core';
+import { and, eq, isNull, lte, or, type SQL } from 'drizzle-orm';
+import { text, type SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
 /** Primary key: opaque nanoid, generated at insert time. */
@@ -33,3 +34,16 @@ export const publicationStatus = () =>
 
 /** ISO timestamp from which a published item is publicly visible (schedulable). */
 export const publishedAt = () => text('published_at');
+
+/**
+ * WHERE clause of the public plane: status=published AND (publishedAt unset OR
+ * past). Shared by every publishable domain — scheduled items stay hidden.
+ */
+export const publishedWhere = (
+  table: { status: SQLiteColumn; publishedAt: SQLiteColumn },
+  now: string = new Date().toISOString(),
+): SQL =>
+  and(
+    eq(table.status, 'published'),
+    or(isNull(table.publishedAt), lte(table.publishedAt, now)),
+  )!;

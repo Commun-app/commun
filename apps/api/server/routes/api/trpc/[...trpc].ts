@@ -1,7 +1,7 @@
 import { defineHandler } from 'nitro';
 import { appRouter } from '@commun/core/trpc';
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
-import { createContext } from '../../../services/context.ts';
+import { createRequestContext } from '../../../services/context.ts';
 
 // Mounts the core tRPC router under /api/trpc/* on the API.
 // In h3 v2, `event.req` is a Web-Fetch-compatible Request.
@@ -15,6 +15,6 @@ export default defineHandler(async (event) => {
     endpoint: '/api/trpc',
     req: event.req as unknown as Request,
     router: appRouter,
-    createContext,
+    createContext: ({ req, resHeaders }) => createRequestContext(req, resHeaders),
   });
 });

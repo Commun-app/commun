@@ -18,9 +18,9 @@
 - [x] 2.5 Domaine `deliberations` : séances (date, ordre du jour) + délibérations (numéro, objet, vote), publiables
 - [x] 2.6 Domaine `formulaires` : définitions de formulaires citoyens + soumissions
 - [x] 2.7 Domaine `medias` : enregistrements médias (mime, variantes, alt/légende)
-- [ ] 2.8 Colonne `legacy_extra` (JSON) sur chaque table de contenu ✓ — schémas Zod create/update par domaine (reste à faire)
-- [ ] 2.9 Domaine `collections personnalisées` : table de définitions (champs à jeu fermé de types), validation Zod générée depuis la définition, CRUD générique, cycle de publication
-- [ ] 2.10 Tests unitaires des queries de chaque domaine (`bun test`, base SQLite en mémoire)
+- [x] 2.8 Colonne `legacy_extra` (JSON) sur chaque table de contenu + schémas Zod create/update par domaine (drizzle-zod)
+- [x] 2.9 Domaine `collections personnalisées` : table de définitions (champs à jeu fermé de types), validation Zod générée depuis la définition, CRUD générique, cycle de publication
+- [ ] 2.10 Tests unitaires des queries de chaque domaine (`bun test`) — faits : schema, collections, actualites, tokens ; restent : autres domaines au fil des routers
 
 ## 3. API (`apps/api`)
 
@@ -35,7 +35,7 @@
 
 - [ ] 4.1 Login email + mot de passe (hash argon2), session opaque en DB, cookie httpOnly/secure/sameSite, logout et révocation
 - [ ] 4.2 Invitations à usage unique (`crypto.randomBytes`, expiration), définition du mot de passe, activation du compte
-- [ ] 4.3 Tokens API : génération affichée une fois, stockage hashé, révocation, restriction lecture seule au plan contenu
+- [x] 4.3 Tokens API : génération affichée une fois, stockage hashé (sha256), révocation, restriction lecture seule au plan contenu
 - [ ] 4.4 Tests : login/logout, expiration de session, rédacteur vs admin, lien d'invitation consommé/expiré, token révoqué
 
 ## 5. Médias

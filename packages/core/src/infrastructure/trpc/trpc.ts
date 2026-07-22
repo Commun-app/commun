@@ -42,6 +42,22 @@ export const errorMapper = middleware(async ({ next }) => {
 
 export const procedure = publicProcedure.use(correlation).use(errorMapper);
 
+/** Requires an authenticated session (admin or rédacteur). */
+export const protectedProcedure = procedure.use(
+  middleware(({ ctx, next }) => {
+    if (!ctx.session) throw new TRPCError({ code: 'UNAUTHORIZED' });
+    return next({ ctx: { ...ctx, session: ctx.session } });
+  }),
+);
+
+/** Requires an authenticated admin. */
+export const adminProcedure = protectedProcedure.use(
+  middleware(({ ctx, next }) => {
+    if (ctx.session?.user.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+    return next();
+  }),
+);
+
 function mapErrorCode(code: string): TRPCError['code'] {
   switch (code) {
     case 'NOT_FOUND':
