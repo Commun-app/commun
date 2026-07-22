@@ -1,13 +1,13 @@
 import { defineHandler } from 'nitro';
 import { HTTPError } from 'h3';
-import { CommunError, submitFormulaire } from '@commun/core';
+import { CommunError, submitForm } from '@commun/core';
 import { rateLimit } from '../../../services/content-auth.ts';
 import { useCore } from '../../../services/context.ts';
 
 /**
  * Public citizen-form submission — the ONLY anonymous write of the whole API.
  * Rate-limited per IP; `data` is validated against the form's field
- * definitions inside `submitFormulaire`.
+ * definitions inside `submitForm`.
  */
 export default defineHandler(async (event) => {
   const req = event.req as unknown as Request;
@@ -24,8 +24,8 @@ export default defineHandler(async (event) => {
   }
 
   try {
-    const soumission = submitFormulaire(useCore().db, slug, body.data);
-    return { received: true, id: soumission.id };
+    const submission = submitForm(useCore().db, slug, body.data);
+    return { received: true, id: submission.id };
   } catch (error) {
     if (error instanceof CommunError) {
       throw new HTTPError({

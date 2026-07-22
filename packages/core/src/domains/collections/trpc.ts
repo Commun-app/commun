@@ -1,7 +1,4 @@
-import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import type { StoreDb } from '../../infrastructure/db/index.ts';
-import { publishedWhere } from '../../infrastructure/db/helpers.ts';
 import { adminProcedure, protectedProcedure, router } from '../../infrastructure/trpc/index.ts';
 import {
   createDefinition,
@@ -14,29 +11,12 @@ import {
   updateDefinition,
   updateEntry,
 } from './queries.ts';
-import { collectionEntries, type CollectionEntry } from './schema.ts';
 import {
   collectionDefinitionCreateSchema,
   collectionDefinitionUpdateSchema,
   collectionEntryCreateSchema,
   collectionEntryUpdateSchema,
 } from './validation.ts';
-
-/** Public plane: published entries of a collection, resolved by slug. */
-export function listPublishedEntries(
-  db: StoreDb,
-  collectionSlug: string,
-  now?: string,
-): CollectionEntry[] {
-  const definition = getDefinition(db, collectionSlug);
-  return db
-    .select()
-    .from(collectionEntries)
-    .where(
-      and(eq(collectionEntries.collectionId, definition.id), publishedWhere(collectionEntries, now)),
-    )
-    .all();
-}
 
 export const collectionsRouter = router({
   // Definition management is admin-only — it shapes the content model.

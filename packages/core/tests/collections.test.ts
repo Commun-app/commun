@@ -8,6 +8,8 @@ import {
   createDefinition,
   createEntry,
   getDefinition,
+  listPublishedEntries,
+  updateEntry,
 } from '../src/domains/collections/queries.ts';
 import { collectionDefinitionCreateSchema } from '../src/domains/collections/validation.ts';
 import { CommunError } from '../src/common/errors/index.ts';
@@ -24,45 +26,36 @@ afterAll(() => {
   rmSync(dataDir, { recursive: true, force: true });
 });
 
-const marchesPublics = {
+const publicTenders = {
   name: 'Marchés publics',
-  slug: 'marches-publics',
+  slug: 'public-tenders',
   fields: [
-    { name: 'titre', label: 'Titre', type: 'texte', required: true },
-    { name: 'date_limite', label: 'Date limite', type: 'date', required: true },
+    { name: 'deadline', label: 'Date limite', type: 'date', required: true },
     { name: 'document', label: 'Document', type: 'media', required: false },
-    { name: 'etat', label: 'État', type: 'liste-de-choix', options: ['ouvert', 'clos'] },
+    { name: 'state', label: 'État', type: 'select', options: ['open', 'closed'] },
   ],
 };
 
-describe('collections personnalisées', () => {
+describe('collections engine', () => {
   test('rejects a field type outside the closed set', () => {
-    const parsed = fieldDefinitionSchema.safeParse({
-      name: 'x',
-      label: 'X',
-      type: 'html-libre',
-    });
+    const parsed = fieldDefinitionSchema.safeParse({ name: 'x', label: 'X', type: 'raw-html' });
     expect(parsed.success).toBe(false);
   });
 
-  test('rejects a liste-de-choix without options', () => {
-    const parsed = fieldDefinitionSchema.safeParse({
-      name: 'etat',
-      label: 'État',
-      type: 'liste-de-choix',
-    });
+  test('rejects a select field without options', () => {
+    const parsed = fieldDefinitionSchema.safeParse({ name: 'state', label: 'État', type: 'select' });
     expect(parsed.success).toBe(false);
   });
 
-  test('creates a definition and validates entries against generated schema', () => {
-    const input = collectionDefinitionCreateSchema.parse(marchesPublics);
+  test('creates a definition and validates entries against the generated schema', () => {
+    const input = collectionDefinitionCreateSchema.parse(publicTenders);
     const definition = createDefinition(db, input);
-    expect(getDefinition(db, 'marches-publics').id).toBe(definition.id);
+    expect(getDefinition(db, 'public-tenders').id).toBe(definition.id);
 
     const entry = createEntry(db, definition.id, {
       title: 'Réfection de la voirie',
       slug: 'refection-voirie',
-      data: { titre: 'Réfection de la voirie', date_limite: '2026-09-01', etat: 'ouvert' },
+      data: { deadline: '2026-09-01', state: 'open' },
     });
     expect(entry.status).toBe('draft');
     expect(entry.collectionId).toBe(definition.id);
@@ -70,12 +63,39 @@ describe('collections personnalisées', () => {
 
   test('rejects entry data violating the definition', () => {
     expect(() =>
-      createEntry(db, 'marches-publics', {
+      createEntry(db, 'public-tenders', {
         title: 'Entrée invalide',
         slug: 'entree-invalide',
-        // date_limite manquante + choix hors liste
-        data: { titre: 'X', etat: 'annulé' },
+        // deadline manquante + choix hors liste
+        data: { state: 'cancelled' },
       }),
     ).toThrow(CommunError);
+  });
+
+  test('entries work on a seeded default collection (news) with scheduling', () => {
+    const draft = createEntry(db, 'news', {
+      title: 'Brouillon',
+      slug: 'brouillon',
+      data: { excerpt: 'non publié' },
+    });
+    const published = createEntry(db, 'news', {
+      title: 'Fête de la commune',
+      slug: 'fete-de-la-commune',
+      data: { excerpt: 'publiée' },
+    });
+    updateEntry(db, published.id, { status: 'published' });
+    const scheduled = createEntry(db, 'news', {
+      title: 'Programmée',
+      slug: 'programmee',
+      data: {},
+    });
+    updateEntry(db, scheduled.id, {
+      status: 'published',
+      publishedAt: new Date(Date.now() + 86_400_000).toISOString(),
+    });
+
+    const visible = listPublishedEntries(db, 'news');
+    expect(visible.map((entry) => entry.slug)).toEqual(['fete-de-la-commune']);
+    expect(visible.find((entry) => entry.id === draft.id)).toBeUndefined();
   });
 });

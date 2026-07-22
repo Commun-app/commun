@@ -1,7 +1,8 @@
-import { eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { CommunError, ERR } from '../../common/errors/index.ts';
 import type { StoreDb } from '../../infrastructure/db/index.ts';
+import { publishedWhere } from '../../infrastructure/db/helpers.ts';
 import { buildDataSchema, type FieldDefinition } from './fields.ts';
 import {
   collectionDefinitions,
@@ -84,6 +85,24 @@ export function listEntries(db: StoreDb, collectionId: string): CollectionEntry[
     .select()
     .from(collectionEntries)
     .where(eq(collectionEntries.collectionId, collectionId))
+    .orderBy(desc(collectionEntries.createdAt))
+    .all();
+}
+
+/** Public plane: published entries of a collection, resolved by slug or id. */
+export function listPublishedEntries(
+  db: StoreDb,
+  collectionSlug: string,
+  now?: string,
+): CollectionEntry[] {
+  const definition = getDefinition(db, collectionSlug);
+  return db
+    .select()
+    .from(collectionEntries)
+    .where(
+      and(eq(collectionEntries.collectionId, definition.id), publishedWhere(collectionEntries, now)),
+    )
+    .orderBy(desc(collectionEntries.createdAt))
     .all();
 }
 

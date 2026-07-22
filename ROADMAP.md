@@ -38,7 +38,7 @@
 
 - [ ] `apps/admin` : Nuxt 4 + Nuxt UI 4 + trpc-nuxt + TanStack Query
 - [ ] Écrans par module : actualités (publication programmée), agenda, élus, projets, **délibérations** (CRUD + publication), formulaires citoyens (réception), médias, réglages de la commune
-- [ ] **Modules typés en dur** (choix assumé vs le moteur de collections JSON génériques de l'ancien admin — simplicité pour la cible). Le moteur JSON validé Zod reste en backlog comme module « collections personnalisées »
+- [ ] **Modèle de contenu générique** (décision juillet 2026, D6 rév. 2) : écrans générés depuis les définitions de collections (moteur assaini : jeu fermé de types, Zod) ; collections par défaut seedées (news, events, officials, projects) ; seul écran métier dédié : les délibérations (typées, séances + votes)
 - [ ] Éditeur riche : remplacer `@poulpus/prose` (dépendance TipTap Pro incompatible avec un projet AGPL) par TipTap open source ou ProseMirror direct
 - [ ] Déclenchement du rebuild du site depuis l'admin (avec état de progression)
 

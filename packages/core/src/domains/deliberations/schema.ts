@@ -7,17 +7,22 @@ import {
   publishedAt,
   updatedAt,
 } from '../../infrastructure/db/helpers.ts';
-import { medias } from '../medias/schema.ts';
+import { media } from '../media/schema.ts';
 
-/** Séance du conseil (municipal, communautaire…). */
-export const seances = sqliteTable('seances', {
+// Deliberations keep a TYPED schema on purpose (design D6 rev. 2): structured
+// vote counts, the séance→délibération relation and the AI transcription
+// module (phase 5) all need guarantees a generic collection cannot give.
+// `council_sessions` — not `sessions`, which is taken by auth.
+
+/** Council meeting (conseil municipal, conseil communautaire…). */
+export const councilSessions = sqliteTable('council_sessions', {
   id: id(),
   title: text('title').notNull(),
   date: text('date').notNull(),
   /** Ordre du jour (rich text). */
-  ordreDuJour: text('ordre_du_jour', { mode: 'json' }).$type<Record<string, unknown>>(),
+  agenda: text('agenda', { mode: 'json' }).$type<Record<string, unknown>>(),
   /** Compte-rendu (rich text) — later fed by the AI transcription module. */
-  compteRendu: text('compte_rendu', { mode: 'json' }).$type<Record<string, unknown>>(),
+  minutes: text('minutes', { mode: 'json' }).$type<Record<string, unknown>>(),
   status: publicationStatus(),
   publishedAt: publishedAt(),
   legacyExtra: legacyExtra(),
@@ -25,22 +30,21 @@ export const seances = sqliteTable('seances', {
   updatedAt: updatedAt(),
 });
 
-/** Délibération d'une séance, publiable individuellement. */
+/** Deliberation of a council session, publishable individually. */
 export const deliberations = sqliteTable('deliberations', {
   id: id(),
-  seanceId: text('seance_id')
+  sessionId: text('session_id')
     .notNull()
-    .references(() => seances.id, { onDelete: 'cascade' }),
-  numero: text('numero').notNull(),
-  objet: text('objet').notNull(),
+    .references(() => councilSessions.id, { onDelete: 'cascade' }),
+  number: text('number').notNull(),
+  subject: text('subject').notNull(),
   content: text('content', { mode: 'json' }).$type<Record<string, unknown>>(),
-  /** Résultat du vote. */
-  votePour: integer('vote_pour'),
-  voteContre: integer('vote_contre'),
-  voteAbstention: integer('vote_abstention'),
-  resultat: text('resultat', { enum: ['adoptee', 'rejetee', 'ajournee'] }),
-  /** PDF officiel joint. */
-  fichierMediaId: text('fichier_media_id').references(() => medias.id, { onDelete: 'set null' }),
+  votesFor: integer('votes_for'),
+  votesAgainst: integer('votes_against'),
+  abstentions: integer('abstentions'),
+  outcome: text('outcome', { enum: ['adopted', 'rejected', 'postponed'] }),
+  /** Official PDF attachment. */
+  fileMediaId: text('file_media_id').references(() => media.id, { onDelete: 'set null' }),
   status: publicationStatus(),
   publishedAt: publishedAt(),
   legacyExtra: legacyExtra(),
@@ -48,7 +52,7 @@ export const deliberations = sqliteTable('deliberations', {
   updatedAt: updatedAt(),
 });
 
-export type Seance = typeof seances.$inferSelect;
-export type NewSeance = typeof seances.$inferInsert;
+export type CouncilSession = typeof councilSessions.$inferSelect;
+export type NewCouncilSession = typeof councilSessions.$inferInsert;
 export type Deliberation = typeof deliberations.$inferSelect;
 export type NewDeliberation = typeof deliberations.$inferInsert;

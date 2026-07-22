@@ -12,31 +12,31 @@
 ## 2. Schéma de données (`@commun/core`)
 
 - [x] 2.1 Configurer Drizzle + SQLite via `bun:sqlite` (connexion, drizzle-kit, application automatique des migrations au démarrage, PRAGMA foreign_keys=ON)
-- [x] 2.2 Domaine `collectivite` : settings d'instance en enregistrement unique (identité, coordonnées, thème, réseaux) — vocabulaire générique (communes, communautés de communes, autres collectivités)
+- [x] 2.2 Domaine `organization` : settings d'instance en enregistrement unique (identité, coordonnées, thème, réseaux) — vocabulaire générique, codebase anglaise (D11)
 - [x] 2.3 Domaine `users` : utilisateurs, rôles admin/rédacteur, sessions, invitations, tokens API (tables — tokens hashés)
-- [x] 2.4 Domaines de contenu : actualités, agenda (événements), élus, projets — avec statut draft/published et publication programmée
-- [x] 2.5 Domaine `deliberations` : séances (date, ordre du jour) + délibérations (numéro, objet, vote), publiables
-- [x] 2.6 Domaine `formulaires` : définitions de formulaires citoyens + soumissions
-- [x] 2.7 Domaine `medias` : enregistrements médias (mime, variantes, alt/légende)
+- [x] 2.4 ~~Domaines de contenu typés~~ **Révisé (D6 rév. 2)** : le contenu standard vit dans le moteur de collections ; les 4 collections par défaut (`news`, `events`, `officials`, `projects`) sont seedées par migration Drizzle custom (`0001_seed-default-collections.sql`)
+- [x] 2.5 Domaine `deliberations` (typé, exception assumée) : `council_sessions` (date, ordre du jour, compte-rendu) + `deliberations` (numéro, objet, votes structurés, résultat), publiables
+- [x] 2.6 Domaine `forms` : définitions de formulaires citoyens + soumissions
+- [x] 2.7 Domaine `media` : enregistrements médias (mime, variantes, alt/légende)
 - [x] 2.8 Colonne `legacy_extra` (JSON) sur chaque table de contenu + schémas Zod create/update par domaine (drizzle-zod)
-- [x] 2.9 Domaine `collections personnalisées` : table de définitions (champs à jeu fermé de types), validation Zod générée depuis la définition, CRUD générique, cycle de publication
-- [ ] 2.10 Tests unitaires des queries de chaque domaine (`bun test`) — faits : schema, collections, actualites, tokens ; restent : autres domaines au fil des routers
+- [x] 2.9 Moteur de collections : définitions (champs à jeu fermé de 8 types anglais), validation Zod générée, CRUD générique avec validation des entrées, cycle de publication
+- [x] 2.10 Tests unitaires des queries (`bun test`) : schema + seed, collections (5 dont collection seedée et publication programmée), auth, tokens — 13 tests
 
 ## 3. API (`apps/api`)
 
-- [ ] 3.1 Router tRPC racine agrégeant les routers de domaines, monté en catch-all `/api/trpc` ; contexte h3 (session, db)
-- [ ] 3.2 Middleware de protection : procédures `protected` (session) et `adminOnly` (rôle) ; erreurs structurées + logs consola
-- [ ] 3.3 Routes REST publiques de contenu (`/api/content/*`) : contenu publié par domaine, auth par token API
-- [ ] 3.4 Route REST publique de soumission des formulaires citoyens, avec rate-limiting par IP
-- [ ] 3.5 `GET /health` (version + état DB) ; refus de démarrage en prod si secrets manquants ou valeurs d'exemple
-- [ ] 3.6 Tests d'intégration des routes clés (auth, CRUD actualité, contenu public, formulaire)
+- [x] 3.1 Router tRPC racine agrégeant les routers des domaines système (organization, users, apiTokens, deliberations, forms, media, collections), monté en catch-all `/api/trpc` ; contexte par requête (session, db, cookies)
+- [x] 3.2 Middleware de protection : `protectedProcedure` (session) et `adminProcedure` (rôle) ; erreurs structurées + logs consola
+- [x] 3.3 Route REST publique de contenu `/api/content/[domain]` : domaines système + fallback collections par slug (news, events, …), contenu publié uniquement, auth par token API
+- [x] 3.4 Route REST publique `POST /api/forms/[slug]` avec rate-limiting par IP (5/min) et validation contre les champs du formulaire
+- [x] 3.5 `GET /health` (état DB) ; garde de démarrage prod refusant les valeurs placeholder (`assertProductionConfig`)
+- [ ] 3.6 Tests d'intégration automatisés des routes clés (auth, CRUD actualité, contenu public, formulaire) — smoke manuels faits, à automatiser dans e2e/
 
 ## 4. Authentification
 
-- [ ] 4.1 Login email + mot de passe (hash argon2), session opaque en DB, cookie httpOnly/secure/sameSite, logout et révocation
-- [ ] 4.2 Invitations à usage unique (`crypto.randomBytes`, expiration), définition du mot de passe, activation du compte
+- [x] 4.1 Login email + mot de passe (argon2id via Bun.password), session opaque hashée en DB, cookie httpOnly/sameSite (+Secure en prod), logout et révocation
+- [x] 4.2 Invitations à usage unique (`crypto.randomBytes`, expiration 7 j), définition du mot de passe, activation du compte
 - [x] 4.3 Tokens API : génération affichée une fois, stockage hashé (sha256), révocation, restriction lecture seule au plan contenu
-- [ ] 4.4 Tests : login/logout, expiration de session, rédacteur vs admin, lien d'invitation consommé/expiré, token révoqué
+- [x] 4.4 Tests : login/logout, session forgée/révoquée, lien d'invitation consommé/expiré, token API révoqué (rédacteur vs admin vérifié en smoke, à couvrir en e2e avec 3.6)
 
 ## 5. Médias
 

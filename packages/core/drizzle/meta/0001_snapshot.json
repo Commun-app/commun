@@ -1,8 +1,8 @@
 {
+  "id": "c5dbdd05-610e-42fd-8a6e-6a459e1fa085",
+  "prevId": "e919256a-8737-4d69-bdb5-97fe6244a705",
   "version": "6",
   "dialect": "sqlite",
-  "id": "e919256a-8737-4d69-bdb5-97fe6244a705",
-  "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "organization": {
       "name": "organization",
@@ -315,15 +315,15 @@
         "sessions_user_id_users_id_fk": {
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
-          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -688,28 +688,28 @@
         "deliberations_session_id_council_sessions_id_fk": {
           "name": "deliberations_session_id_council_sessions_id_fk",
           "tableFrom": "deliberations",
-          "tableTo": "council_sessions",
           "columnsFrom": [
             "session_id"
           ],
+          "tableTo": "council_sessions",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "deliberations_file_media_id_media_id_fk": {
           "name": "deliberations_file_media_id_media_id_fk",
           "tableFrom": "deliberations",
-          "tableTo": "media",
           "columnsFrom": [
             "file_media_id"
           ],
+          "tableTo": "media",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {},
@@ -761,15 +761,15 @@
         "form_submissions_form_id_forms_id_fk": {
           "name": "form_submissions_form_id_forms_id_fk",
           "tableFrom": "form_submissions",
-          "tableTo": "forms",
           "columnsFrom": [
             "form_id"
           ],
+          "tableTo": "forms",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1012,15 +1012,15 @@
         "collection_entries_collection_id_collection_definitions_id_fk": {
           "name": "collection_entries_collection_id_collection_definitions_id_fk",
           "tableFrom": "collection_entries",
-          "tableTo": "collection_definitions",
           "columnsFrom": [
             "collection_id"
           ],
+          "tableTo": "collection_definitions",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1031,9 +1031,9 @@
   "views": {},
   "enums": {},
   "_meta": {
+    "columns": {},
     "schemas": {},
-    "tables": {},
-    "columns": {}
+    "tables": {}
   },
   "internal": {
     "indexes": {}

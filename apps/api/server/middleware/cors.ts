@@ -13,7 +13,7 @@ import {
  *
  * Allowed origin is `*` for now: the admin app origin is not fixed yet. Before
  * production exposure, tighten this to the actual admin origin (e.g.
- * `https://admin.<collectivite>.fr`).
+ * `https://admin.<organization>.fr`).
  */
 const CORS = {
   origin: '*' as const,

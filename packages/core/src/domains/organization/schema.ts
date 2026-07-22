@@ -3,13 +3,13 @@ import { createdAt, legacyExtra, updatedAt } from '../../infrastructure/db/helpe
 
 /**
  * Instance settings — a singleton row (id = 1, enforced by the queries).
- * Single-tenant by design: no table anywhere carries an organisation key.
+ * Single-tenant by design: one instance = one local authority (commune,
+ * intercommunality, …); no table anywhere carries a tenant key.
  */
-export const collectivite = sqliteTable('collectivite', {
+export const organization = sqliteTable('organization', {
   id: integer('id').primaryKey().default(1),
   name: text('name').notNull(),
-  /** commune | communaute-de-communes | syndicat | autre */
-  type: text('type', { enum: ['commune', 'communaute-de-communes', 'syndicat', 'autre'] })
+  type: text('type', { enum: ['commune', 'intercommunality', 'syndicate', 'other'] })
     .notNull()
     .default('commune'),
   slug: text('slug').notNull(),
@@ -29,5 +29,5 @@ export const collectivite = sqliteTable('collectivite', {
   updatedAt: updatedAt(),
 });
 
-export type Collectivite = typeof collectivite.$inferSelect;
-export type NewCollectivite = typeof collectivite.$inferInsert;
+export type Organization = typeof organization.$inferSelect;
+export type NewOrganization = typeof organization.$inferInsert;

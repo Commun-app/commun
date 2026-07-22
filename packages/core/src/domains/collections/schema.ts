@@ -9,10 +9,12 @@ import {
 } from '../../infrastructure/db/helpers.ts';
 
 /**
- * Custom collection definitions — the sanitised heir of the legacy
- * `attributes/editor/display` engine. Field types come from a CLOSED set
- * (validated by the domain's Zod schemas): texte, texte-riche, nombre,
- * booleen, date, media, relation, liste-de-choix.
+ * Collection definitions — the primary content model of Commun (sanitised
+ * heir of the legacy `attributes/editor/display` engine). Standard content
+ * (news, events, officials, projects) ships as seeded collections via a
+ * Drizzle migration; communes extend freely. Field types come from a CLOSED
+ * set (validated by the domain's Zod schemas): text, rich-text, number,
+ * boolean, date, media, relation, select.
  */
 export const collectionDefinitions = sqliteTable('collection_definitions', {
   id: id(),

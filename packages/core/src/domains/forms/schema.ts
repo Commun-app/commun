@@ -2,12 +2,12 @@ import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { createdAt, id, legacyExtra, updatedAt } from '../../infrastructure/db/helpers.ts';
 
 /** Citizen-facing form definitions (contact, signalement, demande d'acte…). */
-export const formulaires = sqliteTable('formulaires', {
+export const forms = sqliteTable('forms', {
   id: id(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   description: text('description'),
-  /** Field definitions — same closed field-type set as custom collections. */
+  /** Field definitions — same closed field-type set as collections. */
   fields: text('fields', { mode: 'json' }).$type<unknown[]>().notNull(),
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
   legacyExtra: legacyExtra(),
@@ -16,19 +16,19 @@ export const formulaires = sqliteTable('formulaires', {
 });
 
 /** Citizen submissions, visible in the admin. */
-export const soumissions = sqliteTable('soumissions', {
+export const formSubmissions = sqliteTable('form_submissions', {
   id: id(),
-  formulaireId: text('formulaire_id')
+  formId: text('form_id')
     .notNull()
-    .references(() => formulaires.id, { onDelete: 'cascade' }),
+    .references(() => forms.id, { onDelete: 'cascade' }),
   data: text('data', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
-  status: text('status', { enum: ['nouvelle', 'traitee'] })
+  status: text('status', { enum: ['new', 'processed'] })
     .notNull()
-    .default('nouvelle'),
+    .default('new'),
   createdAt: createdAt(),
 });
 
-export type Formulaire = typeof formulaires.$inferSelect;
-export type NewFormulaire = typeof formulaires.$inferInsert;
-export type Soumission = typeof soumissions.$inferSelect;
-export type NewSoumission = typeof soumissions.$inferInsert;
+export type Form = typeof forms.$inferSelect;
+export type NewForm = typeof forms.$inferInsert;
+export type FormSubmission = typeof formSubmissions.$inferSelect;
+export type NewFormSubmission = typeof formSubmissions.$inferInsert;

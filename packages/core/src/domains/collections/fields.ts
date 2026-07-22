@@ -1,19 +1,19 @@
 import { z } from 'zod';
 
 /**
- * The CLOSED set of field types available to custom collections (and citizen
- * forms). Extending this set is a spec-level decision — arbitrary field types
- * are exactly the legacy JSON free-for-all this design replaces.
+ * The CLOSED set of field types available to collections (and citizen forms).
+ * Extending this set is a spec-level decision — arbitrary field types are
+ * exactly the legacy JSON free-for-all this design replaces.
  */
 export const FIELD_TYPES = [
-  'texte',
-  'texte-riche',
-  'nombre',
-  'booleen',
+  'text',
+  'rich-text',
+  'number',
+  'boolean',
   'date',
   'media',
   'relation',
-  'liste-de-choix',
+  'select',
 ] as const;
 
 export type FieldType = (typeof FIELD_TYPES)[number];
@@ -25,16 +25,16 @@ export const fieldDefinitionSchema = z
     label: z.string().min(1),
     type: z.enum(FIELD_TYPES),
     required: z.boolean().default(false),
-    /** Choices — required for `liste-de-choix`. */
+    /** Choices — required for `select`. */
     options: z.array(z.string().min(1)).optional(),
-    /** Target domain or collection slug — required for `relation`. */
+    /** Target collection slug — required for `relation`. */
     target: z.string().optional(),
   })
   .check((ctx) => {
-    if (ctx.value.type === 'liste-de-choix' && !ctx.value.options?.length) {
+    if (ctx.value.type === 'select' && !ctx.value.options?.length) {
       ctx.issues.push({
         code: 'custom',
-        message: 'options requises pour un champ liste-de-choix',
+        message: 'options requises pour un champ select',
         input: ctx.value,
       });
     }
@@ -50,14 +50,14 @@ export const fieldDefinitionSchema = z
 export type FieldDefinition = z.infer<typeof fieldDefinitionSchema>;
 
 const FIELD_VALUE_SCHEMAS: Record<FieldType, z.ZodType> = {
-  texte: z.string(),
-  'texte-riche': z.record(z.string(), z.unknown()),
-  nombre: z.number(),
-  booleen: z.boolean(),
+  text: z.string(),
+  'rich-text': z.record(z.string(), z.unknown()),
+  number: z.number(),
+  boolean: z.boolean(),
   date: z.iso.datetime({ offset: true }).or(z.iso.date()),
   media: z.string(), // media id
-  relation: z.string(), // target entity id
-  'liste-de-choix': z.string(),
+  relation: z.string(), // target entry id
+  select: z.string(),
 };
 
 /**
@@ -68,7 +68,7 @@ export function buildDataSchema(fields: FieldDefinition[]): z.ZodType<Record<str
   const shape: Record<string, z.ZodType> = {};
   for (const field of fields) {
     let valueSchema = FIELD_VALUE_SCHEMAS[field.type];
-    if (field.type === 'liste-de-choix' && field.options?.length) {
+    if (field.type === 'select' && field.options?.length) {
       valueSchema = z.enum(field.options as [string, ...string[]]);
     }
     shape[field.name] = field.required ? valueSchema : valueSchema.nullable().optional();

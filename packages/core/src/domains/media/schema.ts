@@ -1,7 +1,7 @@
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { createdAt, id, legacyExtra, updatedAt } from '../../infrastructure/db/helpers.ts';
 
-export const medias = sqliteTable('medias', {
+export const media = sqliteTable('media', {
   id: id(),
   filename: text('filename').notNull(),
   mime: text('mime').notNull(),
@@ -21,5 +21,5 @@ export const medias = sqliteTable('medias', {
   updatedAt: updatedAt(),
 });
 
-export type Media = typeof medias.$inferSelect;
-export type NewMedia = typeof medias.$inferInsert;
+export type Media = typeof media.$inferSelect;
+export type NewMedia = typeof media.$inferInsert;

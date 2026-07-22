@@ -1,4 +1,4 @@
-CREATE TABLE `collectivite` (
+CREATE TABLE `organization` (
 	`id` integer PRIMARY KEY DEFAULT 1 NOT NULL,
 	`name` text NOT NULL,
 	`type` text DEFAULT 'commune' NOT NULL,
@@ -60,7 +60,7 @@ CREATE TABLE `users` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);--> statement-breakpoint
-CREATE TABLE `medias` (
+CREATE TABLE `media` (
 	`id` text PRIMARY KEY NOT NULL,
 	`filename` text NOT NULL,
 	`mime` text NOT NULL,
@@ -75,104 +75,12 @@ CREATE TABLE `medias` (
 	`updated_at` text NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `actualites` (
-	`id` text PRIMARY KEY NOT NULL,
-	`title` text NOT NULL,
-	`slug` text NOT NULL,
-	`excerpt` text,
-	`content` text,
-	`cover_media_id` text,
-	`status` text DEFAULT 'draft' NOT NULL,
-	`published_at` text,
-	`legacy_extra` text,
-	`created_at` text NOT NULL,
-	`updated_at` text NOT NULL,
-	FOREIGN KEY (`cover_media_id`) REFERENCES `medias`(`id`) ON UPDATE no action ON DELETE set null
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `actualites_slug_unique` ON `actualites` (`slug`);--> statement-breakpoint
-CREATE TABLE `evenements` (
-	`id` text PRIMARY KEY NOT NULL,
-	`title` text NOT NULL,
-	`slug` text NOT NULL,
-	`excerpt` text,
-	`content` text,
-	`start_at` text NOT NULL,
-	`end_at` text,
-	`location` text,
-	`cover_media_id` text,
-	`status` text DEFAULT 'draft' NOT NULL,
-	`published_at` text,
-	`legacy_extra` text,
-	`created_at` text NOT NULL,
-	`updated_at` text NOT NULL,
-	FOREIGN KEY (`cover_media_id`) REFERENCES `medias`(`id`) ON UPDATE no action ON DELETE set null
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `evenements_slug_unique` ON `evenements` (`slug`);--> statement-breakpoint
-CREATE TABLE `elus` (
-	`id` text PRIMARY KEY NOT NULL,
-	`first_name` text NOT NULL,
-	`last_name` text NOT NULL,
-	`fonction` text,
-	`delegation` text,
-	`bio` text,
-	`email` text,
-	`photo_media_id` text,
-	`sort_order` integer DEFAULT 0 NOT NULL,
-	`status` text DEFAULT 'draft' NOT NULL,
-	`published_at` text,
-	`legacy_extra` text,
-	`created_at` text NOT NULL,
-	`updated_at` text NOT NULL,
-	FOREIGN KEY (`photo_media_id`) REFERENCES `medias`(`id`) ON UPDATE no action ON DELETE set null
-);
---> statement-breakpoint
-CREATE TABLE `projets` (
-	`id` text PRIMARY KEY NOT NULL,
-	`title` text NOT NULL,
-	`slug` text NOT NULL,
-	`excerpt` text,
-	`content` text,
-	`etat` text DEFAULT 'etude' NOT NULL,
-	`start_at` text,
-	`end_at` text,
-	`cover_media_id` text,
-	`status` text DEFAULT 'draft' NOT NULL,
-	`published_at` text,
-	`legacy_extra` text,
-	`created_at` text NOT NULL,
-	`updated_at` text NOT NULL,
-	FOREIGN KEY (`cover_media_id`) REFERENCES `medias`(`id`) ON UPDATE no action ON DELETE set null
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `projets_slug_unique` ON `projets` (`slug`);--> statement-breakpoint
-CREATE TABLE `deliberations` (
-	`id` text PRIMARY KEY NOT NULL,
-	`seance_id` text NOT NULL,
-	`numero` text NOT NULL,
-	`objet` text NOT NULL,
-	`content` text,
-	`vote_pour` integer,
-	`vote_contre` integer,
-	`vote_abstention` integer,
-	`resultat` text,
-	`fichier_media_id` text,
-	`status` text DEFAULT 'draft' NOT NULL,
-	`published_at` text,
-	`legacy_extra` text,
-	`created_at` text NOT NULL,
-	`updated_at` text NOT NULL,
-	FOREIGN KEY (`seance_id`) REFERENCES `seances`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`fichier_media_id`) REFERENCES `medias`(`id`) ON UPDATE no action ON DELETE set null
-);
---> statement-breakpoint
-CREATE TABLE `seances` (
+CREATE TABLE `council_sessions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`title` text NOT NULL,
 	`date` text NOT NULL,
-	`ordre_du_jour` text,
-	`compte_rendu` text,
+	`agenda` text,
+	`minutes` text,
 	`status` text DEFAULT 'draft' NOT NULL,
 	`published_at` text,
 	`legacy_extra` text,
@@ -180,7 +88,36 @@ CREATE TABLE `seances` (
 	`updated_at` text NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `formulaires` (
+CREATE TABLE `deliberations` (
+	`id` text PRIMARY KEY NOT NULL,
+	`session_id` text NOT NULL,
+	`number` text NOT NULL,
+	`subject` text NOT NULL,
+	`content` text,
+	`votes_for` integer,
+	`votes_against` integer,
+	`abstentions` integer,
+	`outcome` text,
+	`file_media_id` text,
+	`status` text DEFAULT 'draft' NOT NULL,
+	`published_at` text,
+	`legacy_extra` text,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL,
+	FOREIGN KEY (`session_id`) REFERENCES `council_sessions`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`file_media_id`) REFERENCES `media`(`id`) ON UPDATE no action ON DELETE set null
+);
+--> statement-breakpoint
+CREATE TABLE `form_submissions` (
+	`id` text PRIMARY KEY NOT NULL,
+	`form_id` text NOT NULL,
+	`data` text NOT NULL,
+	`status` text DEFAULT 'new' NOT NULL,
+	`created_at` text NOT NULL,
+	FOREIGN KEY (`form_id`) REFERENCES `forms`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `forms` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`slug` text NOT NULL,
@@ -192,16 +129,7 @@ CREATE TABLE `formulaires` (
 	`updated_at` text NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `formulaires_slug_unique` ON `formulaires` (`slug`);--> statement-breakpoint
-CREATE TABLE `soumissions` (
-	`id` text PRIMARY KEY NOT NULL,
-	`formulaire_id` text NOT NULL,
-	`data` text NOT NULL,
-	`status` text DEFAULT 'nouvelle' NOT NULL,
-	`created_at` text NOT NULL,
-	FOREIGN KEY (`formulaire_id`) REFERENCES `formulaires`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
+CREATE UNIQUE INDEX `forms_slug_unique` ON `forms` (`slug`);--> statement-breakpoint
 CREATE TABLE `collection_definitions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,

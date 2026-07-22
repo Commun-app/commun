@@ -30,13 +30,9 @@ export type { Core, CoreContext, CoreEnv, Id, IsoTimestamp, SessionCookies } fro
 export { appRouter, type AppRouter } from './router.ts';
 
 // Domains — schemas, validation, queries, routers.
-export * from './domains/collectivite/index.ts';
+export * from './domains/organization/index.ts';
 export * from './domains/users/index.ts';
-export * from './domains/medias/index.ts';
-export * from './domains/actualites/index.ts';
-export * from './domains/agenda/index.ts';
-export * from './domains/elus/index.ts';
-export * from './domains/projets/index.ts';
+export * from './domains/media/index.ts';
 export * from './domains/deliberations/index.ts';
-export * from './domains/formulaires/index.ts';
+export * from './domains/forms/index.ts';
 export * from './domains/collections/index.ts';
