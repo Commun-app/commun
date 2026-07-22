@@ -17,6 +17,8 @@ export function connectDb(dataDir: string) {
 
   const client = new Database(join(dataDir, 'commun.db'));
   client.exec('PRAGMA journal_mode=WAL');
+  // Off by default in SQLite — required for the schema's cascades and referential integrity.
+  client.exec('PRAGMA foreign_keys=ON');
 
   const db = drizzle({ client, schema });
   // The migrations folder appears with the first drizzle-kit generation.

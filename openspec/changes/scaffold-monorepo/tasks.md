@@ -2,12 +2,12 @@
 
 ## 1. Ossature du monorepo
 
-- [ ] 1.1 Copier l'ossature d'opencorp dans `commun.app/` (workspaces, tsconfig.base, scripts, structure apps/packages, docs/) — sans node_modules, .git ni artefacts de build
-- [ ] 1.2 Purger la logique métier opencorp : domaines agents/channels/messages, event-queue, migrations Drizzle opencorp, fixtures et tests associés
-- [ ] 1.3 Renommer `@opencorp/*` → `@commun/*` (package.json, imports, scripts, README) ; `apps/daemon` → `apps/api`
-- [ ] 1.4 Vérifier `bun install` + `bun run typecheck` propres ; ajouter un check CI `grep -ri opencorp` = 0 occurrence
-- [ ] 1.5 `git init`, LICENSE AGPL v3, README de lancement, premier commit
-- [ ] 1.6 Workflow CI : typecheck + lint + `bun test` sur push
+- [x] 1.1 Copier l'ossature d'opencorp dans `commun.app/` (workspaces, tsconfig.base, scripts, structure apps/packages, docs/) — sans node_modules, .git ni artefacts de build
+- [x] 1.2 Purger la logique métier opencorp : domaines agents/channels/messages, event-queue, migrations Drizzle opencorp, fixtures et tests associés
+- [x] 1.3 Renommer `@opencorp/*` → `@commun/*` (package.json, imports, scripts, README) ; `apps/daemon` → `apps/api`
+- [x] 1.4 Vérifier `bun install` + `bun run typecheck` propres ; ajouter un check CI `grep -ri opencorp` = 0 occurrence (`scripts/check-naming.sh`)
+- [x] 1.5 `git init`, LICENSE AGPL v3, README de lancement, premier commit
+- [x] 1.6 Workflow CI : typecheck + tests + naming check sur push (`.github/workflows/ci.yml`)
 
 ## 2. Schéma de données (`@commun/core`)
 
