@@ -11,14 +11,14 @@
 
 ## 2. Schéma de données (`@commun/core`)
 
-- [ ] 2.1 Configurer Drizzle + SQLite via `bun:sqlite` (connexion, drizzle-kit, application automatique des migrations au démarrage)
-- [ ] 2.2 Domaine `collectivite` : settings d'instance en enregistrement unique (identité, coordonnées, thème, réseaux) — vocabulaire générique (communes, communautés de communes, autres collectivités)
-- [ ] 2.3 Domaine `users` : utilisateurs, rôles admin/rédacteur, sessions, invitations, tokens API
-- [ ] 2.4 Domaines de contenu : actualités, agenda (événements), élus, projets — avec statut draft/published et publication programmée
-- [ ] 2.5 Domaine `deliberations` : séances (date, ordre du jour) + délibérations (numéro, objet, vote), publiables
-- [ ] 2.6 Domaine `formulaires` : définitions de formulaires citoyens + soumissions
-- [ ] 2.7 Domaine `medias` : enregistrements médias (mime, variantes, alt/légende)
-- [ ] 2.8 Colonne `legacy_extra` (JSON) sur chaque table de contenu + schémas Zod create/update par domaine
+- [x] 2.1 Configurer Drizzle + SQLite via `bun:sqlite` (connexion, drizzle-kit, application automatique des migrations au démarrage, PRAGMA foreign_keys=ON)
+- [x] 2.2 Domaine `collectivite` : settings d'instance en enregistrement unique (identité, coordonnées, thème, réseaux) — vocabulaire générique (communes, communautés de communes, autres collectivités)
+- [x] 2.3 Domaine `users` : utilisateurs, rôles admin/rédacteur, sessions, invitations, tokens API (tables — tokens hashés)
+- [x] 2.4 Domaines de contenu : actualités, agenda (événements), élus, projets — avec statut draft/published et publication programmée
+- [x] 2.5 Domaine `deliberations` : séances (date, ordre du jour) + délibérations (numéro, objet, vote), publiables
+- [x] 2.6 Domaine `formulaires` : définitions de formulaires citoyens + soumissions
+- [x] 2.7 Domaine `medias` : enregistrements médias (mime, variantes, alt/légende)
+- [ ] 2.8 Colonne `legacy_extra` (JSON) sur chaque table de contenu ✓ — schémas Zod create/update par domaine (reste à faire)
 - [ ] 2.9 Domaine `collections personnalisées` : table de définitions (champs à jeu fermé de types), validation Zod générée depuis la définition, CRUD générique, cycle de publication
 - [ ] 2.10 Tests unitaires des queries de chaque domaine (`bun test`, base SQLite en mémoire)
 

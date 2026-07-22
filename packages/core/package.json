@@ -29,6 +29,7 @@
     "@trpc/server": "^11.17.0",
     "consola": "^3.4.2",
     "drizzle-orm": "^0.44.2",
+    "drizzle-zod": "^0.8.2",
     "nanoid": "^5.1.11",
     "zod": "^4.4.3"
   },

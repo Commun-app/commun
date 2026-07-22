@@ -26,3 +26,5 @@ export { HealthService, type HealthStatus } from './infrastructure/health/index.
 export { CommunError, ERR, type ErrorCode } from './common/errors/index.ts';
 export type { Core, CoreContext, CoreEnv, Id, IsoTimestamp } from './common/types/index.ts';
 export { appRouter, type AppRouter } from './router.ts';
+export * from './domains/actualites/index.ts';
+export { createApiToken, revokeApiToken, verifyApiToken } from './domains/users/tokens.ts';
