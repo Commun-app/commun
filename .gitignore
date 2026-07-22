@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.output/
+.nitro/
+.nuxt/
+.docs/
+.features-gen/
+test-results/
+
+# Instance data (dev sandbox + local databases)
+.data/
+*.db
+*.db-shm
+*.db-wal
+
+.env
+.DS_Store

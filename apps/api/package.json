@@ -1,0 +1,25 @@
+{
+  "name": "@commun/api",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Commun single-tenant API — Nitro v3 (tRPC admin plane + minimal public REST plane)",
+  "scripts": {
+    "dev": "bun --bun nitro dev",
+    "build": "nitro build",
+    "preview": "bun .output/server/index.mjs",
+    "prepare": "nitro prepare",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@commun/core": "workspace:*",
+    "@trpc/server": "^11.17.0",
+    "consola": "^3.4.2",
+    "h3": "^2.0.1-rc.22",
+    "nitro": "3.0.260429-beta",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

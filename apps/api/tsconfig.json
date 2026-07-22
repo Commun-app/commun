@@ -1,0 +1,4 @@
+{
+  "extends": ["../../tsconfig.base.json", "nitro/tsconfig"],
+  "include": ["server/**/*", "nitro.config.ts"]
+}

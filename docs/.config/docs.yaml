@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=https://unpkg.com/undocs/schema/config.json
+name: Commun
+shortDescription: CMS open source pour les collectivités françaises
+description: commun.app — le CMS open source (AGPL v3) des communes et collectivités françaises. Auto-hébergeable, souverain, avec IA intégrée.
+# `url` is required by UnDocs at build time even when no production deploy exists yet.
+# Update with the real canonical URL when the docs site is deployed.
+url: https://docs.commun.app
+github: commun-app/commun
+themeColor: blue
+automd: false
+branch: main

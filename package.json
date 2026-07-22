@@ -1,0 +1,38 @@
+{
+  "name": "commun",
+  "version": "0.1.0",
+  "private": true,
+  "description": "commun.app — CMS open source pour les collectivités françaises (AGPL v3)",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "./scripts/dev.sh",
+    "dev:api": "bun --filter @commun/api dev",
+    "dev:docs": "cd docs && bun run dev",
+    "build": "bun --filter @commun/api build",
+    "build:docs": "cd docs && bun run build",
+    "install:docs": "cd docs && bun install",
+    "typecheck": "bun --filter '@commun/*' typecheck",
+    "test": "bun --filter @commun/core test",
+    "test:e2e": "bddgen && playwright test",
+    "check:naming": "./scripts/check-naming.sh",
+    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist apps/*/node_modules apps/*/.nitro apps/*/.output docs/node_modules docs/.output docs/.docs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@trpc/client": "^11.17.0",
+    "@types/bun": "latest",
+    "@types/node": "^22.10.0",
+    "playwright-bdd": "^9.0.0",
+    "typescript": "^6.0.3"
+  },
+  "trustedDependencies": [
+    "@parcel/watcher",
+    "@tailwindcss/oxide",
+    "esbuild",
+    "sharp",
+    "vue-demi"
+  ]
+}
