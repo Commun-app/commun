@@ -41,7 +41,6 @@ export { parseEnv } from './common/env/index.ts';
 export { connectDb, type StoreDb } from './infrastructure/db/index.ts';
 export {
   createStorage,
-  createLocalStorage,
   createS3Storage,
   type StorageDriver,
   type S3Config,
@@ -55,7 +54,6 @@ export type {
   CoreServices,
   Id,
   IsoTimestamp,
-  SessionCookies,
 } from './common/types/index.ts';
 export { appRouter, type AppRouter } from './router.ts';
 

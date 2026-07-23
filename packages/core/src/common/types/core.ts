@@ -30,18 +30,11 @@ export interface Core {
 }
 
 /**
- * Transport-agnostic cookie surface provided by the API adapter — core code
- * never touches HTTP headers directly.
+ * The per-request context exposed to tRPC procedures. Auth is iso-legacy:
+ * an opaque token carried in `Authorization: Bearer` — no cookies anywhere.
  */
-export interface SessionCookies {
-  set(token: string, expiresAt: string): void;
-  clear(): void;
-}
-
-/** The per-request context exposed to tRPC procedures. */
 export interface CoreContext {
   services: CoreServices;
   /** Authenticated session, or null for anonymous requests. */
   session: AuthSession | null;
-  cookies: SessionCookies;
 }

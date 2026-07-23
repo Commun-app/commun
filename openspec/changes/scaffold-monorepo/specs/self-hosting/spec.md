@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: Déploiement docker-compose
-Le repo SHALL fournir un `docker-compose.yml` de référence démarrant une instance complète (API + volume de données SQLite + volume médias) configurée uniquement par variables d'environnement, documentée dans un fichier `.env.example` exhaustif, ainsi qu'un profil optionnel embarquant un service S3-compatible auto-hébergé (MinIO ou Garage) pour le stockage des médias.
+Le repo SHALL fournir un `docker-compose.yml` de référence démarrant une instance complète (API + volume de données SQLite) configurée uniquement par variables d'environnement, documentée dans un fichier `.env.example` exhaustif, ainsi qu'un profil embarquant un service S3-compatible auto-hébergé (MinIO) — les médias exigeant un stockage S3 (iso legacy, review du 2026-07-23).
 
 #### Scenario: Démarrage en 10 minutes
 - **WHEN** un hébergeur copie `.env.example` en `.env`, renseigne les secrets et exécute `docker compose up`
@@ -11,7 +11,7 @@ Le repo SHALL fournir un `docker-compose.yml` de référence démarrant une inst
 
 #### Scenario: Persistance des données
 - **WHEN** l'instance est arrêtée puis redémarrée via docker compose
-- **THEN** la base SQLite et les médias sont intacts (volumes persistants)
+- **THEN** la base SQLite est intacte (volume persistant) ; les médias vivent sur le stockage S3
 
 #### Scenario: Profil S3 embarqué
 - **WHEN** l'hébergeur démarre le compose avec le profil S3 activé

@@ -22,6 +22,12 @@ export const organization = sqliteTable('organization', {
   website: text('website'),
   /** Visual identity consumed by the site build: colors, fonts, logo media id… */
   theme: text('theme', { mode: 'json' }).$type<Record<string, unknown>>(),
+  /**
+   * Legacy deployment payload served ISO on `/api/v1/content/deployment`
+   * (`theme` + `definition` = the `_theme`/`_pages` the current site builds
+   * consume). Superseded by the phase-3 theme layer, kept for the cutover.
+   */
+  deployment: text('deployment', { mode: 'json' }).$type<Record<string, unknown>>(),
   /** Social network links, keyed by network name. */
   social: text('social', { mode: 'json' }).$type<Record<string, string>>(),
   legacyExtra: legacyExtra(),

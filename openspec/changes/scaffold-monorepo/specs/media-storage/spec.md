@@ -2,31 +2,34 @@
 
 ## ADDED Requirements
 
-### Requirement: Interface de stockage à deux drivers
-La gestion des médias SHALL passer par une interface de stockage unique dans `@commun/core` avec deux drivers sélectionnés par configuration : S3-compatible (un bucket par commune, URLs pré-signées) et disque local (répertoire de l'instance, servi par l'API). L'auto-hébergement SHALL fonctionner sans aucun service externe avec le driver local.
+### Requirement: Stockage S3-compatible uniquement
+Les médias SHALL être stockés sur un stockage objet S3-compatible (Scaleway, MinIO, Garage…), l'UNIQUE backend — iso legacy (review du 2026-07-23 : pas de driver disque local). Sans configuration `COMMUN_S3_*`, les opérations médias SHALL échouer avec une erreur explicite, sans empêcher le reste de l'instance de fonctionner.
 
-#### Scenario: Instance en driver local
-- **WHEN** une instance est configurée sans identifiants S3
-- **THEN** les uploads sont stockés sur le disque local et servis par l'API, sans erreur ni dépendance externe
+#### Scenario: Instance sans configuration S3
+- **WHEN** une opération média est tentée sur une instance sans variables S3
+- **THEN** elle échoue avec un message explicite indiquant les variables à renseigner, et le reste de l'API reste fonctionnel
 
-#### Scenario: Instance en driver S3
-- **WHEN** une instance est configurée avec un endpoint S3-compatible
-- **THEN** les uploads passent par URL pré-signée vers le bucket de la commune et les lectures par URL signée à durée limitée
+### Requirement: Flux d'upload iso legacy (URL pré-signée)
+L'upload SHALL suivre le flux legacy en deux temps : `requestUpload` (mime validé contre une allowlist fermée — jamais d'exécutable) retourne une URL S3 pré-signée pour un PUT direct du client ; `finalize` confirme l'existence de l'objet (head) et enregistre le média en base. Un `finalize` sur un objet jamais uploadé SHALL être refusé.
 
-### Requirement: Upload validé et traité
-Les uploads SHALL être réservés aux utilisateurs authentifiés, limités en taille et en types MIME autorisés (images, PDF, documents bureautiques usuels), et les images SHALL être déclinées en variantes web (webp, tailles multiples) par des tâches asynchrones internes à l'instance (Nitro tasks + sharp), sans file d'attente externe.
-
-#### Scenario: Upload d'une image
-- **WHEN** un rédacteur uploade une image JPEG valide
-- **THEN** l'original est stocké, une tâche interne génère les variantes webp, et l'enregistrement média référence l'ensemble
+#### Scenario: Upload complet
+- **WHEN** un rédacteur demande un upload, PUT le fichier sur l'URL signée puis finalise
+- **THEN** le média est enregistré (taille lue du stockage) et son URL signée de lecture est disponible
 
 #### Scenario: Type refusé
-- **WHEN** un utilisateur tente d'uploader un fichier d'un type non autorisé (ex. exécutable)
-- **THEN** l'upload est rejeté avec une erreur explicite et rien n'est stocké
+- **WHEN** un upload est demandé pour un type hors allowlist (ex. exécutable)
+- **THEN** la demande est refusée avant toute URL signée
+
+### Requirement: Variantes d'images différées
+Le retraitement en variantes webp SHALL être stubé (log explicite listant les 7 variantes legacy) — le legacy publiait ces jobs sur SQS mais plus aucun worker n'écoute. L'implémentation réelle est reportée en fin de phase (décision de review) ; l'original est immédiatement utilisable.
+
+#### Scenario: Finalisation d'une image
+- **WHEN** un média image est finalisé
+- **THEN** l'original est enregistré et utilisable, et le stub de resize est journalisé
 
 ### Requirement: Bibliothèque de médias
-Chaque média SHALL être enregistré en base (nom, mime, taille, variantes, légende/alt) et listable/supprimable via le plan admin ; la suppression SHALL retirer les objets du stockage.
+Chaque média SHALL être enregistré en base (nom, mime, taille, alt/légende) et listable/éditable/supprimable via le plan admin ; la suppression SHALL retirer les objets du stockage (original + variantes éventuelles).
 
 #### Scenario: Suppression d'un média
 - **WHEN** un admin supprime un média
-- **THEN** l'enregistrement et tous les objets stockés (original + variantes) sont supprimés
+- **THEN** l'enregistrement et tous les objets stockés sont supprimés

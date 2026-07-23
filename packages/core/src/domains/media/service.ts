@@ -5,8 +5,6 @@ import type { StorageDriver } from '../../infrastructure/storage/index.ts';
 import type { MediaRepository } from './repository.ts';
 import type { Media } from './schema.ts';
 
-export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024; // 20 MB
-
 /** Closed allowlist: images, PDF and common office documents. Never executables. */
 export const ALLOWED_MIME = new Set([
   'image/jpeg',
@@ -21,32 +19,28 @@ export const ALLOWED_MIME = new Set([
   'application/vnd.oasis.opendocument.spreadsheet',
 ]);
 
-/** Raster formats that get webp variants (svg and gif are kept as-is). */
-const VARIANT_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const VARIANT_WIDTHS = [320, 768, 1280] as const;
+/** The 7 webp variants the legacy resize worker produced. */
+const LEGACY_VARIANTS = [
+  'webp-1800',
+  'webp-1320',
+  'webp-840',
+  'webp-480',
+  'webp-1320-thumb',
+  'webp-840-thumb',
+  'webp-480-thumb',
+] as const;
 
 const sanitizeFilename = (name: string) =>
   name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-120) || 'file';
 
-// sharp ships native binaries (@img/*) that break when inlined by the nitro
-// bundler — the non-literal specifier forces a real runtime import resolved
-// from node_modules (dev, e2e bundle and Docker image alike).
-const SHARP_SPECIFIER = 'sharp';
-const loadSharp = async () => (await import(SHARP_SPECIFIER)).default as typeof import('sharp').default;
-
-export interface UploadInput {
-  filename: string;
-  mime: string;
-  bytes: Uint8Array;
-  alt?: string;
-}
-
 type MediaObjects = { original: string; variants: Record<string, string> };
 
 /**
- * Media library: validated uploads, webp variants (internal async task — no
- * external queue), full cleanup on removal. Storage goes through the driver
- * abstraction (local disk or S3-compatible).
+ * Media library — iso legacy flow: the API hands out a pre-signed S3 PUT URL
+ * (`requestUpload`), the client uploads DIRECTLY to object storage, then
+ * `finalize` verifies the object and records the row. Resize is stubbed for
+ * now (the legacy published 7 webp variant jobs to SQS, but no worker listens
+ * anymore) — to be implemented at the end of the phase.
  */
 export class MediaService {
   constructor(
@@ -54,55 +48,33 @@ export class MediaService {
     private readonly storage: StorageDriver,
   ) {}
 
-  /** Validate and store an upload: original object first, media row second. */
-  async upload(input: UploadInput): Promise<Media> {
-    if (!ALLOWED_MIME.has(input.mime)) {
-      throw new CommunError(ERR.INVALID_STATE, `type de fichier non autorisé: ${input.mime}`);
+  /** Step 1 (iso legacy `PUT /media/:org`): validate the mime, hand out a pre-signed PUT URL. */
+  async requestUpload(filename: string, mime: string): Promise<{ key: string; url: string }> {
+    if (!ALLOWED_MIME.has(mime)) {
+      throw new CommunError(ERR.INVALID_STATE, `type de fichier non autorisé: ${mime}`);
     }
-    if (input.bytes.byteLength === 0 || input.bytes.byteLength > MAX_UPLOAD_BYTES) {
-      throw new CommunError(
-        ERR.INVALID_STATE,
-        `taille de fichier invalide (max ${MAX_UPLOAD_BYTES / 1024 / 1024} Mo)`,
-      );
-    }
-
-    const filename = sanitizeFilename(input.filename);
-    const originalKey = `${nanoid(10)}/${filename}`;
-    await this.storage.put(originalKey, input.bytes, input.mime);
-
-    return this.repository.insert({
-      filename,
-      mime: input.mime,
-      size: input.bytes.byteLength,
-      alt: input.alt ?? null,
-      driver: this.storage.kind,
-      objects: { original: originalKey, variants: {} },
-    });
+    const key = `${nanoid(10)}/${sanitizeFilename(filename)}`;
+    return { key, url: await this.storage.presignedPutUrl(key, mime) };
   }
 
-  /** Internal async task: derive webp variants and attach them to the media row. */
-  async generateImageVariants(mediaId: string, bytes: Uint8Array): Promise<void> {
-    const row = this.repository.findById(mediaId);
-    if (!row || !VARIANT_MIME.has(row.mime)) return;
-
-    const objects = row.objects as MediaObjects;
-    const dir = objects.original.split('/')[0];
-    try {
-      const sharp = await loadSharp();
-      for (const width of VARIANT_WIDTHS) {
-        const variant = await sharp(bytes)
-          .resize({ width, withoutEnlargement: true })
-          .webp({ quality: 80 })
-          .toBuffer();
-        const key = `${dir}/variants/w${width}.webp`;
-        await this.storage.put(key, new Uint8Array(variant), 'image/webp');
-        objects.variants[`w${width}`] = key;
-      }
-      this.repository.update(mediaId, { objects });
-    } catch (error) {
-      // The original stays perfectly usable without variants — log, don't fail.
-      consola.warn(`génération des variantes échouée pour ${mediaId}:`, error);
+  /** Step 2 (iso legacy `POST /media/:org`): confirm the S3 object, record the media row. */
+  async finalize(input: { key: string; filename: string; mime: string; alt?: string }): Promise<Media> {
+    const head = await this.storage.head(input.key);
+    if (!head) {
+      throw new CommunError(ERR.INVALID_STATE, `objet non trouvé sur le stockage: ${input.key}`);
     }
+    const row = this.repository.insert({
+      filename: sanitizeFilename(input.filename),
+      mime: input.mime,
+      size: head.size,
+      alt: input.alt ?? null,
+      driver: 's3',
+      objects: { original: input.key, variants: {} },
+    });
+    // TODO(fin de phase): produire réellement les variantes. Le legacy publiait
+    // ces jobs sur SQS mais plus aucun worker n'écoute — stub assumé (review).
+    consola.info(`[media] resize à implémenter pour ${row.id} (${LEGACY_VARIANTS.join(', ')})`);
+    return row;
   }
 
   list(): Media[] {
@@ -115,7 +87,7 @@ export class MediaService {
     return updated;
   }
 
-  /** Delete the row AND every stored object (original + variants) — spec media-storage. */
+  /** Delete the row AND every stored object (original + variants). */
   async remove(id: string): Promise<void> {
     const row = this.repository.findById(id);
     if (!row) throw new CommunError(ERR.NOT_FOUND, `média introuvable: ${id}`);
@@ -124,14 +96,10 @@ export class MediaService {
     this.repository.delete(id);
   }
 
-  /** Browser-loadable URL of a media's original object (signed for S3, API path for local). */
+  /** Signed GET URL of a media's original object (null if the media is unknown). */
   async url(id: string): Promise<string | null> {
     const row = this.repository.findById(id);
     if (!row) return null;
     return this.storage.url((row.objects as MediaObjects).original);
-  }
-
-  readObject(key: string): Promise<Uint8Array | null> {
-    return this.storage.get(key);
   }
 }

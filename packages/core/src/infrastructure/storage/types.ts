@@ -1,15 +1,17 @@
 /**
- * Storage abstraction of the media library (spec media-storage): one
- * interface, two drivers — `local` (instance disk, zero dependency, the
- * self-hosting default) and `s3` (any S3-compatible endpoint: Scaleway,
- * MinIO, Garage…). The driver is chosen from env at composition time.
+ * Media storage abstraction — iso legacy: S3-compatible object storage is the
+ * ONLY backend (Scaleway, MinIO, Garage…). The upload flow is the legacy one:
+ * the API hands out a pre-signed PUT URL, the client uploads DIRECTLY to S3,
+ * then finalizes. `unconfigured` is the explicit-failure driver used when the
+ * COMMUN_S3_* variables are absent.
  */
 export interface StorageDriver {
-  readonly kind: 'local' | 's3';
-  put(key: string, data: Uint8Array, contentType: string): Promise<void>;
-  /** Byte payload, or null when the object is missing. Used by the local serving route. */
-  get(key: string): Promise<Uint8Array | null>;
+  readonly kind: 's3' | 'unconfigured';
+  /** Pre-signed URL for a direct client PUT of the object. */
+  presignedPutUrl(key: string, contentType: string): Promise<string>;
+  /** Object metadata if it exists (used to confirm an upload), null otherwise. */
+  head(key: string): Promise<{ size: number } | null>;
   remove(keys: string[]): Promise<void>;
-  /** URL a browser can load the object from (time-limited signed URL for s3, API path for local). */
+  /** Time-limited signed GET URL a browser can load the object from. */
   url(key: string): Promise<string>;
 }

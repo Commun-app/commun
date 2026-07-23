@@ -7,9 +7,9 @@ const { Given, When, Then } = createBdd(test);
 
 const trpcUrl = (procedure: string) => `${API_URL}/api/trpc/${procedure}`;
 
-async function callMe(cookie?: string) {
+async function callMe(token?: string) {
   const response = await fetch(trpcUrl('auth.me'), {
-    headers: cookie ? { cookie } : {},
+    headers: token ? { authorization: `Bearer ${token}` } : {},
   });
   return { status: response.status, body: await response.json() };
 }
@@ -45,15 +45,16 @@ When('logs in with those credentials', async ({ world }) => {
     body: JSON.stringify({ email: body.result.data.user.email, password: 'mot-de-passe-e2e' }),
   });
   expect(response.status).toBe(200);
-  world.cookie = response.headers.get('set-cookie')?.split(';')[0] ?? undefined;
+  const login = (await response.json()) as { result: { data: { token: string } } };
+  world.sessionToken = login.result.data.token;
 });
 
-Then('a session cookie is set', ({ world }) => {
-  expect(world.cookie).toMatch(/^commun_session=/);
+Then('a session token is returned', ({ world }) => {
+  expect(world.sessionToken).toBeTruthy();
 });
 
 Then('the me procedure returns the {string} account', async ({ world }, email: string) => {
-  const result = await callMe(world.cookie);
+  const result = await callMe(world.sessionToken);
   expect(result.status).toBe(200);
   expect(JSON.stringify(result.body)).toContain(email);
 });
@@ -61,13 +62,13 @@ Then('the me procedure returns the {string} account', async ({ world }, email: s
 When('the user logs out', async ({ world }) => {
   const response = await fetch(trpcUrl('auth.logout'), {
     method: 'POST',
-    headers: { 'content-type': 'application/json', cookie: world.cookie ?? '' },
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${world.sessionToken}` },
     body: JSON.stringify({}),
   });
   expect(response.status).toBe(200);
 });
 
-Then('the me procedure refuses the revoked session', async ({ world }) => {
-  const result = await callMe(world.cookie);
+Then('the me procedure refuses the revoked token', async ({ world }) => {
+  const result = await callMe(world.sessionToken);
   expect(result.status).toBe(401);
 });

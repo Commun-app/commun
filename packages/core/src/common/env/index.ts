@@ -7,19 +7,13 @@ import { z } from 'zod';
 // shell) — a namespace avoids collisions with generic names (PORT, DATA_DIR…)
 // set by other tools, and makes `env | grep COMMUN_` the whole story.
 const envSchema = z.object({
-  /** Root data directory of the instance (SQLite database, local media). */
+  /** Root data directory of the instance (SQLite database). */
   COMMUN_DATA_DIR: z.string().default(join(homedir(), '.commun')),
   /** Override of the Drizzle migrations folder (set in the Docker image and dev script). */
   COMMUN_MIGRATIONS_DIR: z.string().optional(),
-  /**
-   * Origins allowed to call the API cross-origin WITH credentials. Only needed
-   * when the admin is not served from the same origin as the API.
-   */
-  COMMUN_ALLOWED_ORIGINS: z
-    .string()
-    .default('http://localhost:3000,http://127.0.0.1:3000')
-    .transform((value) => value.split(',').map((origin) => origin.trim()).filter(Boolean)),
-  // S3-compatible media storage — bucket + both keys set → s3 driver, otherwise local disk.
+  // S3-compatible media storage (iso legacy: S3 is the ONLY media backend) —
+  // bucket + both keys set → storage available, otherwise media uploads fail
+  // with an explicit error.
   COMMUN_S3_ENDPOINT: z.string().optional(),
   COMMUN_S3_REGION: z.string().default('fr-par'),
   COMMUN_S3_BUCKET: z.string().optional(),
@@ -37,7 +31,6 @@ export function parseEnv(raw: Record<string, string | undefined> = process.env):
   return envSchema.parse({
     COMMUN_DATA_DIR: raw.COMMUN_DATA_DIR,
     COMMUN_MIGRATIONS_DIR: raw.COMMUN_MIGRATIONS_DIR,
-    COMMUN_ALLOWED_ORIGINS: raw.COMMUN_ALLOWED_ORIGINS,
     COMMUN_S3_ENDPOINT: raw.COMMUN_S3_ENDPOINT,
     COMMUN_S3_REGION: raw.COMMUN_S3_REGION,
     COMMUN_S3_BUCKET: raw.COMMUN_S3_BUCKET,

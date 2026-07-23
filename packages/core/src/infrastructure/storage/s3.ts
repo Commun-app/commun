@@ -1,6 +1,7 @@
 import {
   DeleteObjectsCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -27,15 +28,16 @@ export function createS3Storage(config: S3Config): StorageDriver {
 
   return {
     kind: 's3',
-    async put(key, data, contentType) {
-      await client.send(
-        new PutObjectCommand({ Bucket: config.bucket, Key: key, Body: data, ContentType: contentType }),
-      );
-    },
-    async get(key) {
+    presignedPutUrl: (key, contentType) =>
+      getSignedUrl(
+        client,
+        new PutObjectCommand({ Bucket: config.bucket, Key: key, ContentType: contentType }),
+        { expiresIn: SIGNED_URL_TTL_S },
+      ),
+    async head(key) {
       try {
-        const result = await client.send(new GetObjectCommand({ Bucket: config.bucket, Key: key }));
-        return result.Body ? new Uint8Array(await result.Body.transformToByteArray()) : null;
+        const result = await client.send(new HeadObjectCommand({ Bucket: config.bucket, Key: key }));
+        return { size: result.ContentLength ?? 0 };
       } catch {
         return null;
       }

@@ -3,7 +3,6 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { connectDb } from '../src/infrastructure/db/index.ts';
-import { createLocalStorage } from '../src/infrastructure/storage/index.ts';
 import { fieldDefinitionSchema } from '../src/domains/collections/fields.ts';
 import { CollectionsRepository } from '../src/domains/collections/repository.ts';
 import { CollectionsService } from '../src/domains/collections/service.ts';
@@ -11,6 +10,7 @@ import { MediaRepository } from '../src/domains/media/repository.ts';
 import { MediaService } from '../src/domains/media/service.ts';
 import { collectionDefinitionCreateSchema } from '../src/domains/collections/validation.ts';
 import { CommunError } from '../src/common/errors/index.ts';
+import { createFakeStorage } from './helpers/storage.ts';
 
 let dataDir: string;
 let collections: CollectionsService;
@@ -19,7 +19,7 @@ let media: MediaService;
 beforeAll(() => {
   dataDir = mkdtempSync(join(tmpdir(), 'commun-collections-test-'));
   const db = connectDb(dataDir);
-  media = new MediaService(new MediaRepository(db), createLocalStorage(dataDir));
+  media = new MediaService(new MediaRepository(db), createFakeStorage());
   collections = new CollectionsService(new CollectionsRepository(db), media);
 });
 
@@ -96,12 +96,8 @@ describe('CollectionsService', () => {
   });
 
   test('resolved public plane: media fields and rich-text image nodes get URLs', async () => {
-    const png = await (await import('sharp')).default({
-      create: { width: 10, height: 10, channels: 3, background: '#fff' },
-    })
-      .png()
-      .toBuffer();
-    const uploaded = await media.upload({ filename: 'une.png', mime: 'image/png', bytes: new Uint8Array(png) });
+    const { key } = await media.requestUpload('une.png', 'image/png');
+    const uploaded = await media.finalize({ key, filename: 'une.png', mime: 'image/png' });
 
     const entry = collections.createEntry('news', {
       title: 'Avec image',
@@ -119,8 +115,8 @@ describe('CollectionsService', () => {
     const [resolved] = await collections.listPublishedEntriesResolved('news');
     const cover = resolved!.data.cover as { id: string; url: string };
     expect(cover.id).toBe(uploaded.id);
-    expect(cover.url).toContain('/api/media/file/');
+    expect(cover.url).toContain('fake-s3.local');
     const doc = resolved!.data.content as { content: Array<{ attrs?: { src?: string } }> };
-    expect(doc.content[0]?.attrs?.src).toContain('/api/media/file/');
+    expect(doc.content[0]?.attrs?.src).toContain('fake-s3.local');
   });
 });

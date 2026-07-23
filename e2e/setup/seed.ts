@@ -6,7 +6,7 @@
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 // Relative import: e2e/ is not a workspace package, @commun/core is unresolvable here.
-import { createCore, parseEnv } from '../../packages/core/src/index.ts';
+import { createCore, parseEnv, UsersRepository } from '../../packages/core/src/index.ts';
 
 const dataDir = process.env.COMMUN_DATA_DIR ?? join(tmpdir(), 'commun-e2e-data');
 const migrationsDir = join(import.meta.dir, '..', '..', 'packages', 'core', 'drizzle');
@@ -24,6 +24,27 @@ switch (command) {
   }
   case 'api-token': {
     const { token } = core.services.users.createApiToken(`e2e-${argument ?? 'token'}`);
+    console.log(JSON.stringify({ token }));
+    break;
+  }
+  case 'organization': {
+    if (!core.services.organization.get()) {
+      core.services.organization.init({ name: 'Commune E2E', slug: 'commune-e2e', type: 'commune' });
+    }
+    console.log(JSON.stringify({ initialized: true }));
+    break;
+  }
+  case 'session': {
+    // Logged-in session for a fresh user with the given role (admin|redacteur).
+    const role = (argument === 'redacteur' ? 'redacteur' : 'admin') as 'admin' | 'redacteur';
+    const repository = new UsersRepository(core.db);
+    const user = repository.activateUser({
+      email: `e2e-${role}-${Math.random().toString(36).slice(2, 8)}@e2e.fr`,
+      name: `E2E ${role}`,
+      passwordHash: Bun.password.hashSync('mot-de-passe-e2e'),
+      role,
+    });
+    const { token } = core.services.users.createSession(user);
     console.log(JSON.stringify({ token }));
     break;
   }

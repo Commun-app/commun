@@ -31,6 +31,17 @@ L'API SHALL exposer des routes REST h3 publiques restreintes au strict minimum e
 - **WHEN** une entrée publiée référence des médias (champ `media` ou nœud image/file dans un rich-text)
 - **THEN** le plan contenu retourne des URLs chargeables (`{id, url}` pour les champs, `attrs.src` dans le rich-text) — parité avec la résolution signée du legacy
 
+### Requirement: Plan legacy-compat pour les builds actuels
+L'API SHALL exposer, sous les chemins legacy exacts, les routes que les builds de sites ACTUELS consomment sans modification : `GET /api/v1/content/records` (map plate des entrées publiées par id, médias résolus, enveloppe `{ name, description, data }` legacy), `GET /api/v1/content/deployment` (`_theme`, `_pages`, `slugs`) et `GET /api/v1/content/wordpress-marseille-15-16` (JSON statique, avatars enrichis quand l'instance est marseille15-16, sans authentification — iso legacy). Les deux premières SHALL accepter le header `Authorization` brut (sans préfixe Bearer) envoyé par les clients legacy.
+
+#### Scenario: Build de site actuel inchangé
+- **WHEN** un thème actuel appelle `/api/v1/content/records` avec son header `Authorization: <token>` brut
+- **THEN** il reçoit la map des entrées publiées au format legacy, sans modification de son code
+
+#### Scenario: Route wordpress statique
+- **WHEN** un client appelle `/api/v1/content/wordpress-marseille-15-16` sans authentification
+- **THEN** le JSON statique est servi (enrichi des avatars si l'instance est l'organisation marseille15-16)
+
 ### Requirement: Gestion d'erreurs et journalisation
 L'API SHALL retourner des erreurs structurées (code, message, sans fuite de détails internes) et journaliser les requêtes et erreurs via consola avec un niveau configurable.
 

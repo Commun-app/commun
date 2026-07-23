@@ -152,6 +152,41 @@ export class CollectionsService {
     return copy;
   }
 
+  /**
+   * Legacy-compat payload of `GET /api/v1/content/records`: ONE flat map of
+   * every published entry across all collections, keyed by id, media resolved
+   * — the shape the current site builds consume.
+   */
+  async legacyRecordsPayload(): Promise<Record<string, Record<string, unknown>>> {
+    const records: Record<string, Record<string, unknown>> = {};
+    for (const definition of this.repository.listDefinitions()) {
+      const entries = await this.listPublishedEntriesResolved(definition.id);
+      for (const entry of entries) {
+        records[entry.id] = {
+          _id: entry.id,
+          title: entry.title,
+          slug: entry.slug,
+          relatedCollection: definition.slug,
+          status: entry.status,
+          publishedAt: entry.publishedAt,
+          ...entry.data,
+        };
+      }
+    }
+    return records;
+  }
+
+  /** Public slugs of every published entry (`/collection/entry`), for the deployment payload. */
+  publishedSlugs(now = new Date().toISOString()): string[] {
+    return this.repository
+      .listDefinitions()
+      .flatMap((definition) =>
+        this.repository
+          .listPublishedEntries(definition.id, now)
+          .map((entry) => `/${definition.slug}/${entry.slug}`),
+      );
+  }
+
   createEntry(collectionIdOrSlug: string, input: EntryCreate): CollectionEntry {
     const definition = this.getDefinition(collectionIdOrSlug);
     const data = this.validateData(definition, input.data);

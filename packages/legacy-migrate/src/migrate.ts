@@ -67,7 +67,9 @@ export function migrateOrganization(options: {
       slug: options.orgSlug,
       type: 'commune',
       theme: (legacyOrg.settings as Record<string, unknown> | undefined) ?? null,
-      legacyExtra: { legacyId: orgId, injector: legacyOrg.injector, deployment: legacyOrg.deployment },
+      // Served ISO on /api/v1/content/deployment during the cutover.
+      deployment: (legacyOrg.deployment as Record<string, unknown> | undefined) ?? null,
+      legacyExtra: { legacyId: orgId, injector: legacyOrg.injector },
     })
     .run();
 

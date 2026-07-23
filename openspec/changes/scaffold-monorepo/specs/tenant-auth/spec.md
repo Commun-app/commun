@@ -3,15 +3,15 @@
 ## ADDED Requirements
 
 ### Requirement: Authentification par session
-Les utilisateurs SHALL s'authentifier par email + mot de passe (hash argon2/bcrypt) ; une session opaque est créée en base et transmise via cookie httpOnly/secure/sameSite, avec expiration et révocation individuelle.
+Les utilisateurs SHALL s'authentifier par email + mot de passe (hash argon2id). Une session opaque est créée en base (hashée) et son token retourné au client, qui le transmet en `Authorization: Bearer <token>` — SANS cookie, iso transport legacy (review du 2026-07-23). Expiration, liste des sessions actives et révocation individuelle (appareil ciblé) SHALL être supportées.
 
 #### Scenario: Connexion réussie
 - **WHEN** un utilisateur soumet des identifiants valides
-- **THEN** une session est créée en base et un cookie httpOnly est posé ; les procédures protégées deviennent accessibles
+- **THEN** un token de session est retourné ; les procédures protégées deviennent accessibles avec `Authorization: Bearer <token>`
 
 #### Scenario: Déconnexion
 - **WHEN** un utilisateur se déconnecte
-- **THEN** la session est supprimée/révoquée en base et le cookie invalidé ; toute requête ultérieure avec l'ancien cookie est rejetée
+- **THEN** la session est révoquée en base ; toute requête ultérieure avec l'ancien token est rejetée
 
 ### Requirement: Rôles admin et rédacteur
 Le système SHALL distinguer deux rôles : `admin` (gestion des utilisateurs, réglages de la commune, tous contenus) et `redacteur` (gestion des contenus uniquement). Les procédures tRPC SHALL vérifier le rôle requis.

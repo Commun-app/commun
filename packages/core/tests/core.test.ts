@@ -13,7 +13,7 @@ describe('createCore', () => {
       expect(health.ok).toBe(true);
       expect(health.service).toBe('@commun/core');
       expect(health.db.ok).toBe(true);
-      expect(core.storage.kind).toBe('local');
+      expect(core.storage.kind).toBe('unconfigured');
     } finally {
       rmSync(dataDir, { recursive: true, force: true });
     }

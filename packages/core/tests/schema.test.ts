@@ -5,11 +5,11 @@ import { join } from 'node:path';
 import { connectDb, type StoreDb } from '../src/infrastructure/db/index.ts';
 import { organization } from '../src/domains/organization/schema.ts';
 import { collectionEntries } from '../src/domains/collections/schema.ts';
-import { createLocalStorage } from '../src/infrastructure/storage/index.ts';
 import { CollectionsRepository } from '../src/domains/collections/repository.ts';
 import { CollectionsService } from '../src/domains/collections/service.ts';
 import { MediaRepository } from '../src/domains/media/repository.ts';
 import { MediaService } from '../src/domains/media/service.ts';
+import { createFakeStorage } from './helpers/storage.ts';
 
 let dataDir: string;
 let db: StoreDb;
@@ -18,7 +18,7 @@ let collections: CollectionsService;
 beforeAll(() => {
   dataDir = mkdtempSync(join(tmpdir(), 'commun-schema-test-'));
   db = connectDb(dataDir);
-  const media = new MediaService(new MediaRepository(db), createLocalStorage(dataDir));
+  const media = new MediaService(new MediaRepository(db), createFakeStorage());
   collections = new CollectionsService(new CollectionsRepository(db), media);
 });
 

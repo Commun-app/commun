@@ -26,8 +26,6 @@ ENV COMMUN_MIGRATIONS_DIR=/app/drizzle
 COPY --from=build /app/apps/api/.output ./.output
 COPY --from=build /app/packages/core/drizzle ./drizzle
 COPY --from=build /app/bootstrap-admin.mjs ./bootstrap-admin.mjs
-# sharp stays a runtime import (native @img binaries) — resolved from here.
-COPY --from=build /app/apps/api/node_modules ./node_modules
 
 RUN mkdir -p /data && chown bun:bun /data
 USER bun

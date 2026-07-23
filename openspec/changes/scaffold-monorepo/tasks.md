@@ -29,7 +29,8 @@
 - [x] 3.3 Route REST publique de contenu `/api/content/[domain]` : domaines système + fallback collections par slug (news, events, …), contenu publié uniquement, auth par token API
 - [x] 3.4 ~~Route publique formulaires~~ **Retirée (review 2026-07-23)** : le plan REST public est désormais 100 % lecture seule
 - [x] 3.5 `GET /health` (état DB) ; ~~garde placeholder~~ retirée sur review (pas d'heuristique de secrets) — aucun secret en dur ni valeur par défaut fonctionnelle
-- [x] 3.6 E2E automatisés (Playwright + Gherkin, 7 scénarios verts) : health HTTP + tRPC, cycle invitation→login→me→logout, cookie de session, plan contenu (401 sans token, publiés seuls, 404 collection inconnue) — seed via script Bun partageant la base de l'API sous test
+- [x] 3.6 E2E automatisés (Playwright + Gherkin, 12 scénarios verts) : health, cycle invitation→login (Bearer)→me→logout, rôles (redacteur FORBIDDEN sur users/collections, admin OK + invite), cycle de contenu complet (création collection → entrée draft → publication → visible sur /api/content ET /api/v1/content/records + slug dans deployment), header Authorization brut legacy, route wordpress statique — seed via script Bun
+- [x] 3.7 Plan legacy-compat (review 2026-07-23) : `/api/v1/content/{records,deployment,wordpress-marseille-15-16}` ISO pour bascule des thèmes sans modification ; colonne `organization.deployment` (migration 0002) alimentée par la CLI de migration
 
 ## 4. Authentification
 
@@ -40,10 +41,10 @@
 
 ## 5. Médias
 
-- [x] 5.1 Interface de stockage + driver disque local (put/get/remove/url, anti-traversal, servi par `/api/media/file/[...key]`)
-- [x] 5.2 Driver S3-compatible (SDK v3, URLs signées, endpoint custom pour MinIO/Garage) — implémenté et typé ; test d'intégration contre MinIO restant (profil compose `s3` prêt)
-- [x] 5.3 Validation des uploads (20 Mo max, allowlist MIME fermée) + variantes webp 320/768/1280 par tâche asynchrone interne (sharp, fire-and-forget)
-- [x] 5.4 Upload REST multipart (session requise), CRUD tRPC ; suppression = enregistrement + original + variantes (testé)
+- [x] 5.1 ~~Driver disque local~~ **Retiré (review 2026-07-23)** : S3-only iso legacy ; driver `unconfigured` à erreur explicite sans variables S3
+- [x] 5.2 Driver S3-compatible (SDK v3 : presigned PUT, head, signed GET, delete ; endpoint custom MinIO/Garage) — test d'intégration MinIO restant (profil compose prêt)
+- [x] 5.3 Flux d'upload iso legacy : requestUpload (allowlist MIME) → PUT direct client → finalize (head + enregistrement) ; resize **stubé par log** (7 variantes legacy, SQS sans worker) — implémentation réelle en fin de phase
+- [x] 5.4 CRUD tRPC (requestUpload/finalize/list/update/remove) ; suppression = enregistrement + objets (testé sur double S3)
 
 ## 6. Self-hosting & documentation
 

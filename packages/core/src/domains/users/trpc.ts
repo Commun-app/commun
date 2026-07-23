@@ -17,19 +17,22 @@ const publicUser = ({ id, email, name, role }: typeof users.$inferSelect) => ({
 
 // Transport layer only: every handler delegates to the UsersService.
 export const authRouter = router({
-  /** Login — poses the httpOnly session cookie via the adapter. */
+  /** Login — iso legacy: the opaque token is returned in the body, the client
+   * sends it back as `Authorization: Bearer <token>`. No cookies. */
   login: procedure
     .input(z.object({ email: z.email(), password: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const result = await ctx.services.users.login(input.email, input.password);
       if (!result) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'identifiants invalides' });
-      ctx.cookies.set(result.token, result.session.expiresAt);
-      return { user: publicUser(result.session.user) };
+      return {
+        token: result.token,
+        expiresAt: result.session.expiresAt,
+        user: publicUser(result.session.user),
+      };
     }),
 
   logout: protectedProcedure.mutation(({ ctx }) => {
     ctx.services.users.revokeSession(ctx.session.sessionId);
-    ctx.cookies.clear();
     return { loggedOut: true };
   }),
 

@@ -1,11 +1,11 @@
 # Commun — auto-hébergement de référence (spec self-hosting).
 #
-#   cp .env.example .env   # renseignez au minimum COMMUN_ADMIN_EMAIL
+#   cp .env.example .env   # ajustez si besoin (port, S3…)
 #   docker compose up -d
-#   docker compose logs api   # le lien d'invitation admin s'affiche au 1er boot
+#   docker compose exec api bun bootstrap-admin.mjs <email>   # premier admin
 #
-# Par défaut les médias sont stockés sur le volume local (aucune dépendance).
-# Profil optionnel `s3` : un service S3-compatible auto-hébergé (MinIO) :
+# Les médias vivent sur un stockage S3-compatible (iso legacy) : soit un
+# service externe (Scaleway, Garage…), soit le profil `s3` ci-dessous (MinIO) :
 #   docker compose --profile s3 up -d
 # (renseignez alors les variables COMMUN_S3_* dans .env — voir .env.example)
 

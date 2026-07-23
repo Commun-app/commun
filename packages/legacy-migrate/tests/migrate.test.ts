@@ -11,12 +11,19 @@ import {
   MediaRepository,
   MediaService,
   OrganizationRepository,
-  createLocalStorage,
+  type StorageDriver,
   type StoreDb,
 } from '@commun/core';
 
-const servicesOf = (db: StoreDb, dir: string) => {
-  const media = new MediaService(new MediaRepository(db), createLocalStorage(dir));
+const fakeStorage: StorageDriver = {
+  kind: 's3',
+  presignedPutUrl: async (key) => `https://fake/${key}`,
+  head: async () => ({ size: 0 }),
+  remove: async () => {},
+  url: async (key) => `https://fake/${key}`,
+};
+const servicesOf = (db: StoreDb, _dir: string) => {
+  const media = new MediaService(new MediaRepository(db), fakeStorage);
   return new CollectionsService(new CollectionsRepository(db), media);
 };
 import { migrateOrganization, type MigrationReport } from '../src/migrate.ts';

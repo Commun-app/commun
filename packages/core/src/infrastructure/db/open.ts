@@ -22,6 +22,8 @@ export function connectDb(dataDir: string, migrationsDir?: string) {
   client.exec('PRAGMA journal_mode=WAL');
   // Off by default in SQLite — required for the schema's cascades and referential integrity.
   client.exec('PRAGMA foreign_keys=ON');
+  // A concurrent writer (CLI, seed script, backup) waits instead of failing.
+  client.exec('PRAGMA busy_timeout=5000');
 
   const db = drizzle({ client, schema });
   // The migrations folder appears with the first drizzle-kit generation.
