@@ -2,24 +2,25 @@ import { beforeAll, afterAll, describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { connectDb, type StoreDb } from '../src/infrastructure/db/index.ts';
+import { connectDb } from '../src/infrastructure/db/index.ts';
+import { createLocalStorage } from '../src/infrastructure/storage/index.ts';
 import { fieldDefinitionSchema } from '../src/domains/collections/fields.ts';
-import {
-  createDefinition,
-  createEntry,
-  getDefinition,
-  listPublishedEntries,
-  updateEntry,
-} from '../src/domains/collections/queries.ts';
+import { CollectionsRepository } from '../src/domains/collections/repository.ts';
+import { CollectionsService } from '../src/domains/collections/service.ts';
+import { MediaRepository } from '../src/domains/media/repository.ts';
+import { MediaService } from '../src/domains/media/service.ts';
 import { collectionDefinitionCreateSchema } from '../src/domains/collections/validation.ts';
 import { CommunError } from '../src/common/errors/index.ts';
 
 let dataDir: string;
-let db: StoreDb;
+let collections: CollectionsService;
+let media: MediaService;
 
 beforeAll(() => {
   dataDir = mkdtempSync(join(tmpdir(), 'commun-collections-test-'));
-  db = connectDb(dataDir);
+  const db = connectDb(dataDir);
+  media = new MediaService(new MediaRepository(db), createLocalStorage(dataDir));
+  collections = new CollectionsService(new CollectionsRepository(db), media);
 });
 
 afterAll(() => {
@@ -36,7 +37,7 @@ const publicTenders = {
   ],
 };
 
-describe('collections engine', () => {
+describe('CollectionsService', () => {
   test('rejects a field type outside the closed set', () => {
     const parsed = fieldDefinitionSchema.safeParse({ name: 'x', label: 'X', type: 'raw-html' });
     expect(parsed.success).toBe(false);
@@ -49,10 +50,10 @@ describe('collections engine', () => {
 
   test('creates a definition and validates entries against the generated schema', () => {
     const input = collectionDefinitionCreateSchema.parse(publicTenders);
-    const definition = createDefinition(db, input);
-    expect(getDefinition(db, 'public-tenders').id).toBe(definition.id);
+    const definition = collections.createDefinition(input);
+    expect(collections.getDefinition('public-tenders').id).toBe(definition.id);
 
-    const entry = createEntry(db, definition.id, {
+    const entry = collections.createEntry(definition.id, {
       title: 'Réfection de la voirie',
       slug: 'refection-voirie',
       data: { deadline: '2026-09-01', state: 'open' },
@@ -63,48 +64,63 @@ describe('collections engine', () => {
 
   test('rejects entry data violating the definition', () => {
     expect(() =>
-      createEntry(db, 'public-tenders', {
+      collections.createEntry('public-tenders', {
         title: 'Entrée invalide',
         slug: 'entree-invalide',
-        // deadline manquante + choix hors liste
         data: { state: 'cancelled' },
       }),
     ).toThrow(CommunError);
   });
 
   test('slugs are unique per collection with a domain-level error', () => {
-    createEntry(db, 'events', { title: 'Marché', slug: 'marche', data: { start_date: '2026-08-01' } });
+    collections.createEntry('events', { title: 'Marché', slug: 'marche', data: { start_date: '2026-08-01' } });
     expect(() =>
-      createEntry(db, 'events', { title: 'Doublon', slug: 'marche', data: { start_date: '2026-08-02' } }),
+      collections.createEntry('events', { title: 'Doublon', slug: 'marche', data: { start_date: '2026-08-02' } }),
     ).toThrow('déjà utilisé');
     // The same slug in ANOTHER collection is fine.
-    createEntry(db, 'news', { title: 'Marché', slug: 'marche', data: {} });
+    collections.createEntry('news', { title: 'Marché', slug: 'marche', data: {} });
   });
 
-  test('entries work on a seeded default collection (news) with scheduling', () => {
-    const draft = createEntry(db, 'news', {
-      title: 'Brouillon',
-      slug: 'brouillon',
-      data: { excerpt: 'non publié' },
-    });
-    const published = createEntry(db, 'news', {
-      title: 'Fête de la commune',
-      slug: 'fete-de-la-commune',
-      data: { excerpt: 'publiée' },
-    });
-    updateEntry(db, published.id, { status: 'published' });
-    const scheduled = createEntry(db, 'news', {
-      title: 'Programmée',
-      slug: 'programmee',
-      data: {},
-    });
-    updateEntry(db, scheduled.id, {
+  test('scheduling: drafts and future publishedAt stay off the public plane', () => {
+    collections.createEntry('news', { title: 'Brouillon', slug: 'brouillon', data: {} });
+    const published = collections.createEntry('news', { title: 'Publiée', slug: 'publiee', data: {} });
+    collections.updateEntry(published.id, { status: 'published' });
+    const scheduled = collections.createEntry('news', { title: 'Programmée', slug: 'programmee', data: {} });
+    collections.updateEntry(scheduled.id, {
       status: 'published',
       publishedAt: new Date(Date.now() + 86_400_000).toISOString(),
     });
 
-    const visible = listPublishedEntries(db, 'news');
-    expect(visible.map((entry) => entry.slug)).toEqual(['fete-de-la-commune']);
-    expect(visible.find((entry) => entry.id === draft.id)).toBeUndefined();
+    const visible = collections.listPublishedEntries('news');
+    expect(visible.map((entry) => entry.slug)).toEqual(['publiee']);
+  });
+
+  test('resolved public plane: media fields and rich-text image nodes get URLs', async () => {
+    const png = await (await import('sharp')).default({
+      create: { width: 10, height: 10, channels: 3, background: '#fff' },
+    })
+      .png()
+      .toBuffer();
+    const uploaded = await media.upload({ filename: 'une.png', mime: 'image/png', bytes: new Uint8Array(png) });
+
+    const entry = collections.createEntry('news', {
+      title: 'Avec image',
+      slug: 'avec-image',
+      data: {
+        cover: uploaded.id,
+        content: {
+          type: 'doc',
+          content: [{ type: 'image', attrs: { id: uploaded.id } }, { type: 'paragraph' }],
+        },
+      },
+    });
+    collections.updateEntry(entry.id, { status: 'published' });
+
+    const [resolved] = await collections.listPublishedEntriesResolved('news');
+    const cover = resolved!.data.cover as { id: string; url: string };
+    expect(cover.id).toBe(uploaded.id);
+    expect(cover.url).toContain('/api/media/file/');
+    const doc = resolved!.data.content as { content: Array<{ attrs?: { src?: string } }> };
+    expect(doc.content[0]?.attrs?.src).toContain('/api/media/file/');
   });
 });

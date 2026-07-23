@@ -1,3 +1,5 @@
 export * from './schema.ts';
 export * from './validation.ts';
-export { organizationRouter, getOrganization } from './trpc.ts';
+export { OrganizationRepository } from './repository.ts';
+export { OrganizationService } from './service.ts';
+export { organizationRouter } from './trpc.ts';

@@ -27,6 +27,10 @@ L'API SHALL exposer des routes REST h3 publiques restreintes au strict minimum e
 - **WHEN** le build d'un site appelle `/api/content/<slug>` avec un token API valide
 - **THEN** l'API retourne le contenu publié de la collection (ou les settings pour `organization`) en JSON, prêt pour Nuxt Content
 
+#### Scenario: Résolution des médias dans le contenu
+- **WHEN** une entrée publiée référence des médias (champ `media` ou nœud image/file dans un rich-text)
+- **THEN** le plan contenu retourne des URLs chargeables (`{id, url}` pour les champs, `attrs.src` dans le rich-text) — parité avec la résolution signée du legacy
+
 ### Requirement: Gestion d'erreurs et journalisation
 L'API SHALL retourner des erreurs structurées (code, message, sans fuite de détails internes) et journaliser les requêtes et erreurs via consola avec un niveau configurable.
 

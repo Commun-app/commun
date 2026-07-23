@@ -21,11 +21,7 @@ When('I query the core health check', async ({ world }) => {
 });
 
 Then('it reports database connectivity', ({ world }) => {
-  const health = world.body as {
-    ok: boolean;
-    service: string;
-    db: { ok: boolean };
-  };
+  const health = world.body as { ok: boolean; service: string; db: { ok: boolean } };
   expect(health.ok).toBe(true);
   expect(health.service).toBe('@commun/core');
   expect(health.db.ok).toBe(true);

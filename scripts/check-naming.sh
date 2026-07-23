@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# CI guard: no opencorp residue may survive in Commun sources (task 1.4 of the
-# scaffold-monorepo change). Exits 1 and lists offenders if any are found.
+# CI guard against boilerplate residue: Commun's skeleton was copied from the
+# `opencorp` monorepo (see openspec/changes/scaffold-monorepo, task 1.4) and
+# this script guarantees the rename to @commun/* stays total — any lingering
+# "opencorp" identifier, import or comment fails the build. Exits 1 and lists
+# offenders if any are found.
 set -uo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"

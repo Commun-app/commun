@@ -5,19 +5,21 @@ import { join } from 'node:path';
 import { connectDb, type StoreDb } from '../src/infrastructure/db/index.ts';
 import { organization } from '../src/domains/organization/schema.ts';
 import { collectionEntries } from '../src/domains/collections/schema.ts';
-import {
-  createEntry,
-  listDefinitions,
-  removeDefinition,
-  getDefinition,
-} from '../src/domains/collections/queries.ts';
+import { createLocalStorage } from '../src/infrastructure/storage/index.ts';
+import { CollectionsRepository } from '../src/domains/collections/repository.ts';
+import { CollectionsService } from '../src/domains/collections/service.ts';
+import { MediaRepository } from '../src/domains/media/repository.ts';
+import { MediaService } from '../src/domains/media/service.ts';
 
 let dataDir: string;
 let db: StoreDb;
+let collections: CollectionsService;
 
 beforeAll(() => {
   dataDir = mkdtempSync(join(tmpdir(), 'commun-schema-test-'));
   db = connectDb(dataDir);
+  const media = new MediaService(new MediaRepository(db), createLocalStorage(dataDir));
+  collections = new CollectionsService(new CollectionsRepository(db), media);
 });
 
 afterAll(() => {
@@ -34,18 +36,19 @@ describe('schema — core domains', () => {
   });
 
   test('the seed migration created the four default collections', () => {
-    const slugs = listDefinitions(db)
+    const slugs = collections
+      .listDefinitions()
       .map((definition) => definition.slug)
       .sort();
     expect(slugs).toEqual(['events', 'news', 'officials', 'projects']);
   });
 
   test('entries cascade-delete with their collection definition', () => {
-    const definition = getDefinition(db, 'projects');
-    createEntry(db, definition.id, { title: 'Place du marché', slug: 'place-du-marche', data: {} });
+    const definition = collections.getDefinition('projects');
+    collections.createEntry(definition.id, { title: 'Place du marché', slug: 'place-du-marche', data: {} });
     expect(db.select().from(collectionEntries).all()).toHaveLength(1);
 
-    removeDefinition(db, definition.id);
+    collections.removeDefinition(definition.id);
     expect(db.select().from(collectionEntries).all()).toHaveLength(0);
   });
 });

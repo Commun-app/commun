@@ -11,6 +11,9 @@ RUN bun install --frozen-lockfile
 
 COPY . .
 RUN bun --filter @commun/api build
+# Standalone first-admin bootstrap CLI (spec self-hosting) — bundled so the
+# runtime image needs no workspace sources.
+RUN bun build scripts/bootstrap-admin.ts --target=bun --outfile=bootstrap-admin.mjs
 
 FROM oven/bun:1 AS runtime
 WORKDIR /app
@@ -22,6 +25,9 @@ ENV COMMUN_MIGRATIONS_DIR=/app/drizzle
 
 COPY --from=build /app/apps/api/.output ./.output
 COPY --from=build /app/packages/core/drizzle ./drizzle
+COPY --from=build /app/bootstrap-admin.mjs ./bootstrap-admin.mjs
+# sharp stays a runtime import (native @img binaries) — resolved from here.
+COPY --from=build /app/apps/api/node_modules ./node_modules
 
 RUN mkdir -p /data && chown bun:bun /data
 USER bun

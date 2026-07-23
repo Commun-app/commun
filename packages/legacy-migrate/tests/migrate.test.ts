@@ -3,7 +3,22 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
-import { collectionEntries, connectDb, getOrganization, listPublishedEntries } from '@commun/core';
+import {
+  collectionEntries,
+  connectDb,
+  CollectionsRepository,
+  CollectionsService,
+  MediaRepository,
+  MediaService,
+  OrganizationRepository,
+  createLocalStorage,
+  type StoreDb,
+} from '@commun/core';
+
+const servicesOf = (db: StoreDb, dir: string) => {
+  const media = new MediaService(new MediaRepository(db), createLocalStorage(dir));
+  return new CollectionsService(new CollectionsRepository(db), media);
+};
 import { migrateOrganization, type MigrationReport } from '../src/migrate.ts';
 
 const FIXTURE = join(import.meta.dir, '..', 'fixtures', 'sample');
@@ -23,7 +38,7 @@ afterAll(() => {
 describe('legacy migration (sample dump)', () => {
   test('organization singleton is populated with legacy metadata preserved', () => {
     const db = connectDb(outDir);
-    const org = getOrganization(db);
+    const org = new OrganizationRepository(db).get();
     expect(org?.name).toBe('Ville de Grigny');
     expect((org?.legacyExtra as Record<string, unknown>).legacyId).toBe('64a000000000000000000001');
   });
@@ -35,7 +50,7 @@ describe('legacy migration (sample dump)', () => {
     // handler-schedules has no Commun equivalent → reported unmapped, value in legacy_extra.
     expect(news.fieldsUnmapped.join(' ')).toContain('widget3d');
 
-    const published = listPublishedEntries(db, 'news');
+    const published = servicesOf(db, outDir).listPublishedEntries('news');
     expect(published.map((entry) => entry.slug)).toEqual(['fete-de-la-ville']);
     const extra = published[0]?.legacyExtra as Record<string, unknown>;
     expect(extra.widget3d).toEqual({ periods: [] });
@@ -72,7 +87,7 @@ describe('legacy migration (sample dump)', () => {
       report.collections.map((collection) => collection.entries),
     );
     const db = connectDb(outDir);
-    expect(listPublishedEntries(db, 'news')).toHaveLength(1);
+    expect(servicesOf(db, outDir).listPublishedEntries('news')).toHaveLength(1);
   });
 
   test('unknown organization produces an explicit error', () => {

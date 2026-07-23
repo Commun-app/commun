@@ -4,35 +4,29 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { sql } from 'drizzle-orm';
 import { connectDb, type StoreDb } from '../src/infrastructure/db/index.ts';
-import {
-  acceptInvitation,
-  createInvitation,
-  login,
-  revokeSession,
-  verifySession,
-} from '../src/domains/users/auth.ts';
+import { UsersRepository } from '../src/domains/users/repository.ts';
+import { UsersService } from '../src/domains/users/service.ts';
 import { CommunError } from '../src/common/errors/index.ts';
 
 let dataDir: string;
 let db: StoreDb;
+let users: UsersService;
 
 beforeAll(() => {
   dataDir = mkdtempSync(join(tmpdir(), 'commun-auth-test-'));
   db = connectDb(dataDir);
+  users = new UsersService(new UsersRepository(db));
 });
 
 afterAll(() => {
   rmSync(dataDir, { recursive: true, force: true });
 });
 
-describe('invitations à usage unique', () => {
-  test('full flow: invite → accept → login → session → logout', async () => {
-    const { token: inviteToken } = createInvitation(db, {
-      email: 'Maire@Grigny.fr',
-      role: 'admin',
-    });
+describe('UsersService — invitations et sessions', () => {
+  test('full flow: invite → accept → login → session → targeted revoke → logout', async () => {
+    const { token: inviteToken } = users.createInvitation({ email: 'Maire@Grigny.fr', role: 'admin' });
 
-    const user = await acceptInvitation(db, inviteToken, {
+    const user = await users.acceptInvitation(inviteToken, {
       name: 'Le Maire',
       password: 'correct-horse-battery',
     });
@@ -42,31 +36,48 @@ describe('invitations à usage unique', () => {
 
     // Le lien est consommé : une seconde utilisation échoue.
     await expect(
-      acceptInvitation(db, inviteToken, { name: 'Intrus', password: 'whatever-pass' }),
+      users.acceptInvitation(inviteToken, { name: 'Intrus', password: 'whatever-pass' }),
     ).rejects.toThrow(CommunError);
 
     // Login avec mauvais mot de passe → null, bon mot de passe → session.
-    expect(await login(db, 'maire@grigny.fr', 'wrong')).toBeNull();
-    const result = await login(db, 'maire@grigny.fr', 'correct-horse-battery');
-    expect(result).not.toBeNull();
+    expect(await users.login('maire@grigny.fr', 'wrong')).toBeNull();
+    const first = await users.login('maire@grigny.fr', 'correct-horse-battery');
+    const second = await users.login('maire@grigny.fr', 'correct-horse-battery');
+    expect(first).not.toBeNull();
 
-    // Le token de session vérifie ; après révocation, il ne vérifie plus.
-    const auth = verifySession(db, result!.token);
-    expect(auth?.user.email).toBe('maire@grigny.fr');
-    revokeSession(db, auth!.sessionId);
-    expect(verifySession(db, result!.token)).toBeNull();
+    // Liste des appareils : 2 sessions actives, la courante est marquée.
+    const list = users.listSessions(user.id, second!.session.sessionId);
+    expect(list).toHaveLength(2);
+    expect(list.find((s) => s.current)?.id).toBe(second!.session.sessionId);
+
+    // Révocation ciblée de la première session — la seconde reste valide.
+    users.revokeOwnSession(user.id, first!.session.sessionId);
+    expect(users.verifySession(first!.token)).toBeNull();
+    expect(users.verifySession(second!.token)?.user.email).toBe('maire@grigny.fr');
+
+    // Logout de la session courante.
+    users.revokeSession(second!.session.sessionId);
+    expect(users.verifySession(second!.token)).toBeNull();
   });
 
-  test('a forged or expired session token verifies to null', () => {
-    expect(verifySession(db, 'forged-token')).toBeNull();
+  test('revoking a session that belongs to someone else is refused', async () => {
+    const { token } = users.createInvitation({ email: 'autre@grigny.fr', role: 'redacteur' });
+    const other = await users.acceptInvitation(token, { name: 'Autre', password: 'password-solide' });
+    const login = await users.login('autre@grigny.fr', 'password-solide');
+    expect(() => users.revokeOwnSession('someone-else', login!.session.sessionId)).toThrow(CommunError);
+    expect(users.verifySession(login!.token)).not.toBeNull();
+    expect(other.role).toBe('redacteur');
+  });
+
+  test('a forged session token verifies to null', () => {
+    expect(users.verifySession('forged-token')).toBeNull();
   });
 
   test('an expired invitation is refused without leaking account info', async () => {
-    const { token } = createInvitation(db, { email: 'agent@grigny.fr', role: 'redacteur' });
-    // Force l'expiration en base.
-    db.run(sql`UPDATE invitations SET expires_at = '2000-01-01T00:00:00.000Z'`);
+    const { token } = users.createInvitation({ email: 'agent@grigny.fr', role: 'redacteur' });
+    db.run(sql`UPDATE invitations SET expires_at = '2000-01-01T00:00:00.000Z' WHERE used_at IS NULL`);
     await expect(
-      acceptInvitation(db, token, { name: 'Agent', password: 'some-password-1' }),
+      users.acceptInvitation(token, { name: 'Agent', password: 'some-password-1' }),
     ).rejects.toThrow('invitation invalide ou expirée');
   });
 });

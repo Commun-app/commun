@@ -75,6 +75,15 @@ Projet greenfield — pas de déploiement à migrer. Ordre de bootstrap : copie/
 
 - Le repo Git de `commun.app/` : initialisé dans ce change (`git init` + premier commit) — à confirmer, ainsi que la création de l'org GitHub `commun-app` (prévue phase 6).
 
+## Audit de parité legacy (2026-07-23, sur demande de review)
+
+Passe exhaustive sur les 33 actions HTTP des 4 services legacy (media/members/organizations/records). Résultat : **couvert ou volontairement différent à ~90 %**, aucune fonctionnalité utilisée oubliée après les compléments ci-dessous.
+
+- **Complété suite à l'audit** : résolution des médias sur le plan contenu (champs `media` → `{id, url}` ET nœuds image/file dans le rich-text → `attrs.src`, parité avec la signature S3 du legacy) ; liste des sessions + révocation ciblée (`auth.sessions.list/revoke`, parité `account/me` + `DELETE /account/session/:id`) ; `users.update`.
+- **Différent assumé (capacité couverte autrement)** : upload média côté serveur (legacy : URL S3 pré-signée + PUT client + resize via SQS externe) ; sessions opaques cookie/Bearer (legacy : JWT secret `@changeme`) ; 2 rôles fixes (legacy : CRUD de rôles dynamiques — aucun rôle custom en prod) ; organisation singleton (legacy : hiérarchie multi-org par `path`) ; invitations à usage unique (legacy : `users.create` + `emailProofToken` jamais envoyé par email).
+- **Abandonné (mort ou jamais fonctionnel dans le legacy)** : `media.update`/`media.delete` (fichiers 100 % commentés), `users.invite` (stub vide), `password/recover` (aucun email jamais envoyé), branche changement d'email de `email/confirm`, `wordpress-marseille-15-16` (client en dur, sans auth), `devices/fetch-all` (consommé uniquement par l'ancien SSG abandonné).
+- **Reste à arbitrer (produit)** : `deployments` POST/GET (déclencheur + statut Vercel — utilisé par le bouton publier de l'admin legacy) → probablement remplacé par le build auto-hébergé de la phase 3 ; à trancher au cadrage phase 2/3. `GET /content/deployment` (payload `_theme`/`_pages`/`slugs` consommé par les thèmes actuels) → couvert par `/api/content/organization` (theme) + collections ; les `_pages` JSON-driven appartiennent à l'ancien SSG abandonné, la layer phase 3 consommera le nouveau plan.
+
 ## Résolu par review du code (2026-07-23)
 
 - **Principe de périmètre phase 1 (structurant)** : reproduire l'existant legacy à iso-fonctionnalités dans le monolithe — en écartant le code mort/abandonné — sans AUCUNE fonctionnalité nouvelle. En conséquence : domaines `deliberations` et `forms` retirés (fonctionnalités nouvelles ; elles reviendront par leurs propres changes, les délibérations avec le module IA). Le contenu est 100 % collections génériques.

@@ -2,6 +2,11 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, normalize } from 'node:path';
 import type { StorageDriver } from './types.ts';
 
+// NOT a legacy port: the legacy platform was S3-only. This driver exists for
+// the self-hosting promise (spec self-hosting) — `docker compose up` must give
+// a fully working instance with ZERO external dependency; S3 stays available
+// via the other driver for production-grade setups.
+
 /** Keys are relative paths — refuse anything that could escape the media root. */
 function safePath(baseDir: string, key: string): string {
   const path = normalize(join(baseDir, key));

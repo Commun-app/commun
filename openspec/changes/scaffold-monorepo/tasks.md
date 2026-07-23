@@ -29,7 +29,7 @@
 - [x] 3.3 Route REST publique de contenu `/api/content/[domain]` : domaines système + fallback collections par slug (news, events, …), contenu publié uniquement, auth par token API
 - [x] 3.4 ~~Route publique formulaires~~ **Retirée (review 2026-07-23)** : le plan REST public est désormais 100 % lecture seule
 - [x] 3.5 `GET /health` (état DB) ; ~~garde placeholder~~ retirée sur review (pas d'heuristique de secrets) — aucun secret en dur ni valeur par défaut fonctionnelle
-- [ ] 3.6 Tests d'intégration automatisés des routes clés (auth, CRUD actualité, contenu public, formulaire) — smoke manuels faits, à automatiser dans e2e/
+- [x] 3.6 E2E automatisés (Playwright + Gherkin, 7 scénarios verts) : health HTTP + tRPC, cycle invitation→login→me→logout, cookie de session, plan contenu (401 sans token, publiés seuls, 404 collection inconnue) — seed via script Bun partageant la base de l'API sous test
 
 ## 4. Authentification
 
