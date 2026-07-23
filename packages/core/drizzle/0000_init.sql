@@ -75,61 +75,6 @@ CREATE TABLE `media` (
 	`updated_at` text NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `council_sessions` (
-	`id` text PRIMARY KEY NOT NULL,
-	`title` text NOT NULL,
-	`date` text NOT NULL,
-	`agenda` text,
-	`minutes` text,
-	`status` text DEFAULT 'draft' NOT NULL,
-	`published_at` text,
-	`legacy_extra` text,
-	`created_at` text NOT NULL,
-	`updated_at` text NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE `deliberations` (
-	`id` text PRIMARY KEY NOT NULL,
-	`session_id` text NOT NULL,
-	`number` text NOT NULL,
-	`subject` text NOT NULL,
-	`content` text,
-	`votes_for` integer,
-	`votes_against` integer,
-	`abstentions` integer,
-	`outcome` text,
-	`file_media_id` text,
-	`status` text DEFAULT 'draft' NOT NULL,
-	`published_at` text,
-	`legacy_extra` text,
-	`created_at` text NOT NULL,
-	`updated_at` text NOT NULL,
-	FOREIGN KEY (`session_id`) REFERENCES `council_sessions`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`file_media_id`) REFERENCES `media`(`id`) ON UPDATE no action ON DELETE set null
-);
---> statement-breakpoint
-CREATE TABLE `form_submissions` (
-	`id` text PRIMARY KEY NOT NULL,
-	`form_id` text NOT NULL,
-	`data` text NOT NULL,
-	`status` text DEFAULT 'new' NOT NULL,
-	`created_at` text NOT NULL,
-	FOREIGN KEY (`form_id`) REFERENCES `forms`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE `forms` (
-	`id` text PRIMARY KEY NOT NULL,
-	`name` text NOT NULL,
-	`slug` text NOT NULL,
-	`description` text,
-	`fields` text NOT NULL,
-	`active` integer DEFAULT true NOT NULL,
-	`legacy_extra` text,
-	`created_at` text NOT NULL,
-	`updated_at` text NOT NULL
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `forms_slug_unique` ON `forms` (`slug`);--> statement-breakpoint
 CREATE TABLE `collection_definitions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -155,3 +100,5 @@ CREATE TABLE `collection_entries` (
 	`updated_at` text NOT NULL,
 	FOREIGN KEY (`collection_id`) REFERENCES `collection_definitions`(`id`) ON UPDATE no action ON DELETE cascade
 );
+--> statement-breakpoint
+CREATE UNIQUE INDEX `collection_entries_slug_unique` ON `collection_entries` (`collection_id`,`slug`);

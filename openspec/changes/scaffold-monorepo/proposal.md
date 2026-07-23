@@ -17,6 +17,8 @@ La plateforme legacy Poulpus (5 microservices sur framework maison, MongoDB part
 
 Aucun code legacy n'est modifié (décision actée : l'existant reste intouché jusqu'à la bascule).
 
+**Principe de périmètre (review du 2026-07-23)** : la phase 1 reproduit l'existant à iso-fonctionnalités (hors code mort/abandonné), sans fonctionnalité nouvelle — les délibérations et formulaires citoyens, initialement envisagés ici, sont reportés à leurs propres changes.
+
 ## Capabilities
 
 ### New Capabilities

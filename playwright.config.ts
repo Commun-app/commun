@@ -21,22 +21,20 @@ export default defineConfig({
   },
   // Boot the API under test on the dedicated test port.
   //
-  // Two shims, both load-bearing:
-  // 1. `nitro dev` cannot boot this API: core imports `bun:sqlite`, and the
-  //    nitro CLI + its dev worker run under Node, which rejects the `bun:`
-  //    scheme. So: build the API and run the production bundle under Bun.
-  // 2. In the built bundle, core's MIGRATIONS_FOLDER (`import.meta.dir` +
-  //    `../../../drizzle`) resolves to `apps/api/drizzle` — symlink it to
-  //    `packages/core/drizzle` before starting.
+  // One shim, load-bearing: `nitro dev` cannot boot this API — core imports
+  // `bun:sqlite`, and the nitro CLI + its dev worker run under Node, which
+  // rejects the `bun:` scheme. So: build the API and run the production
+  // bundle under Bun. The bundle resolves its migrations via
+  // COMMUN_MIGRATIONS_DIR (same mechanism as the Docker image).
   // COMMUN_DATA_DIR points at a throwaway dir so E2E rows never land in the
   // developer's real ~/.commun data; it is recreated fresh each boot.
   webServer: [
     {
       command:
         'bun --filter @commun/api build && ' +
-        'ln -sfn ../../packages/core/drizzle apps/api/drizzle && ' +
         'rm -rf "${TMPDIR:-/tmp}/commun-e2e-data" && ' +
         'COMMUN_DATA_DIR="${TMPDIR:-/tmp}/commun-e2e-data" ' +
+        'COMMUN_MIGRATIONS_DIR="$PWD/packages/core/drizzle" ' +
         'PORT=3101 bun apps/api/.output/server/index.mjs',
       url: 'http://127.0.0.1:3101/health',
       reuseExistingServer: !process.env.CI,

@@ -21,15 +21,11 @@ L'API SHALL exposer le router tRPC de `@commun/core` sur `/api/trpc` (catch-all 
 - **THEN** l'API répond avec une erreur UNAUTHORIZED et n'exécute pas l'opération
 
 ### Requirement: Plan public REST
-L'API SHALL exposer des routes REST h3 publiques restreintes au strict minimum : lecture du contenu publié par domaine (destinée au build des sites, authentifiée par token API) et soumission des formulaires citoyens (publique). Toute autre surface d'API SHALL être exposée via tRPC.
+L'API SHALL exposer des routes REST h3 publiques restreintes au strict minimum et en LECTURE SEULE : contenu publié par collection (destiné au build des sites, authentifié par token API) et objets médias du driver local. Toute autre surface d'API SHALL être exposée via tRPC. (La soumission de formulaires citoyens, fonctionnalité nouvelle, est hors périmètre phase 1 — review 2026-07-23.)
 
 #### Scenario: Récupération du contenu au build
-- **WHEN** le build d'un site appelle les routes de contenu avec un token API valide
-- **THEN** l'API retourne le contenu publié (actualités, agenda, élus, projets, délibérations, pages) en JSON, prêt pour Nuxt Content
-
-#### Scenario: Soumission d'un formulaire citoyen
-- **WHEN** un citoyen soumet un formulaire (contact, signalement) via la route publique
-- **THEN** la soumission est validée, persistée, et visible côté admin ; les soumissions sont rate-limitées par IP
+- **WHEN** le build d'un site appelle `/api/content/<slug>` avec un token API valide
+- **THEN** l'API retourne le contenu publié de la collection (ou les settings pour `organization`) en JSON, prêt pour Nuxt Content
 
 ### Requirement: Gestion d'erreurs et journalisation
 L'API SHALL retourner des erreurs structurées (code, message, sans fuite de détails internes) et journaliser les requêtes et erreurs via consola avec un niveau configurable.

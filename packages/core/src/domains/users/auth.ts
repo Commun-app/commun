@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { and, eq, gt, isNull } from 'drizzle-orm';
+import { and, eq, gt, isNotNull, lt, or } from 'drizzle-orm';
+import { isNull } from 'drizzle-orm';
 import { CommunError, ERR } from '../../common/errors/index.ts';
 import type { StoreDb } from '../../infrastructure/db/index.ts';
 import { invitations, sessions, users, type User } from './schema.ts';
@@ -23,6 +24,10 @@ export const hashPassword = (password: string) => Bun.password.hash(password);
 export const verifyPassword = (password: string, passwordHash: string) =>
   Bun.password.verify(password, passwordHash);
 
+// Verified against when the email is unknown, so login cost is identical for
+// existing and non-existing accounts (no user-enumeration timing oracle).
+const DUMMY_HASH = Bun.password.hashSync('commun-dummy-password-for-timing');
+
 // ── Sessions opaques ─────────────────────────────────────────────────────────
 // Le token (aléatoire, 256 bits) voyage dans un cookie httpOnly ; seul son
 // sha256 est stocké. Révocation individuelle par simple update.
@@ -33,9 +38,9 @@ export async function login(
   password: string,
 ): Promise<{ token: string; session: AuthSession } | null> {
   const user = db.select().from(users).where(eq(users.email, email.toLowerCase())).get();
-  // Compare against a dummy hash when the user is unknown — keeps timing flat.
-  const ok = user?.passwordHash ? await verifyPassword(password, user.passwordHash) : false;
-  if (!user || !ok) return null;
+  // Always run one argon2 verification — unknown emails cost the same as known ones.
+  const verified = await verifyPassword(password, user?.passwordHash ?? DUMMY_HASH);
+  if (!user?.passwordHash || !verified) return null;
   return createSession(db, user);
 }
 
@@ -69,6 +74,20 @@ export function verifySession(db: StoreDb, token: string): AuthSession | null {
 
 export function revokeSession(db: StoreDb, sessionId: string): void {
   db.update(sessions).set({ revokedAt: nowIso() }).where(eq(sessions.id, sessionId)).run();
+}
+
+/**
+ * Housekeeping (SQLite has no TTL indexes, unlike the legacy Mongo): drop
+ * expired/revoked sessions and consumed/expired invitations. Called at boot.
+ */
+export function purgeExpiredAuthRows(db: StoreDb): void {
+  const now = nowIso();
+  db.delete(sessions)
+    .where(or(lt(sessions.expiresAt, now), isNotNull(sessions.revokedAt)))
+    .run();
+  db.delete(invitations)
+    .where(or(lt(invitations.expiresAt, now), isNotNull(invitations.usedAt)))
+    .run();
 }
 
 // ── Invitations à usage unique ───────────────────────────────────────────────

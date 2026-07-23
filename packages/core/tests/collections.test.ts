@@ -72,6 +72,15 @@ describe('collections engine', () => {
     ).toThrow(CommunError);
   });
 
+  test('slugs are unique per collection with a domain-level error', () => {
+    createEntry(db, 'events', { title: 'Marché', slug: 'marche', data: { start_date: '2026-08-01' } });
+    expect(() =>
+      createEntry(db, 'events', { title: 'Doublon', slug: 'marche', data: { start_date: '2026-08-02' } }),
+    ).toThrow('déjà utilisé');
+    // The same slug in ANOTHER collection is fine.
+    createEntry(db, 'news', { title: 'Marché', slug: 'marche', data: {} });
+  });
+
   test('entries work on a seeded default collection (news) with scheduling', () => {
     const draft = createEntry(db, 'news', {
       title: 'Brouillon',

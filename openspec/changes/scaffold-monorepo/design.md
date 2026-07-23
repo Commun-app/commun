@@ -75,6 +75,16 @@ Projet greenfield — pas de déploiement à migrer. Ordre de bootstrap : copie/
 
 - Le repo Git de `commun.app/` : initialisé dans ce change (`git init` + premier commit) — à confirmer, ainsi que la création de l'org GitHub `commun-app` (prévue phase 6).
 
+## Résolu par review du code (2026-07-23)
+
+- **Principe de périmètre phase 1 (structurant)** : reproduire l'existant legacy à iso-fonctionnalités dans le monolithe — en écartant le code mort/abandonné — sans AUCUNE fonctionnalité nouvelle. En conséquence : domaines `deliberations` et `forms` retirés (fonctionnalités nouvelles ; elles reviendront par leurs propres changes, les délibérations avec le module IA). Le contenu est 100 % collections génériques.
+- **Garde placeholder supprimée** (`assertProductionConfig`) : pas d'heuristique programmatique sur la qualité des secrets — responsabilité opérationnelle. Il n'existe d'ailleurs aucun secret de configuration obligatoire (sessions opaques, pas de JWT).
+- **Oracle de timing corrigé** : le login vérifie systématiquement un hash argon2 (dummy pré-calculé pour les emails inconnus) — plus d'énumération de comptes par le temps de réponse.
+- **Unicité `(collection_id, slug)`** sur les entrées (index unique + erreur domaine explicite) — les slugs sont des segments de route du site publié.
+- **CORS** : recommandation admin même origine que l'API (zéro config) ; origines séparées possibles via `COMMUN_ALLOWED_ORIGINS` (reflet + credentials — le wildcard est incompatible avec les cookies).
+- **Hygiène** : purge au boot des sessions expirées/révoquées et invitations consommées/expirées (SQLite n'a pas de TTL) ; shim symlink e2e remplacé par `COMMUN_MIGRATIONS_DIR`.
+- **Parité existant à arbitrer plus tard** (notes, pas des tâches phase 1) : le déclenchement de déploiement Vercel du legacy sera probablement rendu obsolète par le build auto-hébergé (phase 3) ; la récupération de mot de passe legacy n'a jamais fonctionné (envoi d'emails TODO côté legacy) → considérée abandonnée, les invitations la remplacent.
+
 ## Résolu par annotations (2026-07-22)
 
 - **Base de données** : `bun:sqlite` plutôt que LibSQL — driver natif du runtime, zéro binding (D2 révisé).

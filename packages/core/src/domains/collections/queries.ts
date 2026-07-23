@@ -109,11 +109,30 @@ export function listPublishedEntries(
 export function createEntry(db: StoreDb, collectionId: string, input: EntryCreate): CollectionEntry {
   const definition = getDefinition(db, collectionId);
   const data = validateData(definition, input.data);
-  return db
-    .insert(collectionEntries)
-    .values({ ...input, data, collectionId: definition.id })
-    .returning()
-    .get();
+  try {
+    return db
+      .insert(collectionEntries)
+      .values({ ...input, data, collectionId: definition.id })
+      .returning()
+      .get();
+  } catch (error) {
+    throw mapSlugConflict(error, definition.slug, input.slug);
+  }
+}
+
+/** SQLite unique-index violations surface as raw errors — translate the slug case. */
+function mapSlugConflict(error: unknown, collectionSlug: string, entrySlug: string): unknown {
+  if (
+    error instanceof Error &&
+    error.message.includes('UNIQUE constraint failed') &&
+    error.message.includes('collection_entries.slug')
+  ) {
+    return new CommunError(
+      ERR.INVALID_STATE,
+      `le slug "${entrySlug}" est déjà utilisé dans la collection ${collectionSlug}`,
+    );
+  }
+  return error;
 }
 
 export function updateEntry(db: StoreDb, id: string, input: EntryUpdate): CollectionEntry {
@@ -121,12 +140,16 @@ export function updateEntry(db: StoreDb, id: string, input: EntryUpdate): Collec
   if (!existing) throw new CommunError(ERR.NOT_FOUND, `entrée introuvable: ${id}`);
   const definition = getDefinition(db, existing.collectionId);
   const data = input.data ? validateData(definition, input.data) : undefined;
-  return db
-    .update(collectionEntries)
-    .set({ ...input, ...(data ? { data } : {}) })
-    .where(eq(collectionEntries.id, id))
-    .returning()
-    .get()!;
+  try {
+    return db
+      .update(collectionEntries)
+      .set({ ...input, ...(data ? { data } : {}) })
+      .where(eq(collectionEntries.id, id))
+      .returning()
+      .get()!;
+  } catch (error) {
+    throw mapSlugConflict(error, definition.slug, input.slug ?? existing.slug);
+  }
 }
 
 export function removeEntry(db: StoreDb, id: string): void {

@@ -2,7 +2,7 @@
 
 > Le CMS open source des communes et collectivités françaises — auto-hébergeable, souverain, avec IA intégrée.
 
-**commun.app** permet à une collectivité (commune, communauté de communes…) de gérer son site public — actualités, agenda, élus, projets, **délibérations**, formulaires citoyens — depuis une administration simple, et de le publier en site statique rapide et accessible (RGAA).
+**commun.app** permet à une collectivité (commune, communauté de communes…) de gérer son site public — actualités, agenda, élus, projets et toute collection de contenus sur mesure — depuis une administration simple, et de le publier en site statique rapide et accessible (RGAA). À venir sur la feuille de route : délibérations avec transcription IA des conseils, formulaires citoyens.
 
 - **Open source** : AGPL v3 — auto-hébergez gratuitement, contribuez, auditez.
 - **Single-tenant** : une instance = une collectivité. Sa base SQLite, ses médias, son serveur.

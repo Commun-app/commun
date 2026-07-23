@@ -6,7 +6,6 @@
 
 import type { Core, CoreEnv } from './common/types/index.ts';
 import { parseEnv } from './common/env/index.ts';
-import { assertProductionConfig } from './common/env/guards.ts';
 import { instrument } from './common/observability/index.ts';
 import { connectDb } from './infrastructure/db/index.ts';
 import { HealthService } from './infrastructure/health/index.ts';
@@ -14,7 +13,6 @@ import { createStorage } from './infrastructure/storage/index.ts';
 
 export function createCore({ env }: { env?: CoreEnv } = {}): Core {
   const e: CoreEnv = env ?? parseEnv();
-  assertProductionConfig();
 
   const db = connectDb(e.COMMUN_DATA_DIR, e.COMMUN_MIGRATIONS_DIR);
   const health = instrument(new HealthService(db), { layer: 'infra', component: 'health' });
@@ -24,7 +22,6 @@ export function createCore({ env }: { env?: CoreEnv } = {}): Core {
 }
 
 export { parseEnv } from './common/env/index.ts';
-export { assertProductionConfig } from './common/env/guards.ts';
 export { connectDb, type StoreDb } from './infrastructure/db/index.ts';
 export {
   createStorage,
@@ -42,6 +39,4 @@ export { appRouter, type AppRouter } from './router.ts';
 export * from './domains/organization/index.ts';
 export * from './domains/users/index.ts';
 export * from './domains/media/index.ts';
-export * from './domains/deliberations/index.ts';
-export * from './domains/forms/index.ts';
 export * from './domains/collections/index.ts';

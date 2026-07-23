@@ -38,9 +38,9 @@ Les consommateurs machine (build des sites) SHALL s'authentifier par token API :
 - **WHEN** un build appelle le plan contenu avec un token révoqué
 - **THEN** l'API répond UNAUTHORIZED
 
-### Requirement: Aucun secret par défaut
-L'application SHALL refuser de démarrer en production si un secret obligatoire est absent ou vaut une valeur d'exemple. Aucun secret ne SHALL être codé en dur dans le code source.
+### Requirement: Aucun secret codé en dur
+Aucun secret ne SHALL être codé en dur dans le code source, et aucun secret ne SHALL avoir de valeur par défaut fonctionnelle. Le système ne fait AUCUNE vérification heuristique de la qualité des secrets configurés (décision de review du 2026-07-23) — leur gestion relève de l'exploitation. Par construction, l'authentification n'exige aucun secret de configuration (sessions opaques hashées, pas de JWT).
 
-#### Scenario: Secret manquant en production
-- **WHEN** l'instance démarre en mode production sans secret de session configuré
-- **THEN** le démarrage échoue avec un message d'erreur explicite
+#### Scenario: Recherche de secrets en dur
+- **WHEN** on audite le code source du monolithe
+- **THEN** aucun secret fonctionnel (clé, mot de passe, token) n'y figure

@@ -1,4 +1,4 @@
-import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import {
   createdAt,
   id,
@@ -27,21 +27,26 @@ export const collectionDefinitions = sqliteTable('collection_definitions', {
   updatedAt: updatedAt(),
 });
 
-/** Entries of a custom collection — validated against the definition's fields. */
-export const collectionEntries = sqliteTable('collection_entries', {
-  id: id(),
-  collectionId: text('collection_id')
-    .notNull()
-    .references(() => collectionDefinitions.id, { onDelete: 'cascade' }),
-  title: text('title').notNull(),
-  slug: text('slug').notNull(),
-  data: text('data', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
-  status: publicationStatus(),
-  publishedAt: publishedAt(),
-  legacyExtra: legacyExtra(),
-  createdAt: createdAt(),
-  updatedAt: updatedAt(),
-});
+/** Entries of a collection — validated against the definition's fields. */
+export const collectionEntries = sqliteTable(
+  'collection_entries',
+  {
+    id: id(),
+    collectionId: text('collection_id')
+      .notNull()
+      .references(() => collectionDefinitions.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    slug: text('slug').notNull(),
+    data: text('data', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+    status: publicationStatus(),
+    publishedAt: publishedAt(),
+    legacyExtra: legacyExtra(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  // Slugs are route segments on the published site — unique per collection.
+  (table) => [uniqueIndex('collection_entries_slug_unique').on(table.collectionId, table.slug)],
+);
 
 export type CollectionDefinition = typeof collectionDefinitions.$inferSelect;
 export type NewCollectionDefinition = typeof collectionDefinitions.$inferInsert;

@@ -2,11 +2,15 @@ import { beforeAll, afterAll, describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { eq } from 'drizzle-orm';
 import { connectDb, type StoreDb } from '../src/infrastructure/db/index.ts';
 import { organization } from '../src/domains/organization/schema.ts';
-import { councilSessions, deliberations } from '../src/domains/deliberations/schema.ts';
-import { listDefinitions } from '../src/domains/collections/queries.ts';
+import { collectionEntries } from '../src/domains/collections/schema.ts';
+import {
+  createEntry,
+  listDefinitions,
+  removeDefinition,
+  getDefinition,
+} from '../src/domains/collections/queries.ts';
 
 let dataDir: string;
 let db: StoreDb;
@@ -36,16 +40,12 @@ describe('schema — core domains', () => {
     expect(slugs).toEqual(['events', 'news', 'officials', 'projects']);
   });
 
-  test('deliberations cascade-delete with their council session', () => {
-    db.insert(councilSessions)
-      .values({ id: 's1', title: 'Conseil de juillet', date: '2026-07-01' })
-      .run();
-    db.insert(deliberations)
-      .values({ sessionId: 's1', number: '2026-042', subject: 'Budget participatif' })
-      .run();
-    expect(db.select().from(deliberations).all()).toHaveLength(1);
+  test('entries cascade-delete with their collection definition', () => {
+    const definition = getDefinition(db, 'projects');
+    createEntry(db, definition.id, { title: 'Place du marché', slug: 'place-du-marche', data: {} });
+    expect(db.select().from(collectionEntries).all()).toHaveLength(1);
 
-    db.delete(councilSessions).where(eq(councilSessions.id, 's1')).run();
-    expect(db.select().from(deliberations).all()).toHaveLength(0);
+    removeDefinition(db, definition.id);
+    expect(db.select().from(collectionEntries).all()).toHaveLength(0);
   });
 });

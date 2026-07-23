@@ -1,38 +1,22 @@
 import { defineHandler } from 'nitro';
 import { HTTPError } from 'h3';
-import {
-  CommunError,
-  getOrganization,
-  listActiveForms,
-  listPublishedCouncilSessions,
-  listPublishedDeliberations,
-  listPublishedEntries,
-  type StoreDb,
-} from '@commun/core';
+import { CommunError, getOrganization, listPublishedEntries } from '@commun/core';
 import { requireApiToken } from '../../../services/content-auth.ts';
 import { useCore } from '../../../services/context.ts';
 
 /**
- * Public content plane — consumed by the static site build. Bearer-token
- * authenticated; serves ONLY published content (scheduled publication
- * respected). System domains are resolved first; anything else falls through
- * to the collections engine by slug (news, events, officials, projects, and
- * any collection the commune defined).
+ * Public content plane — consumed by the static site build (the heir of the
+ * legacy `/content/deployment` + `/content/records` device endpoints).
+ * Bearer-token authenticated; serves ONLY published content. `organization`
+ * resolves the instance settings; anything else resolves a collection by slug
+ * (news, events, officials, projects, and any collection the commune defined).
  */
-const SYSTEM_DOMAINS: Record<string, (db: StoreDb) => unknown> = {
-  organization: (db) => getOrganization(db),
-  'council-sessions': (db) => listPublishedCouncilSessions(db),
-  deliberations: (db) => listPublishedDeliberations(db),
-  forms: (db) => listActiveForms(db),
-};
-
 export default defineHandler((event) => {
   requireApiToken(event.req as unknown as Request);
   const domain = event.context.params?.domain ?? '';
   const db = useCore().db;
 
-  const system = SYSTEM_DOMAINS[domain];
-  if (system) return { [domain]: system(db) };
+  if (domain === 'organization') return { organization: getOrganization(db) };
 
   try {
     return { [domain]: listPublishedEntries(db, domain) };

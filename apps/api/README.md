@@ -3,7 +3,7 @@
 API single-tenant de Commun — serveur [Nitro v3](https://nitro.build).
 
 - **Plan admin** : tRPC monté sur `/api/trpc/*` (router défini dans `@commun/core`).
-- **Plan public** : routes REST h3 réduites au strict minimum — contenu publié pour le build des sites (`/api/content/*`, token API) et soumission des formulaires citoyens.
+- **Plan public** : routes REST h3 réduites au strict minimum — contenu publié pour le build des sites (`/api/content/*`, token API, lecture seule) et médias locaux (`/api/media/file/*`).
 - **Santé** : `GET /health`.
 
 ```sh

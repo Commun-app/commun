@@ -17,6 +17,9 @@ Commun dev sandbox
 EOF
 
 export COMMUN_DATA_DIR="$data_dir"
+# The dev worker bundles core sources — the migrations folder cannot be
+# resolved relatively from there, so pin it explicitly.
+export COMMUN_MIGRATIONS_DIR="$repo_root/packages/core/drizzle"
 
 # --bun is load-bearing: nitro's CLI has a Node shebang but core imports bun:sqlite.
 cd "$repo_root/apps/api" && exec bun --bun nitro dev

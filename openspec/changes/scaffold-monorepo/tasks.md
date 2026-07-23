@@ -15,8 +15,8 @@
 - [x] 2.2 Domaine `organization` : settings d'instance en enregistrement unique (identité, coordonnées, thème, réseaux) — vocabulaire générique, codebase anglaise (D11)
 - [x] 2.3 Domaine `users` : utilisateurs, rôles admin/rédacteur, sessions, invitations, tokens API (tables — tokens hashés)
 - [x] 2.4 ~~Domaines de contenu typés~~ **Révisé (D6 rév. 2)** : le contenu standard vit dans le moteur de collections ; les 4 collections par défaut (`news`, `events`, `officials`, `projects`) sont seedées par migration Drizzle custom (`0001_seed-default-collections.sql`)
-- [x] 2.5 Domaine `deliberations` (typé, exception assumée) : `council_sessions` (date, ordre du jour, compte-rendu) + `deliberations` (numéro, objet, votes structurés, résultat), publiables
-- [x] 2.6 Domaine `forms` : définitions de formulaires citoyens + soumissions
+- [x] 2.5 ~~Domaine `deliberations`~~ **Retiré (review 2026-07-23)** : fonctionnalité nouvelle, hors périmètre phase 1 (iso-fonctionnel existant) — reviendra avec le module IA
+- [x] 2.6 ~~Domaine `forms`~~ **Retiré (review 2026-07-23)** : idem, fonctionnalité nouvelle hors périmètre phase 1
 - [x] 2.7 Domaine `media` : enregistrements médias (mime, variantes, alt/légende)
 - [x] 2.8 Colonne `legacy_extra` (JSON) sur chaque table de contenu + schémas Zod create/update par domaine (drizzle-zod)
 - [x] 2.9 Moteur de collections : définitions (champs à jeu fermé de 8 types anglais), validation Zod générée, CRUD générique avec validation des entrées, cycle de publication
@@ -27,8 +27,8 @@
 - [x] 3.1 Router tRPC racine agrégeant les routers des domaines système (organization, users, apiTokens, deliberations, forms, media, collections), monté en catch-all `/api/trpc` ; contexte par requête (session, db, cookies)
 - [x] 3.2 Middleware de protection : `protectedProcedure` (session) et `adminProcedure` (rôle) ; erreurs structurées + logs consola
 - [x] 3.3 Route REST publique de contenu `/api/content/[domain]` : domaines système + fallback collections par slug (news, events, …), contenu publié uniquement, auth par token API
-- [x] 3.4 Route REST publique `POST /api/forms/[slug]` avec rate-limiting par IP (5/min) et validation contre les champs du formulaire
-- [x] 3.5 `GET /health` (état DB) ; garde de démarrage prod refusant les valeurs placeholder (`assertProductionConfig`)
+- [x] 3.4 ~~Route publique formulaires~~ **Retirée (review 2026-07-23)** : le plan REST public est désormais 100 % lecture seule
+- [x] 3.5 `GET /health` (état DB) ; ~~garde placeholder~~ retirée sur review (pas d'heuristique de secrets) — aucun secret en dur ni valeur par défaut fonctionnelle
 - [ ] 3.6 Tests d'intégration automatisés des routes clés (auth, CRUD actualité, contenu public, formulaire) — smoke manuels faits, à automatiser dans e2e/
 
 ## 4. Authentification

@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: Organisation par domaines
-`packages/core` SHALL organiser le code par domaine, chaque domaine regroupant son schéma Drizzle, ses schémas de validation Zod, ses queries et son router tRPC. Les domaines système du socle v1 sont : `organization` (settings d'instance), `users` (utilisateurs/sessions/invitations/tokens API), `media`, `deliberations` (séances du conseil + délibérations), `forms` (formulaires citoyens), `collections` (moteur de contenu générique). Le code, les identifiants et les noms de tables SHALL être en anglais ; seules les chaînes destinées aux utilisateurs restent en français.
+`packages/core` SHALL organiser le code par domaine, chaque domaine regroupant son schéma Drizzle, ses schémas de validation Zod, ses queries et son router tRPC. Les domaines système du socle v1 sont : `organization` (settings d'instance), `users` (utilisateurs/sessions/invitations/tokens API), `media`, `collections` (moteur de contenu générique). Périmètre acté (review 2026-07-23) : la phase 1 reproduit l'existant legacy à iso-fonctionnalités — les délibérations et les formulaires citoyens sont des fonctionnalités NOUVELLES, hors périmètre, réintroduites par leurs propres changes ultérieurs. Le code, les identifiants et les noms de tables SHALL être en anglais ; seules les chaînes destinées aux utilisateurs restent en français.
 
 #### Scenario: Structure d'un domaine
 - **WHEN** on inspecte `packages/core/src/domains/<domain>/`
@@ -28,7 +28,7 @@ Le schéma SHALL être single-tenant : la configuration de la collectivité est 
 - **THEN** un unique enregistrement de settings est retourné, sans notion de tenant multiple
 
 ### Requirement: Collections génériques comme modèle de contenu principal
-Le contenu SHALL être modélisé par le moteur de collections : définitions en base (nom, slug, champs choisis dans un jeu fermé de 8 types — text, rich-text, number, boolean, date, media, relation, select), validation Zod générée depuis la définition, entrées avec titre/slug/données typées et cycle de publication. Les entrées invalides SHALL être rejetées.
+Le contenu SHALL être modélisé par le moteur de collections : définitions en base (nom, slug, champs choisis dans un jeu fermé de 8 types — text, rich-text, number, boolean, date, media, relation, select), validation Zod générée depuis la définition, entrées avec titre/slug/données typées et cycle de publication. Les entrées invalides SHALL être rejetées, et le slug d'une entrée SHALL être unique au sein de sa collection (les slugs sont des segments de route du site publié).
 
 #### Scenario: Création d'une collection et d'une entrée valide
 - **WHEN** un admin définit une collection « marchés publics » avec des champs typés et qu'une entrée conforme est créée
@@ -42,6 +42,10 @@ Le contenu SHALL être modélisé par le moteur de collections : définitions en
 - **WHEN** une entrée viole la définition de sa collection (champ requis manquant, choix hors liste)
 - **THEN** l'écriture est refusée avec une erreur explicite
 
+#### Scenario: Slug en double dans une collection
+- **WHEN** une entrée est créée avec un slug déjà utilisé dans la même collection
+- **THEN** l'écriture est refusée avec une erreur explicite (le même slug reste permis dans une autre collection)
+
 ### Requirement: Collections par défaut seedées par migration
 Les collections standard (`news`, `events`, `officials`, `projects`) SHALL être créées par une migration Drizzle custom, exécutée exactement une fois par base via le journal de migrations. Une collection par défaut supprimée par la commune SHALL NOT être recréée.
 
@@ -54,18 +58,11 @@ Les collections standard (`news`, `events`, `officials`, `projects`) SHALL être
 - **THEN** la collection n'est pas recréée
 
 ### Requirement: Cycle de publication du contenu
-Les contenus publiables (entrées de collections, séances, délibérations) SHALL porter un statut (`draft`, `published`, avec date de publication programmable) et seuls les contenus publiés SHALL être exposés sur le plan public.
+Les entrées de collections SHALL porter un statut (`draft`, `published`, avec date de publication programmable) et seuls les contenus publiés SHALL être exposés sur le plan public.
 
 #### Scenario: Publication programmée
 - **WHEN** une entrée a le statut publié avec une date de publication future
 - **THEN** elle n'apparaît pas sur le plan public avant cette date, et y apparaît après
-
-### Requirement: Délibérations typées
-Le domaine `deliberations` SHALL rester typé (exception au modèle générique) : séances du conseil (`council_sessions` — date, ordre du jour, compte-rendu) et délibérations (numéro, objet, contenu, décomptes de votes, résultat adopté/rejeté/ajourné, pièce jointe), publiables individuellement, avec suppression en cascade des délibérations d'une séance supprimée. C'est la cible d'écriture du futur module IA de transcription.
-
-#### Scenario: Publication d'une délibération
-- **WHEN** une délibération d'une séance est marquée publiée
-- **THEN** elle est exposée sur le plan public avec sa séance, son numéro et son résultat de vote
 
 ### Requirement: Champ d'extension legacy
 Chaque table de contenu SHALL comporter une colonne JSON `legacy_extra` destinée aux champs du legacy sans équivalent, afin qu'aucune donnée ne soit perdue à la migration.

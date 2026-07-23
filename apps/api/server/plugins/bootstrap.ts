@@ -1,6 +1,6 @@
 import { definePlugin } from 'nitro';
 import { consola } from 'consola';
-import { createInvitation, users } from '@commun/core';
+import { createInvitation, purgeExpiredAuthRows, users } from '@commun/core';
 import { useCore } from '../services/context.ts';
 
 /**
@@ -8,9 +8,11 @@ import { useCore } from '../services/context.ts';
  * users, a single-use invitation link is generated for COMMUN_ADMIN_EMAIL and
  * printed to the logs. Once any user exists the mechanism is inert — it can
  * never be replayed to take over an initialised instance.
+ * Also runs boot housekeeping (expired sessions/invitations).
  */
 export default definePlugin(() => {
   const core = useCore();
+  purgeExpiredAuthRows(core.db);
   const hasUsers = core.db.select({ id: users.id }).from(users).limit(1).all().length > 0;
   if (hasUsers) return;
 
