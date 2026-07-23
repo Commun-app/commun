@@ -23,6 +23,14 @@ const FIELD_VALUE_SCHEMAS: Record<FieldType, z.ZodType> = {
   relation: z.string().or(z.array(z.string())), // target entry id(s)
   select: z.string(),
   steps: z.array(stepSchema), // iso legacy array-of-steps
+  // Iso legacy raw JSON : tout sauf undefined (le dump réel contient aussi des scalaires).
+  json: z.union([
+    z.record(z.string(), z.unknown()),
+    z.array(z.unknown()),
+    z.string(),
+    z.number(),
+    z.boolean(),
+  ]),
 };
 
 /**
@@ -328,8 +336,10 @@ export class CollectionsService {
           relatedCollection: definition.slug,
           status: entry.status,
           publishedAt: entry.publishedAt,
-          records: entry.related ?? [], // iso legacy `records[]` (relations inverses)
           ...(await this.resolveEntryData(definition, entry)),
+          // Iso legacy `records[]` (relations, entretenues bidirectionnellement) —
+          // APRÈS le spread : prime sur un éventuel champ de données homonyme.
+          records: entry.related ?? [],
         };
       }
     }

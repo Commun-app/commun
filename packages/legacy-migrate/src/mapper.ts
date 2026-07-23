@@ -24,6 +24,24 @@ const COMPONENT_TO_FIELD_TYPE: Record<string, FieldDefinition['type']> = {
   'handler-records': 'relation',
   // Iso legacy: contenu par étapes (wysiwyg par étape).
   'array-of-steps': 'steps',
+  // ── Vocabulaire RÉEL du dump de prod (attribute.type) ──
+  text: 'text',
+  url: 'text',
+  wysiwyg: 'rich-text',
+  media: 'media',
+  boolean: 'boolean',
+  integer: 'number',
+  float: 'number',
+  date: 'date',
+  enum: 'select',
+  'relation-one-to-one': 'relation',
+  'relation-one-to-many': 'relation',
+  'relation-many-to-many': 'relation',
+  json: 'json',
+  'input-location': 'json',
+  schedules: 'json', // structure {periods:[]} — sert le filtre events iso legacy
+  array: 'steps', // seul usage réel : neighborhoods.steps (array-of-steps)
+  enumeration: 'json', // multi-sélections APIDAE (services, equipments…) servies brutes
 };
 
 /** Attribute names that map onto entry COLUMNS instead of data fields. */
@@ -78,6 +96,18 @@ export function mapAttributeDefinition(attribute: LegacyDoc): MappedField {
   return { field, legacyComponent, legacyName };
 }
 
+/** Le legacy stockait les valeurs complexes STRINGIFIÉES en Mongo. */
+function tryJson(raw: unknown): unknown {
+  if (typeof raw !== 'string') return raw;
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return raw;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return raw;
+  }
+}
+
 export interface MappedEntry {
   title: string;
   slug: string;
@@ -119,9 +149,15 @@ export function mapRecord(
     let value: unknown = raw;
     if (raw == null) continue;
     switch (field.type) {
-      case 'number':
-        value = Number(raw);
+      case 'number': {
+        const parsed = Number.parseFloat(String(raw).replace(',', '.'));
+        if (Number.isNaN(parsed)) {
+          legacyExtra[name] = raw; // valeur non numérique préservée
+          continue;
+        }
+        value = parsed;
         break;
+      }
       case 'boolean':
         value = Boolean(raw);
         break;
@@ -129,17 +165,40 @@ export function mapRecord(
         value = dateOf(raw) ?? String(raw);
         break;
       case 'media': {
-        const ref = idOf(Array.isArray(raw) ? raw[0] : raw);
-        if (ref) mediaRefs.push(ref);
-        value = ref;
+        // Iso legacy : un champ media peut être MULTIPLE — on garde tout.
+        const refs = (Array.isArray(raw) ? raw : [raw]).map(idOf).filter(Boolean);
+        mediaRefs.push(...refs);
+        value = Array.isArray(raw) ? refs : (refs[0] ?? null);
         break;
       }
       case 'relation':
-        value = idOf(Array.isArray(raw) ? raw[0] : raw);
+        value = Array.isArray(raw) ? raw.map(idOf).filter(Boolean) : idOf(raw);
         break;
-      case 'rich-text':
-        value = typeof raw === 'object' ? raw : { type: 'doc', legacyHtml: String(raw) };
+      case 'rich-text': {
+        const parsed = tryJson(raw);
+        value =
+          typeof parsed === 'object' && parsed !== null
+            ? parsed
+            : { type: 'doc', legacyHtml: String(raw) };
         break;
+      }
+      case 'json':
+      case 'steps': {
+        const parsed = tryJson(raw);
+        if (field.type === 'steps') {
+          const arr = Array.isArray(parsed) ? parsed : [];
+          value = arr.map((step) => {
+            const s = (typeof step === 'object' && step !== null ? step : {}) as Record<
+              string,
+              unknown
+            >;
+            return { ...s, content: tryJson(s.content) };
+          });
+        } else {
+          value = parsed;
+        }
+        break;
+      }
       default:
         value = typeof raw === 'string' ? raw : JSON.stringify(raw);
     }

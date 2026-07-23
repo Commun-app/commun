@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import {
   apiTokens,
+  media as mediaTable,
   collectionDefinitions,
   entries as entriesTable,
   connectDb,
@@ -82,10 +83,43 @@ export function migrateOrganization(options: {
     .run();
 
   // ── Collections → definitions ──────────────────────────────────────────────
-  const legacyCollections = readCollection(options.dumpDir, 'collections').filter(
-    (doc) => idOf(doc.organization) === orgId || doc.organization === undefined,
+  // Modèle réel (découvert sur le dump de prod) : les DÉFINITIONS appartiennent
+  // à des organisations GABARITS ancêtres (héritage par `path`), et l'org de
+  // prod les référence via son tableau `collections[]`. Les records lient leur
+  // définition par SLUG.
+  const allCollections = readCollection(options.dumpDir, 'collections');
+  const collectionById = new Map(allCollections.map((doc) => [idOf(doc._id), doc]));
+  const ancestorSlugs = String(legacyOrg.path ?? '')
+    .split('/')
+    .filter(Boolean);
+  const ancestorIds = new Set(
+    organizations
+      .filter((doc) => ancestorSlugs.includes(String(doc.slug)))
+      .map((doc) => idOf(doc._id)),
   );
-  const legacyRecords = readCollection(options.dumpDir, 'records');
+  const orgRecords = readCollection(options.dumpDir, 'records').filter(
+    (doc) => idOf(doc.organization) === orgId,
+  );
+  const legacyCollections: LegacyDoc[] = [];
+  for (const ref of (legacyOrg.collections as unknown[]) ?? []) {
+    const definition = collectionById.get(idOf(ref));
+    if (definition && !legacyCollections.some((c) => c.slug === definition.slug)) {
+      legacyCollections.push(definition);
+    }
+  }
+  // Filet : toute collection utilisée par les records mais absente de la liste
+  // explicite est résolue chez les ancêtres (la plus proche gagne).
+  for (const slug of new Set(orgRecords.map((doc) => String(doc.relatedCollection)))) {
+    if (legacyCollections.some((c) => String(c.slug) === slug)) continue;
+    const candidates = allCollections.filter(
+      (c) =>
+        String(c.slug) === slug &&
+        (ancestorIds.has(idOf(c.organization)) || idOf(c.organization) === orgId),
+    );
+    const found = candidates[candidates.length - 1];
+    if (found) legacyCollections.push(found);
+    else report.errors.push(`définition introuvable pour la collection "${slug}"`);
+  }
   const seededSlugs = new Map(
     db
       .select()
@@ -143,17 +177,26 @@ export function migrateOrganization(options: {
     }
 
     // ── Records → entries ────────────────────────────────────────────────────
-    const collectionId = idOf(legacyCollection._id);
-    const records = legacyRecords.filter(
-      (record) => idOf(record.relatedCollection) === collectionId,
-    );
+    // Lien record → définition par SLUG (modèle réel du dump).
+    const records = orgRecords.filter((record) => String(record.relatedCollection) === slug);
     let inserted = 0;
     let invalid = 0;
     let extraCount = 0;
     const dataSchema = buildDataSchema(fields);
+    // Iso legacy : unicité de slug par collection via suffixe incrémental
+    // (le dump réel contient des doublons — imports APIDAE).
+    const usedSlugs = new Set<string>();
 
     for (const record of records) {
       const entry = mapRecord(record, fieldsByLegacyName);
+      if (usedSlugs.has(entry.slug)) {
+        const base = entry.slug;
+        let suffix = 1;
+        while (usedSlugs.has(`${base}-${suffix}`)) suffix++;
+        entry.slug = `${base}-${suffix}`;
+        entry.legacyExtra._slugAdjusted = base;
+      }
+      usedSlugs.add(entry.slug);
       extraCount += Object.keys(entry.legacyExtra).length;
       const parsed = dataSchema.safeParse(entry.data);
       const data = parsed.success ? parsed.data : {};
@@ -201,9 +244,27 @@ export function migrateOrganization(options: {
   );
   for (const doc of legacyMedia) {
     const legacyId = idOf(doc._id);
+    const objects = (doc.objects as Record<string, unknown> | undefined) ?? {};
+    const originalKey = String(
+      objects.original ?? `${legacyId}/${String(doc.originalName ?? 'file')}`,
+    );
+    // Insertion de la ligne media (id = ObjectId legacy : les entrées migrées
+    // référencent ces ids dans leurs données). La clé S3 d'origine est
+    // conservée telle quelle — le bucket ne bouge pas à la bascule.
+    db.insert(mediaTable)
+      .values({
+        id: legacyId,
+        filename: String(doc.originalName ?? doc.filename ?? 'file'),
+        mime: String(doc.mime ?? 'application/octet-stream'),
+        size: Number(doc.size ?? 0) || 0,
+        metaData: (doc.metaData as Record<string, unknown> | undefined) ?? null,
+        objects: { original: originalKey, variants: {} },
+        legacyExtra: { legacyObjects: objects },
+      })
+      .run();
     report.media.manifest.push({
       legacyId,
-      targetKey: `${legacyId}/${String(doc.filename ?? doc.name ?? 'file')}`,
+      targetKey: originalKey,
       referencedBy: mediaReferences.get(legacyId) ?? [],
     });
   }
@@ -229,7 +290,7 @@ export function migrateOrganization(options: {
 
   // ── Relations inverses (iso legacy `records[]`) ────────────────────────────
   // Post-passe : remappe les tableaux records[] legacy vers les nouveaux ids.
-  for (const record of legacyRecords) {
+  for (const record of orgRecords) {
     const newId = entryIdByLegacyId.get(idOf(record._id));
     if (!newId || !Array.isArray(record.records)) continue;
     const related = (record.records as unknown[])

@@ -1,2 +1,3 @@
-{"_id":{"$oid":"64a000000000000000000001"},"name":"Ville de Grigny","slug":"grigny","settings":{"colors":{"primary":"#2b6cb0"}},"injector":{"enable":true},"deployment":{"vercel":{"hook":"https://api.vercel.com/v1/integrations/deploy/xxx"}}}
-{"_id":{"$oid":"64a000000000000000000002"},"name":"Office de tourisme de Pertuis","slug":"pertuis","settings":{}}
+{"_id":{"$oid":"64a000000000000000000001"},"name":"Ville de Grigny","slug":"grigny","path":"/poulpus/grigny","collections":[{"$oid":"64b000000000000000000001"},{"$oid":"64b000000000000000000002"}],"settings":{"ticketRef":"GRY"},"injector":{"enable":true},"deployment":{"theme":{"colors":{"primary":"#2b6cb0"},"logo":"_media:64d000000000000000000001"},"definition":[{"path":"/"},{"path":"/agenda"}],"vercel":{"hook":"https://api.vercel.com/v1/integrations/deploy/xxx"}}}
+{"_id":{"$oid":"64a000000000000000000009"},"name":"Poulp'us","slug":"poulpus","path":"/poulpus","collections":[]}
+{"_id":{"$oid":"64a000000000000000000002"},"name":"Office de tourisme de Pertuis","slug":"ot-pertuis","path":"/poulpus/ot-pertuis","collections":[],"settings":{}}

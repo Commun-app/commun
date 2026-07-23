@@ -84,6 +84,17 @@ Passe exhaustive sur les 33 actions HTTP des 4 services legacy (media/members/or
 - **Abandonné (mort ou jamais fonctionnel dans le legacy)** : `media.update`/`media.delete` (fichiers 100 % commentés), `users.invite` (stub vide), `password/recover` (aucun email jamais envoyé), branche changement d'email de `email/confirm`, `wordpress-marseille-15-16` (client en dur, sans auth), `devices/fetch-all` (consommé uniquement par l'ancien SSG abandonné).
 - **Reste à arbitrer (produit)** : `deployments` POST/GET (déclencheur + statut Vercel — utilisé par le bouton publier de l'admin legacy) → probablement remplacé par le build auto-hébergé de la phase 3 ; à trancher au cadrage phase 2/3. `GET /content/deployment` (payload `_theme`/`_pages`/`slugs` consommé par les thèmes actuels) → couvert par `/api/content/organization` (theme) + collections ; les `_pages` JSON-driven appartiennent à l'ancien SSG abandonné, la layer phase 3 consommera le nouveau plan.
 
+## Conclusions du dérisquage sur dump réel (task 7.6/7.7, 2026-07-23)
+
+Le dump de prod (17 orgs, 7 396 records, 22 234 médias) a révélé 6 réalités que l'analyse statique avait manquées, toutes corrigées dans la CLI :
+1. **Héritage par gabarits** : les définitions de collections appartiennent à des orgs gabarits ancêtres (`poulpus`, `pol-fr-municipality`…) ; l'org de prod les référence via `collections[]` + son `path`. La CLI résout l'héritage (liste explicite + filet par slug chez les ancêtres).
+2. **Lien record→définition par SLUG** (pas par ObjectId).
+3. **Vocabulaire de types réel** : `text/url/wysiwyg/media/boolean/integer/relation-one-to-one/-one-to-many/-many-to-many/json/input-location/schedules/enumeration/array` — tous mappés ; type **`json` ajouté au jeu fermé** (valeurs brutes servies telles quelles, y compris scalaires) ; `schedules`→json alimente le filtre events ; `array`→steps.
+4. **Valeurs complexes stringifiées** en Mongo (location, socials, wysiwyg…) : parse robuste au mapping.
+5. **Slugs dupliqués réels** (imports APIDAE) : suffixe incrémental appliqué par la CLI (iso legacy).
+6. **Lignes media insérées** (id = ObjectId legacy, clé S3 d'origine conservée — le bucket ne bouge pas à la bascule) ; relations médias multiples préservées en tableaux.
+Résultat : 100 % des collections mappées sur les 5 orgs, 2 entrées corrompues en quarantaine, test fonctionnel de bout en bout validé sur Grigny (token device authentique, payloads ISO signés).
+
 ## Arbitrages de l'audit de parité (annotations Quentin, 2026-07-23)
 
 28 constats audités (5 agents, un par service legacy — synthèse dans PARITY-AUDIT.md à la racine). Verdict quasi général : **ISO legacy**. Implémenté : payloads content/* fidèles (wysiwyg stringifié + mediaRecord, médias en tableaux signés 7 variantes, `_media:` résolu dans deployment, hidden exclu, filtre events, records[] inverses), médias (lecture signée 7 j, metaData, SVG retiré), tokens legacy importés hashés par la CLI (continuité de bascule), CRUD iso (slug incrémental fr, update partiel, publishedAt auto, pagination skip/limit + tri updatedAt), audit trail createdBy/updatedBy, sessions avec ua/ip, users.get/update élargis, editor/display/headings + settings en colonnes. Décisions d'orientation : PAS de couche compat REST — l'admin legacy recevra un client tRPC (9.11) ; jobs rapatriés en Nitro tasks (9.10) ; Loops pour les emails transactionnels (9.9) ; transverse sécurité reporté en phase dédiée (9.12) ; TTL session 30 j confirmé.

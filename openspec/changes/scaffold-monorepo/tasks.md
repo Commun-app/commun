@@ -56,13 +56,13 @@
 
 ## 7. Dérisquage migration (`@commun/legacy-migrate`)
 
-- [ ] 7.1 Réceptionner le dump MongoDB de production Poulpus (mongodump des 4 organisations) — Quentin le fournit en temps voulu ; développer 7.2–7.5 sur un échantillon en attendant
+- [x] 7.1 Dump mongodump de prod reçu (base `shared`, 90 Mo — 17 orgs, 7 396 records, 22 234 médias, 6 tokens) dans `.dump/` (gitignoré)
 - [x] 7.2 CLI citty (`@commun/legacy-migrate`) : lecture hors ligne bson (mongodump) et jsonl (mongoexport), sélection par slug — validée sur fixture d'échantillon
 - [x] 7.3 Moteur de mapping : composants legacy → jeu fermé de types (fusion dans les collections seedées quand les slugs correspondent, création sinon), statuts/publication préservés, attributs orphelins → `legacy_extra`, entrées invalides conservées en quarantaine (`_invalidData`)
 - [x] 7.4 Manifeste des médias (objet legacy → clé cible + entrées référentes) — transfert physique en phase 4
 - [x] 7.5 Rapport de couverture JSON par organisation + sortie console ; migration idempotente (reconstruction complète, testée)
-- [ ] 7.6 **Exécution sur le dump réel des 4 organisations (Grigny, LCSS, Pertuis, CMAR PACA)** ; analyse des 4 rapports ; ajustements du schéma v1 si des manques structurels apparaissent
-- [ ] 7.7 Consigner les conclusions du dérisquage (écarts, décisions de mapping) dans le design du change
+- [x] 7.6 **Exécuté sur le dump réel** (grigny, lcss, ot-pertuis, cmar-paca + marseille15-16) : 100 % des collections mappées, ~7 200 entrées migrées, 2 entrées réellement corrompues en quarantaine (marseille) ; corrections majeures issues du réel : héritage de définitions par orgs GABARITS (path + collections[]), liens record→définition par SLUG, vocabulaire de types réel (text/wysiwyg/media/relation-*/json/integer/schedules/enumeration/array), valeurs complexes STRINGIFIÉES en Mongo (parse), slugs dupliqués (suffixe incrémental), insertion des lignes media (id = ObjectId legacy, clé S3 conservée), type `json` ajouté au jeu fermé
+- [x] 7.7 Conclusions consignées dans le design ; test fonctionnel réel validé : API bootée sur la base migrée de Grigny, auth avec le token device AUTHENTIQUE du dump (header brut), payload records 14,3 Mo ISO (cover en tableau signé 7 variantes, wysiwyg stringifié avec mediaRecord + src signés, filtre events 265/277, records[] inverses), deployment avec 0 `_media:` non résolu et 584 slugs (suffixes incrémentaux réels)
 
 ## 9. Retours de l'audit de parité (annotations Quentin, 2026-07-23 — « ISO legacy »)
 

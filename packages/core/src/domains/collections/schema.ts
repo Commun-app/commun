@@ -25,6 +25,8 @@ export const FIELD_TYPES = [
   'select',
   // Iso legacy `array-of-steps`: ordered steps whose content is rich text.
   'steps',
+  // Iso legacy raw JSON attributes (location, socials, schedules…): served as-is.
+  'json',
 ] as const;
 
 export type FieldType = (typeof FIELD_TYPES)[number];
