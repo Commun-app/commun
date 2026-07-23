@@ -1,0 +1,2 @@
+{"_id":{"$oid":"64d000000000000000000001"},"organization":{"$oid":"64a000000000000000000001"},"filename":"fete.jpg","mime":"image/jpeg","objects":{"original":"grigny/fete.jpg"},"metaData":{}}
+{"_id":{"$oid":"64d000000000000000000002"},"organization":{"$oid":"64a000000000000000000001"},"filename":"mairie.png","mime":"image/png","objects":{"original":"grigny/mairie.png"},"metaData":{"apidaeId":"123"}}

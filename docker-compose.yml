@@ -1,0 +1,46 @@
+# Commun — auto-hébergement de référence (spec self-hosting).
+#
+#   cp .env.example .env   # renseignez au minimum COMMUN_ADMIN_EMAIL
+#   docker compose up -d
+#   docker compose logs api   # le lien d'invitation admin s'affiche au 1er boot
+#
+# Par défaut les médias sont stockés sur le volume local (aucune dépendance).
+# Profil optionnel `s3` : un service S3-compatible auto-hébergé (MinIO) :
+#   docker compose --profile s3 up -d
+# (renseignez alors les variables COMMUN_S3_* dans .env — voir .env.example)
+
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    ports:
+      - '${COMMUN_PORT:-3000}:3000'
+    env_file: .env
+    environment:
+      COMMUN_DATA_DIR: /data
+    volumes:
+      - commun-data:/data
+    healthcheck:
+      test: ['CMD', 'bun', '-e', 'await fetch("http://127.0.0.1:3000/health").then(r => { if (!r.ok) throw 1 })']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  minio:
+    image: minio/minio:latest
+    profiles: ['s3']
+    restart: unless-stopped
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: '${MINIO_ROOT_USER:-commun}'
+      # Requis uniquement avec le profil s3 — MinIO refuse de démarrer sans.
+      MINIO_ROOT_PASSWORD: '${MINIO_ROOT_PASSWORD:-}'
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio-data:/data
+
+volumes:
+  commun-data:
+  minio-data:

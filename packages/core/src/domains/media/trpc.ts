@@ -2,13 +2,17 @@ import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { CommunError, ERR } from '../../common/errors/index.ts';
 import { protectedProcedure, router } from '../../infrastructure/trpc/index.ts';
+import { removeMedia } from './service.ts';
 import { media } from './schema.ts';
 import { mediaUpdateSchema } from './validation.ts';
 
-// NOTE: upload (pre-signed URLs / local writes) and physical object deletion
-// land with the media-storage tasks (group 5) — this router covers the
-// library's editorial surface.
+// Upload goes through the REST route (multipart) — tRPC covers the editorial
+// surface and deletion (row + stored objects).
 export const mediaRouter = router({
+  remove: protectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
+    await removeMedia(ctx.db, ctx.storage, input.id);
+    return { removed: input.id };
+  }),
   list: protectedProcedure.query(({ ctx }) =>
     ctx.db.select().from(media).orderBy(desc(media.createdAt)).all(),
   ),

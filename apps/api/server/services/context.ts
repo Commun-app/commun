@@ -1,3 +1,4 @@
+import { HTTPError } from 'h3';
 import {
   createCore,
   parseEnv,
@@ -47,5 +48,20 @@ export function createRequestContext(req: Request, resHeaders: Headers): CoreCon
   const core = useCore();
   const token = readSessionToken(req);
   const session = token ? verifySession(core.db, token) : null;
-  return { db: core.db, health: core.health, session, cookies: makeCookies(resHeaders) };
+  return {
+    db: core.db,
+    health: core.health,
+    storage: core.storage,
+    session,
+    cookies: makeCookies(resHeaders),
+  };
+}
+
+/** Session guard for REST routes (media upload) — throws 401 without a valid session. */
+export function requireSession(req: Request) {
+  const core = useCore();
+  const token = readSessionToken(req);
+  const session = token ? verifySession(core.db, token) : null;
+  if (!session) throw new HTTPError({ status: 401, message: 'session requise' });
+  return session;
 }

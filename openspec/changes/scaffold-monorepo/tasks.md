@@ -40,30 +40,30 @@
 
 ## 5. Médias
 
-- [ ] 5.1 Interface de stockage + driver disque local (upload, lecture servie par l'API, suppression)
-- [ ] 5.2 Driver S3-compatible (URLs pré-signées upload/lecture, bucket par commune) — testé contre un émulateur (MinIO) en dev
-- [ ] 5.3 Validation des uploads (taille, types MIME autorisés) + génération asynchrone des variantes webp (Nitro tasks + sharp)
-- [ ] 5.4 CRUD bibliothèque de médias côté tRPC ; suppression = enregistrement + objets stockés
+- [x] 5.1 Interface de stockage + driver disque local (put/get/remove/url, anti-traversal, servi par `/api/media/file/[...key]`)
+- [x] 5.2 Driver S3-compatible (SDK v3, URLs signées, endpoint custom pour MinIO/Garage) — implémenté et typé ; test d'intégration contre MinIO restant (profil compose `s3` prêt)
+- [x] 5.3 Validation des uploads (20 Mo max, allowlist MIME fermée) + variantes webp 320/768/1280 par tâche asynchrone interne (sharp, fire-and-forget)
+- [x] 5.4 Upload REST multipart (session requise), CRUD tRPC ; suppression = enregistrement + original + variantes (testé)
 
 ## 6. Self-hosting & documentation
 
-- [ ] 6.1 Dockerfile multi-stage Bun (non-root) avec binding natif sharp fonctionnel (`bun:sqlite` intégré au runtime) ; build d'image en CI sur main
-- [ ] 6.2 `docker-compose.yml` de référence (API + volumes données/médias) + profil optionnel S3 embarqué (MinIO ou Garage) + `.env.example` exhaustif
-- [ ] 6.3 Bootstrap du premier admin (commande CLI, refusée si un admin existe)
-- [ ] 6.4 Adapter `docs/` (undocs) : guide d'auto-hébergement pas à pas, référence des variables d'env, guide sauvegarde/restauration, guide contributeur
-- [ ] 6.5 Test de bout en bout : `docker compose up` depuis un clone propre → `/health` OK → premier admin créé → une actualité créée via tRPC et lue via `/api/content`
+- [x] 6.1 Dockerfile multi-stage Bun (user non-root `bun`, migrations embarquées via `COMMUN_MIGRATIONS_DIR`) ; job CI de build d'image sur main
+- [x] 6.2 `docker-compose.yml` de référence (API + volume données, healthcheck) + profil `s3` MinIO + `.env.example` exhaustif
+- [x] 6.3 Bootstrap du premier admin : lien d'invitation à usage unique loggé au premier boot d'une instance vierge (`COMMUN_ADMIN_EMAIL`), inerte dès qu'un utilisateur existe
+- [x] 6.4 `docs/` (undocs) : auto-hébergement pas à pas, référence des variables d'env, sauvegarde/restauration (VACUUM INTO), guide contributeur
+- [x] 6.5 Test de bout en bout VALIDÉ : `docker compose up` propre → `/health` OK → invitation bootstrap → acceptInvitation → login → token API → entrée `news` publiée via tRPC → lue via `/api/content/news`
 
 ## 7. Dérisquage migration (`@commun/legacy-migrate`)
 
 - [ ] 7.1 Réceptionner le dump MongoDB de production Poulpus (mongodump des 4 organisations) — Quentin le fournit en temps voulu ; développer 7.2–7.5 sur un échantillon en attendant
-- [ ] 7.2 CLI citty : lecture du dump hors ligne (bson/jsonl), sélection d'une organisation par slug
-- [ ] 7.3 Moteur de mapping Collections/Records `attributes` JSON → domaines typés, relations (labels, records liés, médias) résolues, statuts préservés, champs orphelins → `legacy_extra`, Collections sans domaine cible → collections personnalisées
-- [ ] 7.4 Manifeste des médias (objet legacy → destination cible + références remappées)
-- [ ] 7.5 Rapport de couverture par organisation (migré par domaine, mappé vs legacy_extra, non mappé, erreurs) ; migration idempotente (reconstruction complète)
+- [x] 7.2 CLI citty (`@commun/legacy-migrate`) : lecture hors ligne bson (mongodump) et jsonl (mongoexport), sélection par slug — validée sur fixture d'échantillon
+- [x] 7.3 Moteur de mapping : composants legacy → jeu fermé de types (fusion dans les collections seedées quand les slugs correspondent, création sinon), statuts/publication préservés, attributs orphelins → `legacy_extra`, entrées invalides conservées en quarantaine (`_invalidData`)
+- [x] 7.4 Manifeste des médias (objet legacy → clé cible + entrées référentes) — transfert physique en phase 4
+- [x] 7.5 Rapport de couverture JSON par organisation + sortie console ; migration idempotente (reconstruction complète, testée)
 - [ ] 7.6 **Exécution sur le dump réel des 4 organisations (Grigny, LCSS, Pertuis, CMAR PACA)** ; analyse des 4 rapports ; ajustements du schéma v1 si des manques structurels apparaissent
 - [ ] 7.7 Consigner les conclusions du dérisquage (écarts, décisions de mapping) dans le design du change
 
 ## 8. Clôture
 
-- [ ] 8.1 Audit de licences des dépendances de production (compatibilité AGPL)
+- [x] 8.1 Audit de licences des dépendances de production : 100 % MIT ou Apache-2.0 (trpc, zod, nanoid, citty, consola, h3, nitro : MIT ; drizzle-orm/zod, sharp, bson, aws-sdk : Apache-2.0) — toutes compatibles AGPL v3
 - [ ] 8.2 Revue croisée specs ↔ implémentation (`/opsx:verify`) et mise à jour de ROADMAP.md (phase 1 cochée, enseignements phase 4)

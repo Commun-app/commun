@@ -1,0 +1,2 @@
+{"_id":{"$oid":"64a000000000000000000001"},"name":"Ville de Grigny","slug":"grigny","settings":{"colors":{"primary":"#2b6cb0"}},"injector":{"enable":true},"deployment":{"vercel":{"hook":"https://api.vercel.com/v1/integrations/deploy/xxx"}}}
+{"_id":{"$oid":"64a000000000000000000002"},"name":"Office de tourisme de Pertuis","slug":"pertuis","settings":{}}

@@ -1,6 +1,7 @@
 import type { CoreEnv } from '../env/index.ts';
 import type { HealthService } from '../../infrastructure/health/index.ts';
 import type { StoreDb } from '../../infrastructure/db/index.ts';
+import type { StorageDriver } from '../../infrastructure/storage/index.ts';
 import type { AuthSession } from '../../domains/users/auth.ts';
 
 export type { CoreEnv };
@@ -14,6 +15,7 @@ export interface Core {
   env: CoreEnv;
   db: StoreDb;
   health: HealthService;
+  storage: StorageDriver;
 }
 
 /**
@@ -29,6 +31,7 @@ export interface SessionCookies {
 export interface CoreContext {
   db: StoreDb;
   health: HealthService;
+  storage: StorageDriver;
   /** Authenticated session, or null for anonymous requests. */
   session: AuthSession | null;
   cookies: SessionCookies;
