@@ -15,3 +15,6 @@ test-results/
 
 .env
 .DS_Store
+
+# Dump Mongo legacy (données de prod — ne jamais committer)
+.dump/
