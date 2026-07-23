@@ -13,6 +13,12 @@ const INVITATION_TTL_MS = 7 * 24 * 3600 * 1000; // 7 jours
 // existing and non-existing accounts (no user-enumeration timing oracle).
 const DUMMY_HASH = Bun.password.hashSync('commun-dummy-password-for-timing');
 
+/** Device metadata captured at login (iso legacy: the account page lists devices). */
+export interface SessionMeta {
+  ua?: string | null;
+  ip?: string | null;
+}
+
 export interface AuthSession {
   sessionId: string;
   user: User;
@@ -42,21 +48,27 @@ export class UsersService {
   async login(
     email: string,
     password: string,
+    meta?: SessionMeta,
   ): Promise<{ token: string; session: AuthSession } | null> {
     const user = await this.repository.findUserByEmail(email.toLowerCase());
     // Always run one argon2 verification — unknown emails cost the same as known ones.
     const verified = await this.verifyPassword(password, user?.passwordHash ?? DUMMY_HASH);
     if (!user?.passwordHash || !verified) return null;
-    return this.createSession(user);
+    return this.createSession(user, meta);
   }
 
-  async createSession(user: User): Promise<{ token: string; session: AuthSession }> {
+  async createSession(
+    user: User,
+    meta?: SessionMeta,
+  ): Promise<{ token: string; session: AuthSession }> {
     const token = randomBytes(32).toString('base64url');
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
     const row = await this.repository.insertSession({
       tokenHash: sha256(token),
       userId: user.id,
       expiresAt,
+      ua: meta?.ua ?? null,
+      ip: meta?.ip ?? null,
     });
     return { token, session: { sessionId: row.id, user, expiresAt } };
   }
@@ -78,6 +90,8 @@ export class UsersService {
       id: session.id,
       createdAt: session.createdAt,
       expiresAt: session.expiresAt,
+      ua: session.ua,
+      ip: session.ip,
       current: session.id === currentSessionId,
     }));
   }
@@ -138,6 +152,12 @@ export class UsersService {
     return this.repository.listUsers();
   }
 
+  async getUser(id: string): Promise<User> {
+    const user = await this.repository.findUserById(id);
+    if (!user) throw new CommunError(ERR.NOT_FOUND, `utilisateur introuvable: ${id}`);
+    return user;
+  }
+
   async hasAnyUser(): Promise<boolean> {
     return this.repository.hasAnyUser();
   }
@@ -151,7 +171,7 @@ export class UsersService {
 
   async updateUser(
     id: string,
-    input: { name?: string; role?: 'admin' | 'redacteur' },
+    input: { name?: string; role?: 'admin' | 'redacteur'; email?: string },
   ): Promise<User> {
     const updated = await this.repository.updateUser(id, input);
     if (!updated) throw new CommunError(ERR.NOT_FOUND, `utilisateur introuvable: ${id}`);

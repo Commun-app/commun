@@ -3,11 +3,19 @@ import { z } from 'zod';
 import { collectionDefinitions, fieldDefinitionSchema } from '../schema.ts';
 
 // System columns are never accepted from the outside.
-const OMIT = { id: true, createdAt: true, updatedAt: true, legacyExtra: true } as const;
+const OMIT = {
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  legacyExtra: true,
+  createdBy: true,
+  updatedBy: true,
+} as const;
 
+// Slug optional (auto-slugifié) ; editor/display/headings = réglages d'admin iso legacy.
 export const definitionCreateDto = createInsertSchema(collectionDefinitions)
   .omit(OMIT)
-  .extend({ fields: z.array(fieldDefinitionSchema).min(1) });
+  .extend({ fields: z.array(fieldDefinitionSchema).min(1), slug: z.string().optional() });
 
 export const definitionUpdateDto = createUpdateSchema(collectionDefinitions)
   .omit(OMIT)

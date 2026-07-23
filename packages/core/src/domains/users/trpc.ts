@@ -21,7 +21,7 @@ export const authRouter = router({
   /** Login — iso legacy: the opaque token is returned in the body, the client
    * sends it back as `Authorization: Bearer <token>`. No cookies. */
   login: procedure.input(loginDto).mutation(async ({ ctx, input }) => {
-    const result = await ctx.services.users.login(input.email, input.password);
+    const result = await ctx.services.users.login(input.email, input.password, ctx.requestMeta);
     if (!result) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'identifiants invalides' });
     return {
       token: result.token,
@@ -61,6 +61,11 @@ export const usersRouter = router({
   list: adminProcedure.query(async ({ ctx }) =>
     (await ctx.services.users.listUsers()).map(toPublicUser),
   ),
+
+  /** Iso legacy: lecture unitaire. */
+  get: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => toPublicUser(await ctx.services.users.getUser(input.id))),
 
   /** Invite a new member — the single-use link is returned to the admin. */
   invite: adminProcedure

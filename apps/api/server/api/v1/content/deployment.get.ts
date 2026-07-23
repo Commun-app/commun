@@ -8,7 +8,7 @@ import { HTTPError } from 'h3';
  * `/collection/slug` paths). Token guard: server/middleware/api-token.ts.
  */
 export default defineHandler(async (event) => {
-  const { organization, collections } = event.context.core.services;
+  const { organization, collections, media } = event.context.core.services;
 
   const settings = await organization.get();
   if (!settings) throw new HTTPError({ status: 404, message: 'collectivité non initialisée' });
@@ -29,8 +29,10 @@ export default defineHandler(async (event) => {
       _id: settings.id,
       name: settings.name,
       sort: deployment.sort ?? null,
-      _theme: deployment.theme ?? settings.theme ?? null,
-      _pages: deployment.definition ?? [],
+      // Iso legacy `_parseRecursively` : les chaînes `_media:<id>` de _theme/_pages
+      // sont remplacées par le média signé.
+      _theme: await media.resolveMediaPlaceholders(deployment.theme ?? settings.theme ?? null),
+      _pages: await media.resolveMediaPlaceholders(deployment.definition ?? []),
       slugs: [...pageSlugs, ...(await collections.publishedSlugs())],
     },
   };

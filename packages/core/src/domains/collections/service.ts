@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CommunError, ERR } from '../../common/errors/index.ts';
+import { slugify } from '../../common/utils/slug.ts';
 import type { CollectionsRepository } from './repository.ts';
 import type { MediaService } from '../media/service.ts';
 import type { CollectionDefinition, Entry, FieldDefinition, FieldType } from './schema.ts';
@@ -10,15 +11,18 @@ import type {
   EntryUpdateDto,
 } from './dtos/index.ts';
 
+const stepSchema = z.object({ title: z.string().optional(), content: z.unknown().optional() });
+
 const FIELD_VALUE_SCHEMAS: Record<FieldType, z.ZodType> = {
   text: z.string(),
   'rich-text': z.record(z.string(), z.unknown()),
   number: z.number(),
   boolean: z.boolean(),
   date: z.iso.datetime({ offset: true }).or(z.iso.date()),
-  media: z.string(), // media id
-  relation: z.string(), // target entry id
+  media: z.string().or(z.array(z.string())), // media id(s) — iso legacy, un champ media peut être multiple
+  relation: z.string().or(z.array(z.string())), // target entry id(s)
   select: z.string(),
+  steps: z.array(stepSchema), // iso legacy array-of-steps
 };
 
 /**
@@ -38,25 +42,24 @@ export function buildDataSchema(fields: FieldDefinition[]): z.ZodType<Record<str
   return z.strictObject(shape) as z.ZodType<Record<string, unknown>>;
 }
 
-/** SQLite unique-index violations surface as raw errors — translate the slug case. */
-function mapSlugConflict(error: unknown, collectionSlug: string, entrySlug: string): unknown {
-  if (
-    error instanceof Error &&
-    error.message.includes('UNIQUE constraint failed') &&
-    error.message.includes('entries.slug')
-  ) {
-    return new CommunError(
-      ERR.INVALID_STATE,
-      `le slug "${entrySlug}" est déjà utilisé dans la collection ${collectionSlug}`,
-    );
+/** Ids referenced by relation-type fields of an entry (single or arrays). */
+function relationIds(fields: FieldDefinition[], data: Record<string, unknown>): string[] {
+  const ids: string[] = [];
+  for (const field of fields) {
+    if (field.type !== 'relation') continue;
+    const value = data[field.name];
+    if (typeof value === 'string' && value) ids.push(value);
+    else if (Array.isArray(value))
+      ids.push(...value.filter((v): v is string => typeof v === 'string'));
   }
-  return error;
+  return [...new Set(ids)];
 }
 
 /**
  * The content engine: collection definitions (closed field-type set) and
  * their entries, validated against the Zod schema generated from each
- * definition. Media references can be resolved to URLs for the public plane.
+ * definition. Public payloads are served ISO legacy (signed media, stringified
+ * rich text, hidden fields excluded).
  */
 export class CollectionsService {
   constructor(
@@ -78,12 +81,27 @@ export class CollectionsService {
     return found;
   }
 
-  async createDefinition(input: DefinitionCreateDto): Promise<CollectionDefinition> {
-    return this.repository.insertDefinition(input);
+  async createDefinition(
+    input: DefinitionCreateDto,
+    actorId?: string,
+  ): Promise<CollectionDefinition> {
+    return this.repository.insertDefinition({
+      ...input,
+      slug: input.slug || (await this.uniqueDefinitionSlug(slugify(input.name))),
+      createdBy: actorId ?? null,
+      updatedBy: actorId ?? null,
+    });
   }
 
-  async updateDefinition(id: string, input: DefinitionUpdateDto): Promise<CollectionDefinition> {
-    const updated = await this.repository.updateDefinition(id, input);
+  async updateDefinition(
+    id: string,
+    input: DefinitionUpdateDto,
+    actorId?: string,
+  ): Promise<CollectionDefinition> {
+    const updated = await this.repository.updateDefinition(id, {
+      ...input,
+      updatedBy: actorId ?? null,
+    });
     if (!updated) throw new CommunError(ERR.NOT_FOUND, `collection introuvable: ${id}`);
     return updated;
   }
@@ -112,6 +130,18 @@ export class CollectionsService {
     return this.repository.listEntries((await this.getDefinition(collectionIdOrSlug)).id);
   }
 
+  /** Paginated admin listing — iso legacy (skip/limit 20, tri updatedAt desc). */
+  async listEntriesPaginated(
+    collectionIdOrSlug: string,
+    options: { skip?: number; limit?: number } = {},
+  ): Promise<Entry[]> {
+    const definition = await this.getDefinition(collectionIdOrSlug);
+    return this.repository.listEntriesPaginated(definition.id, {
+      skip: options.skip ?? 0,
+      limit: options.limit ?? 20,
+    });
+  }
+
   async listPublishedEntries(
     collectionIdOrSlug: string,
     now = new Date().toISOString(),
@@ -122,42 +152,131 @@ export class CollectionsService {
     );
   }
 
-  /**
-   * Public plane payload (parity with the legacy content endpoints): published
-   * entries with media references resolved to loadable URLs — both media-type
-   * field values (→ `{ id, url }`) and image/file nodes embedded in rich-text
-   * documents (→ `attrs.src`), so the site build renders without extra calls.
-   */
-  async listPublishedEntriesResolved(
+  async createEntry(
     collectionIdOrSlug: string,
-    now = new Date().toISOString(),
-  ): Promise<Array<Entry & { data: Record<string, unknown> }>> {
+    input: EntryCreateDto,
+    actorId?: string,
+  ): Promise<Entry> {
     const definition = await this.getDefinition(collectionIdOrSlug);
-    const mediaFields = definition.fields.filter((field) => field.type === 'media');
-    const richTextFields = definition.fields.filter((field) => field.type === 'rich-text');
-    const entries = await this.repository.listPublishedEntries(definition.id, now);
-    if (mediaFields.length === 0 && richTextFields.length === 0) return entries;
-
-    return Promise.all(
-      entries.map(async (entry) => {
-        const data = { ...entry.data };
-        for (const field of mediaFields) {
-          const mediaId = data[field.name];
-          if (typeof mediaId !== 'string' || !mediaId) continue;
-          const url = await this.media.url(mediaId);
-          data[field.name] = url ? { id: mediaId, url } : null;
-        }
-        for (const field of richTextFields) {
-          if (data[field.name] && typeof data[field.name] === 'object') {
-            data[field.name] = await this.resolveRichTextMedia(data[field.name]);
-          }
-        }
-        return { ...entry, data };
-      }),
-    );
+    const data = this.validateData(definition, input.data);
+    // Iso legacy: slug généré depuis le titre (slugify fr) + unicité incrémentale -1/-2…
+    const slug = await this.uniqueEntrySlug(definition.id, input.slug || slugify(input.title));
+    const entry = await this.repository.insertEntry({
+      ...input,
+      slug,
+      data,
+      collectionId: definition.id,
+      createdBy: actorId ?? null,
+      updatedBy: actorId ?? null,
+      // Iso legacy: publishedAt posé automatiquement à la publication.
+      publishedAt:
+        input.status === 'published'
+          ? (input.publishedAt ?? new Date().toISOString())
+          : input.publishedAt,
+    });
+    await this.linkRelations(definition, entry.id, [], relationIds(definition.fields, data));
+    return entry;
   }
 
-  /** Walk a rich-text JSON document and resolve image/file node ids to URLs. */
+  /** Iso legacy: update PARTIEL — `data` est fusionné champ par champ avec l'existant. */
+  async updateEntry(id: string, input: EntryUpdateDto, actorId?: string): Promise<Entry> {
+    const existing = await this.repository.findEntryById(id);
+    if (!existing) throw new CommunError(ERR.NOT_FOUND, `entrée introuvable: ${id}`);
+    const definition = await this.getDefinition(existing.collectionId);
+
+    const mergedData = input.data ? { ...existing.data, ...input.data } : existing.data;
+    const data = input.data ? this.validateData(definition, mergedData) : undefined;
+
+    const patch: Partial<Entry> = { ...input, updatedBy: actorId ?? null };
+    if (data) patch.data = data;
+    // Iso legacy: publishedAt posé au passage à published (si pas déjà tracé).
+    if (input.status === 'published' && !existing.publishedAt && !input.publishedAt) {
+      patch.publishedAt = new Date().toISOString();
+    }
+
+    try {
+      const updated = (await this.repository.updateEntry(id, patch))!;
+      if (data) {
+        await this.linkRelations(
+          definition,
+          id,
+          relationIds(definition.fields, existing.data),
+          relationIds(definition.fields, data),
+        );
+      }
+      return updated;
+    } catch (error) {
+      throw this.mapSlugConflict(error, definition.slug, input.slug ?? existing.slug);
+    }
+  }
+
+  async removeEntry(id: string): Promise<void> {
+    const existing = await this.repository.findEntryById(id);
+    if (!existing) throw new CommunError(ERR.NOT_FOUND, `entrée introuvable: ${id}`);
+    const definition = await this.getDefinition(existing.collectionId);
+    // Iso legacy: $pull inverse à la suppression.
+    await this.linkRelations(definition, id, relationIds(definition.fields, existing.data), []);
+    await this.repository.deleteEntry(id);
+  }
+
+  // ── Public payloads (iso legacy) ───────────────────────────────────────────
+
+  /**
+   * Iso legacy `parseDataAttributes`: hidden fields excluded, rich text
+   * resolved (mediaRecord + signed src) then STRINGIFIED, steps content
+   * resolved+stringified per step, media fields → arrays of signed legacy
+   * media records.
+   */
+  private async resolveEntryData(
+    definition: CollectionDefinition,
+    entry: Entry,
+  ): Promise<Record<string, unknown>> {
+    const data: Record<string, unknown> = {};
+    for (const field of definition.fields) {
+      if (field.hidden) continue; // iso legacy options.hidden
+      const value = entry.data[field.name];
+      if (value === undefined || value === null) {
+        data[field.name] = value;
+        continue;
+      }
+      switch (field.type) {
+        case 'rich-text':
+          data[field.name] = JSON.stringify(await this.resolveRichTextMedia(value));
+          break;
+        case 'steps': {
+          const steps = Array.isArray(value) ? value : [];
+          data[field.name] = await Promise.all(
+            steps.map(async (step) => {
+              const s = step as { title?: string; content?: unknown };
+              return {
+                ...s,
+                content:
+                  s.content == null
+                    ? s.content
+                    : JSON.stringify(await this.resolveRichTextMedia(s.content)),
+              };
+            }),
+          );
+          break;
+        }
+        case 'media': {
+          const ids = Array.isArray(value) ? value : [value];
+          const records = await Promise.all(
+            ids
+              .filter((v): v is string => typeof v === 'string' && v.length > 0)
+              .map((mediaId) => this.media.toLegacyMedia(mediaId)),
+          );
+          data[field.name] = records.filter((record) => record !== null);
+          break;
+        }
+        default:
+          data[field.name] = value;
+      }
+    }
+    return data;
+  }
+
+  /** Iso legacy `populateWysiwygMedia`: image/file nodes get `mediaRecord` + signed `src`. */
   private async resolveRichTextMedia(node: unknown): Promise<unknown> {
     if (Array.isArray(node)) {
       return Promise.all(node.map((child) => this.resolveRichTextMedia(child)));
@@ -172,7 +291,8 @@ export class CollectionsService {
       typeof attrs.id === 'string' &&
       attrs.id
     ) {
-      copy.attrs = { ...attrs, src: await this.media.url(attrs.id) };
+      const mediaRecord = await this.media.toLegacyMedia(attrs.id);
+      copy.attrs = { ...attrs, mediaRecord, src: mediaRecord?.objects.original ?? null };
     }
     if (Array.isArray(copy.content)) {
       copy.content = await this.resolveRichTextMedia(copy.content);
@@ -180,16 +300,27 @@ export class CollectionsService {
     return copy;
   }
 
+  /** Iso legacy: les events sans période d'agenda ne sont pas publiés. */
+  private hasEmptySchedules(entry: Entry): boolean {
+    const schedules = (entry.data.schedules ?? entry.legacyExtra?.schedules) as
+      | { periods?: unknown[] }
+      | undefined;
+    return schedules !== undefined && (schedules.periods?.length ?? 0) === 0;
+  }
+
   /**
    * Legacy-compat payload of `GET /api/v1/content/records`: ONE flat map of
-   * every published entry across all collections, keyed by id, media resolved
-   * — the shape the current site builds consume.
+   * every published entry across all collections, keyed by id.
    */
   async legacyRecordsPayload(): Promise<Record<string, Record<string, unknown>>> {
     const records: Record<string, Record<string, unknown>> = {};
     for (const definition of await this.repository.listDefinitions()) {
-      const resolved = await this.listPublishedEntriesResolved(definition.id);
-      for (const entry of resolved) {
+      const published = await this.repository.listPublishedEntries(
+        definition.id,
+        new Date().toISOString(),
+      );
+      for (const entry of published) {
+        if (definition.slug === 'events' && this.hasEmptySchedules(entry)) continue;
         records[entry.id] = {
           _id: entry.id,
           title: entry.title,
@@ -197,7 +328,8 @@ export class CollectionsService {
           relatedCollection: definition.slug,
           status: entry.status,
           publishedAt: entry.publishedAt,
-          ...entry.data,
+          records: entry.related ?? [], // iso legacy `records[]` (relations inverses)
+          ...(await this.resolveEntryData(definition, entry)),
         };
       }
     }
@@ -209,36 +341,71 @@ export class CollectionsService {
     const slugs: string[] = [];
     for (const definition of await this.repository.listDefinitions()) {
       const published = await this.repository.listPublishedEntries(definition.id, now);
-      slugs.push(...published.map((entry) => `/${definition.slug}/${entry.slug}`));
+      slugs.push(
+        ...published
+          .filter((entry) => !(definition.slug === 'events' && this.hasEmptySchedules(entry)))
+          .map((entry) => `/${definition.slug}/${entry.slug}`),
+      );
     }
     return slugs;
   }
 
-  async createEntry(collectionIdOrSlug: string, input: EntryCreateDto): Promise<Entry> {
-    const definition = await this.getDefinition(collectionIdOrSlug);
-    const data = this.validateData(definition, input.data);
-    try {
-      return await this.repository.insertEntry({ ...input, data, collectionId: definition.id });
-    } catch (error) {
-      throw mapSlugConflict(error, definition.slug, input.slug);
+  // ── Internals ──────────────────────────────────────────────────────────────
+
+  private mapSlugConflict(error: unknown, collectionSlug: string, entrySlug: string): unknown {
+    if (
+      error instanceof Error &&
+      error.message.includes('UNIQUE constraint failed') &&
+      error.message.includes('entries.slug')
+    ) {
+      return new CommunError(
+        ERR.INVALID_STATE,
+        `le slug "${entrySlug}" est déjà utilisé dans la collection ${collectionSlug}`,
+      );
     }
+    return error;
   }
 
-  async updateEntry(id: string, input: EntryUpdateDto): Promise<Entry> {
-    const existing = await this.repository.findEntryById(id);
-    if (!existing) throw new CommunError(ERR.NOT_FOUND, `entrée introuvable: ${id}`);
-    const definition = await this.getDefinition(existing.collectionId);
-    const data = input.data ? this.validateData(definition, input.data) : undefined;
-    try {
-      return (await this.repository.updateEntry(id, { ...input, ...(data ? { data } : {}) }))!;
-    } catch (error) {
-      throw mapSlugConflict(error, definition.slug, input.slug ?? existing.slug);
+  /** Iso legacy: suffixe incrémental -1/-2… jusqu'à unicité dans la collection. */
+  private async uniqueEntrySlug(collectionId: string, base: string): Promise<string> {
+    let candidate = base;
+    for (let suffix = 1; await this.repository.findEntryBySlug(collectionId, candidate); suffix++) {
+      candidate = `${base}-${suffix}`;
     }
+    return candidate;
   }
 
-  async removeEntry(id: string): Promise<void> {
-    if (!(await this.repository.deleteEntry(id))) {
-      throw new CommunError(ERR.NOT_FOUND, `entrée introuvable: ${id}`);
+  private async uniqueDefinitionSlug(base: string): Promise<string> {
+    let candidate = base;
+    for (let suffix = 1; await this.repository.findDefinitionBySlug(candidate); suffix++) {
+      candidate = `${base}-${suffix}`;
     }
+    return candidate;
+  }
+
+  /** Iso legacy bidirectional `records[]`: maintain reverse links on targets. */
+  private async linkRelations(
+    definition: CollectionDefinition,
+    entryId: string,
+    before: string[],
+    after: string[],
+  ): Promise<void> {
+    const added = after.filter((id) => !before.includes(id));
+    const removed = before.filter((id) => !after.includes(id));
+    for (const targetId of added) {
+      const target = await this.repository.findEntryById(targetId);
+      if (!target) continue;
+      const related = new Set(target.related ?? []);
+      related.add(entryId);
+      await this.repository.updateEntry(targetId, { related: [...related] });
+    }
+    for (const targetId of removed) {
+      const target = await this.repository.findEntryById(targetId);
+      if (!target) continue;
+      await this.repository.updateEntry(targetId, {
+        related: (target.related ?? []).filter((id) => id !== entryId),
+      });
+    }
+    void definition;
   }
 }

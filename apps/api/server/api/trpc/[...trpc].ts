@@ -13,6 +13,13 @@ export default defineHandler(async (event) => {
     createContext: () => ({
       services: event.context.core.services,
       session: event.context.session ?? null,
+      requestMeta: {
+        ua: event.req.headers.get('user-agent'),
+        ip:
+          event.req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+          event.context.clientAddress ??
+          null,
+      },
     }),
   });
 });

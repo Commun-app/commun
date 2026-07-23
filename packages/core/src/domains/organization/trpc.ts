@@ -9,5 +9,5 @@ export const organizationRouter = router({
     .mutation(({ ctx, input }) => ctx.services.organization.init(input)),
   update: adminProcedure
     .input(organizationUpdateDto)
-    .mutation(({ ctx, input }) => ctx.services.organization.update(input)),
+    .mutation(({ ctx, input }) => ctx.services.organization.update(input, ctx.session.user.id)),
 });

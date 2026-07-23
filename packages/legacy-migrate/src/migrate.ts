@@ -1,7 +1,9 @@
+import { createHash } from 'node:crypto';
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import {
+  apiTokens,
   collectionDefinitions,
   entries as entriesTable,
   connectDb,
@@ -28,6 +30,7 @@ export interface MigrationReport {
     count: number;
     manifest: Array<{ legacyId: string; targetKey: string; referencedBy: string[] }>;
   };
+  tokens?: number;
   errors: string[];
 }
 
@@ -69,7 +72,9 @@ export function migrateOrganization(options: {
       name: String(legacyOrg.name ?? options.orgSlug),
       slug: options.orgSlug,
       type: 'commune',
-      theme: (legacyOrg.settings as Record<string, unknown> | undefined) ?? null,
+      // Iso legacy: settings ≠ theme — chacun sa colonne (le thème visuel vit
+      // dans deployment.theme, servi par /api/v1/content/deployment).
+      settings: (legacyOrg.settings as Record<string, unknown> | undefined) ?? null,
       // Served ISO on /api/v1/content/deployment during the cutover.
       deployment: (legacyOrg.deployment as Record<string, unknown> | undefined) ?? null,
       legacyExtra: { legacyId: orgId, injector: legacyOrg.injector },
@@ -129,7 +134,9 @@ export function migrateOrganization(options: {
           name: legacyName,
           slug,
           fields,
-          legacyExtra: { editor: legacyCollection.editor, display: legacyCollection.display },
+          editor: (legacyCollection.editor as Record<string, unknown> | undefined) ?? null,
+          display: (legacyCollection.display as Record<string, unknown> | undefined) ?? null,
+          headings: (legacyCollection.headings as Record<string, unknown> | undefined) ?? null,
         })
         .returning()
         .get();
@@ -201,6 +208,37 @@ export function migrateOrganization(options: {
     });
   }
   report.media.count = legacyMedia.length;
+
+  // ── API tokens (continuité de bascule, iso legacy) ─────────────────────────
+  // Les tokens device legacy sont stockés EN CLAIR dans Mongo : on les importe
+  // hashés (sha256) — les sites en prod gardent leur token, zéro changement.
+  const legacyTokens = readCollection(options.dumpDir, 'tokens').filter(
+    (doc) => idOf(doc.organization) === orgId || doc.organization === undefined,
+  );
+  for (const doc of legacyTokens) {
+    const plaintext = String(doc.token ?? '');
+    if (!plaintext) continue;
+    db.insert(apiTokens)
+      .values({
+        name: String(doc.name ?? `legacy-${idOf(doc._id)}`),
+        tokenHash: createHash('sha256').update(plaintext).digest('hex'),
+      })
+      .run();
+  }
+  report.tokens = legacyTokens.length;
+
+  // ── Relations inverses (iso legacy `records[]`) ────────────────────────────
+  // Post-passe : remappe les tableaux records[] legacy vers les nouveaux ids.
+  for (const record of legacyRecords) {
+    const newId = entryIdByLegacyId.get(idOf(record._id));
+    if (!newId || !Array.isArray(record.records)) continue;
+    const related = (record.records as unknown[])
+      .map((ref) => entryIdByLegacyId.get(idOf(ref)))
+      .filter((id): id is string => Boolean(id));
+    if (related.length > 0) {
+      db.update(entriesTable).set({ related }).where(eq(entriesTable.id, newId)).run();
+    }
+  }
 
   return report;
 }

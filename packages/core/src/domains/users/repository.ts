@@ -25,6 +25,10 @@ export class UsersRepository {
     return this.db.select().from(users).where(eq(users.email, email)).get();
   }
 
+  async findUserById(id: string): Promise<User | undefined> {
+    return this.db.select().from(users).where(eq(users.id, id)).get();
+  }
+
   async listUsers(): Promise<User[]> {
     return this.db.select().from(users).all();
   }
@@ -61,6 +65,8 @@ export class UsersRepository {
     tokenHash: string;
     userId: string;
     expiresAt: string;
+    ua?: string | null;
+    ip?: string | null;
   }): Promise<Session> {
     return this.db.insert(sessions).values(input).returning().get();
   }

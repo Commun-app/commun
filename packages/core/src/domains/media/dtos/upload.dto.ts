@@ -6,6 +6,8 @@ import { z } from 'zod';
 export const mediaRequestUploadDto = z.object({
   filename: z.string().min(1),
   mime: z.string().min(1),
+  /** Attached to the S3 object as user metadata (iso legacy). */
+  metaData: z.record(z.string(), z.string()).optional(),
 });
 
 export const mediaFinalizeDto = z.object({
@@ -13,6 +15,8 @@ export const mediaFinalizeDto = z.object({
   filename: z.string().min(1),
   mime: z.string().min(1),
   alt: z.string().optional(),
+  /** Stored on the media row (iso legacy — job-data-sync deduplicates via apidaeId). */
+  metaData: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type MediaRequestUploadDto = z.infer<typeof mediaRequestUploadDto>;

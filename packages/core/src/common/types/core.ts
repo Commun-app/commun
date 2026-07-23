@@ -2,7 +2,7 @@ import type { CoreEnv } from '../env/index.ts';
 import type { HealthService } from '../../infrastructure/health/index.ts';
 import type { StoreDb } from '../../infrastructure/db/index.ts';
 import type { StorageDriver } from '../../infrastructure/storage/index.ts';
-import type { AuthSession, UsersService } from '../../domains/users/service.ts';
+import type { AuthSession, SessionMeta, UsersService } from '../../domains/users/service.ts';
 import type { OrganizationService } from '../../domains/organization/service.ts';
 import type { MediaService } from '../../domains/media/service.ts';
 import type { CollectionsService } from '../../domains/collections/service.ts';
@@ -37,4 +37,6 @@ export interface CoreContext {
   services: CoreServices;
   /** Authenticated session, or null for anonymous requests. */
   session: AuthSession | null;
+  /** Device metadata of the request (captured at login, iso legacy). */
+  requestMeta?: SessionMeta;
 }

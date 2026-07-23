@@ -23,6 +23,8 @@ export const FIELD_TYPES = [
   'media',
   'relation',
   'select',
+  // Iso legacy `array-of-steps`: ordered steps whose content is rich text.
+  'steps',
 ] as const;
 
 export type FieldType = (typeof FIELD_TYPES)[number];
@@ -34,6 +36,8 @@ export const fieldDefinitionSchema = z
     label: z.string().min(1),
     type: z.enum(FIELD_TYPES),
     required: z.boolean().default(false),
+    /** Hidden fields are editable in the admin but EXCLUDED from public payloads (iso legacy `options.hidden`). */
+    hidden: z.boolean().default(false),
     /** Choices — required for `select`. */
     options: z.array(z.string().min(1)).optional(),
     /** Target collection slug — required for `relation`. */
@@ -72,6 +76,12 @@ export const collectionDefinitions = sqliteTable('collection_definitions', {
   slug: text('slug').notNull().unique(),
   description: text('description'),
   fields: text('fields', { mode: 'json' }).$type<FieldDefinition[]>().notNull(),
+  // Iso legacy Collection model: admin form layout, list display and page headings.
+  editor: text('editor', { mode: 'json' }).$type<Record<string, unknown>>(),
+  display: text('display', { mode: 'json' }).$type<Record<string, unknown>>(),
+  headings: text('headings', { mode: 'json' }).$type<Record<string, unknown>>(),
+  createdBy: text('created_by'),
+  updatedBy: text('updated_by'),
   legacyExtra: legacyExtra(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
@@ -88,6 +98,10 @@ export const entries = sqliteTable(
     title: text('title').notNull(),
     slug: text('slug').notNull(),
     data: text('data', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+    /** Reverse relations (iso legacy `records[]`): ids of entries that reference this one. */
+    related: text('related', { mode: 'json' }).$type<string[]>(),
+    createdBy: text('created_by'),
+    updatedBy: text('updated_by'),
     status: publicationStatus(),
     publishedAt: publishedAt(),
     legacyExtra: legacyExtra(),

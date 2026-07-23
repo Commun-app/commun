@@ -22,6 +22,8 @@ const COMPONENT_TO_FIELD_TYPE: Record<string, FieldDefinition['type']> = {
   'select-enum': 'select',
   'select-record': 'relation',
   'handler-records': 'relation',
+  // Iso legacy: contenu par étapes (wysiwyg par étape).
+  'array-of-steps': 'steps',
 };
 
 /** Attribute names that map onto entry COLUMNS instead of data fields. */
@@ -47,6 +49,7 @@ export function mapAttributeDefinition(attribute: LegacyDoc): MappedField {
       ? ((attribute.componentOptions as LegacyDoc).options as unknown[]).map(String)
       : undefined;
 
+  const componentOptions = attribute.componentOptions as LegacyDoc | undefined;
   const field: FieldDefinition = {
     name:
       legacyName
@@ -56,6 +59,10 @@ export function mapAttributeDefinition(attribute: LegacyDoc): MappedField {
     label: String((attribute.headings as LegacyDoc | undefined)?.label ?? legacyName),
     type,
     required: Boolean(attribute.required),
+    // Iso legacy `options.hidden` : exclu des payloads publics.
+    hidden: Boolean(
+      (attribute.options as LegacyDoc | undefined)?.hidden ?? componentOptions?.hidden,
+    ),
     ...(type === 'select' && options?.length ? { options } : {}),
     ...(type === 'relation'
       ? {

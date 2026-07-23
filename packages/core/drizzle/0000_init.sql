@@ -13,6 +13,8 @@ CREATE TABLE `organization` (
 	`theme` text,
 	`deployment` text,
 	`social` text,
+	`settings` text,
+	`updated_by` text,
 	`legacy_extra` text,
 	`created_at` text NOT NULL,
 	`updated_at` text NOT NULL
@@ -45,6 +47,8 @@ CREATE TABLE `sessions` (
 	`user_id` text NOT NULL,
 	`expires_at` text NOT NULL,
 	`revoked_at` text,
+	`ua` text,
+	`ip` text,
 	`created_at` text NOT NULL,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
@@ -70,6 +74,8 @@ CREATE TABLE `media` (
 	`caption` text,
 	`objects` text NOT NULL,
 	`meta_data` text,
+	`created_by` text,
+	`updated_by` text,
 	`legacy_extra` text,
 	`created_at` text NOT NULL,
 	`updated_at` text NOT NULL
@@ -81,6 +87,11 @@ CREATE TABLE `collection_definitions` (
 	`slug` text NOT NULL,
 	`description` text,
 	`fields` text NOT NULL,
+	`editor` text,
+	`display` text,
+	`headings` text,
+	`created_by` text,
+	`updated_by` text,
 	`legacy_extra` text,
 	`created_at` text NOT NULL,
 	`updated_at` text NOT NULL
@@ -93,6 +104,9 @@ CREATE TABLE `entries` (
 	`title` text NOT NULL,
 	`slug` text NOT NULL,
 	`data` text NOT NULL,
+	`related` text,
+	`created_by` text,
+	`updated_by` text,
 	`status` text DEFAULT 'draft' NOT NULL,
 	`published_at` text,
 	`legacy_extra` text,

@@ -30,6 +30,9 @@ export const organization = sqliteTable('organization', {
   deployment: text('deployment', { mode: 'json' }).$type<Record<string, unknown>>(),
   /** Social network links, keyed by network name. */
   social: text('social', { mode: 'json' }).$type<Record<string, string>>(),
+  /** Misc settings (iso legacy `organization.settings`, e.g. ticketRef). */
+  settings: text('settings', { mode: 'json' }).$type<Record<string, unknown>>(),
+  updatedBy: text('updated_by'),
   legacyExtra: legacyExtra(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),

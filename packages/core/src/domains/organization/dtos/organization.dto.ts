@@ -3,7 +3,13 @@ import type { z } from 'zod';
 import { organization } from '../schema.ts';
 
 // System columns are never accepted from the outside.
-const OMIT = { id: true, createdAt: true, updatedAt: true, legacyExtra: true } as const;
+const OMIT = {
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  legacyExtra: true,
+  updatedBy: true,
+} as const;
 
 export const organizationInitDto = createInsertSchema(organization).omit(OMIT);
 export const organizationUpdateDto = createUpdateSchema(organization).omit(OMIT);

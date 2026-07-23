@@ -19,8 +19,8 @@ export class OrganizationService {
     return this.repository.insert(input);
   }
 
-  async update(input: OrganizationUpdateDto): Promise<Organization> {
-    const updated = await this.repository.update(input);
+  async update(input: OrganizationUpdateDto, actorId?: string): Promise<Organization> {
+    const updated = await this.repository.update({ ...input, updatedBy: actorId ?? null });
     if (!updated) throw new CommunError(ERR.NOT_FOUND, 'collectivité non initialisée');
     return updated;
   }

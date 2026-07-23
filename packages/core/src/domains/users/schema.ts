@@ -24,6 +24,9 @@ export const sessions = sqliteTable('sessions', {
     .references(() => users.id, { onDelete: 'cascade' }),
   expiresAt: text('expires_at').notNull(),
   revokedAt: text('revoked_at'),
+  // Device metadata (iso legacy: the account page lists devices).
+  ua: text('ua'),
+  ip: text('ip'),
   createdAt: createdAt(),
 });
 

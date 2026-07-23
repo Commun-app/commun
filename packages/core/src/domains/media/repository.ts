@@ -23,7 +23,7 @@ export class MediaRepository {
 
   async update(
     id: string,
-    input: Partial<Pick<Media, 'alt' | 'caption' | 'filename' | 'objects'>>,
+    input: Partial<Pick<Media, 'alt' | 'caption' | 'filename' | 'objects' | 'updatedBy'>>,
   ): Promise<Media | undefined> {
     return this.db.update(media).set(input).where(eq(media.id, id)).returning().get();
   }

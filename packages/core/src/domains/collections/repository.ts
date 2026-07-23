@@ -70,8 +70,31 @@ export class CollectionsRepository {
       .select()
       .from(entries)
       .where(eq(entries.collectionId, collectionId))
-      .orderBy(desc(entries.createdAt))
+      .orderBy(desc(entries.updatedAt))
       .all();
+  }
+
+  /** Iso legacy admin listing: tri updatedAt desc + skip/limit. */
+  async listEntriesPaginated(
+    collectionId: string,
+    options: { skip: number; limit: number },
+  ): Promise<Entry[]> {
+    return this.db
+      .select()
+      .from(entries)
+      .where(eq(entries.collectionId, collectionId))
+      .orderBy(desc(entries.updatedAt))
+      .limit(options.limit)
+      .offset(options.skip)
+      .all();
+  }
+
+  async findEntryBySlug(collectionId: string, slug: string): Promise<Entry | undefined> {
+    return this.db
+      .select()
+      .from(entries)
+      .where(and(eq(entries.collectionId, collectionId), eq(entries.slug, slug)))
+      .get();
   }
 
   async listPublishedEntries(collectionId: string, now: string): Promise<Entry[]> {

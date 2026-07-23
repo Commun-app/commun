@@ -7,14 +7,22 @@ import { mediaFinalizeDto, mediaRequestUploadDto, mediaUpdateDto } from './dtos/
 export const mediaRouter = router({
   requestUpload: protectedProcedure
     .input(mediaRequestUploadDto)
-    .mutation(({ ctx, input }) => ctx.services.media.requestUpload(input.filename, input.mime)),
+    .mutation(({ ctx, input }) =>
+      ctx.services.media.requestUpload(input.filename, input.mime, input.metaData),
+    ),
   finalize: protectedProcedure
     .input(mediaFinalizeDto)
-    .mutation(({ ctx, input }) => ctx.services.media.finalize(input)),
-  list: protectedProcedure.query(({ ctx }) => ctx.services.media.list()),
+    .mutation(({ ctx, input }) => ctx.services.media.finalize(input, ctx.session.user.id)),
+  // Iso legacy read shape: `objects` are SIGNED URLs, directly displayable.
+  list: protectedProcedure.query(({ ctx }) => ctx.services.media.listResolved()),
+  get: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(({ ctx, input }) => ctx.services.media.get(input.id)),
   update: protectedProcedure
     .input(z.object({ id: z.string(), data: mediaUpdateDto }))
-    .mutation(({ ctx, input }) => ctx.services.media.updateEditorial(input.id, input.data)),
+    .mutation(({ ctx, input }) =>
+      ctx.services.media.updateEditorial(input.id, input.data, ctx.session.user.id),
+    ),
   remove: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {

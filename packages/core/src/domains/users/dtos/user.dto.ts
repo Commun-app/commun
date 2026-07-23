@@ -3,11 +3,13 @@ import type { User } from '../schema.ts';
 
 export const inviteDto = z.object({ email: z.email(), role: z.enum(['admin', 'redacteur']) });
 
+// Iso legacy: l'admin peut modifier les champs du compte (email inclus).
 export const userUpdateDto = z.object({
   id: z.string(),
   data: z.object({
     name: z.string().min(1).optional(),
     role: z.enum(['admin', 'redacteur']).optional(),
+    email: z.email().optional(),
   }),
 });
 

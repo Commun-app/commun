@@ -17,8 +17,12 @@ import type { CoreEnv } from '../../common/env/index.ts';
  */
 export interface StorageDriver {
   readonly kind: 's3' | 'unconfigured';
-  /** Pre-signed URL for a direct client PUT of the object. */
-  presignedPutUrl(key: string, contentType: string): Promise<string>;
+  /** Pre-signed URL for a direct client PUT of the object (metadata attached to the S3 object, iso legacy). */
+  presignedPutUrl(
+    key: string,
+    contentType: string,
+    metadata?: Record<string, string>,
+  ): Promise<string>;
   /** Object metadata if it exists (used to confirm an upload), null otherwise. */
   head(key: string): Promise<{ size: number } | null>;
   remove(keys: string[]): Promise<void>;
@@ -34,7 +38,8 @@ export interface S3Config {
   secretKey: string;
 }
 
-const SIGNED_URL_TTL_S = 3600;
+// Iso legacy: 7 days (site builds cache signed URLs).
+const SIGNED_URL_TTL_S = 7 * 24 * 3600;
 
 /** Works with any S3-compatible endpoint: Scaleway Object Storage, MinIO, Garage… */
 export function createS3Storage(config: S3Config): StorageDriver {
@@ -46,10 +51,15 @@ export function createS3Storage(config: S3Config): StorageDriver {
 
   return {
     kind: 's3',
-    presignedPutUrl: (key, contentType) =>
+    presignedPutUrl: (key, contentType, metadata) =>
       getSignedUrl(
         client,
-        new PutObjectCommand({ Bucket: config.bucket, Key: key, ContentType: contentType }),
+        new PutObjectCommand({
+          Bucket: config.bucket,
+          Key: key,
+          ContentType: contentType,
+          Metadata: metadata,
+        }),
         { expiresIn: SIGNED_URL_TTL_S },
       ),
     async head(key) {

@@ -15,6 +15,8 @@ export const media = sqliteTable('media', {
    */
   objects: text('objects', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
   metaData: text('meta_data', { mode: 'json' }).$type<Record<string, unknown>>(),
+  createdBy: text('created_by'),
+  updatedBy: text('updated_by'),
   legacyExtra: legacyExtra(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
