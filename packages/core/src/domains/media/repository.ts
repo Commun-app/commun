@@ -18,7 +18,10 @@ export class MediaRepository {
     return this.db.select().from(media).orderBy(desc(media.createdAt)).all();
   }
 
-  update(id: string, input: Partial<Pick<Media, 'alt' | 'caption' | 'filename' | 'objects'>>): Media | undefined {
+  update(
+    id: string,
+    input: Partial<Pick<Media, 'alt' | 'caption' | 'filename' | 'objects'>>,
+  ): Media | undefined {
     return this.db.update(media).set(input).where(eq(media.id, id)).returning().get();
   }
 

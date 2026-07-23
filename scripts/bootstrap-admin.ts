@@ -10,7 +10,7 @@ import { consola } from 'consola';
 import { createCore } from '@commun/core';
 
 const email = process.argv[2];
-if (!email || !email.includes('@')) {
+if (!email?.includes('@')) {
   consola.error('usage: bootstrap-admin <email>');
   process.exit(1);
 }

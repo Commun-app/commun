@@ -45,7 +45,11 @@ describe('schema — core domains', () => {
 
   test('entries cascade-delete with their collection definition', () => {
     const definition = collections.getDefinition('projects');
-    collections.createEntry(definition.id, { title: 'Place du marché', slug: 'place-du-marche', data: {} });
+    collections.createEntry(definition.id, {
+      title: 'Place du marché',
+      slug: 'place-du-marche',
+      data: {},
+    });
     expect(db.select().from(collectionEntries).all()).toHaveLength(1);
 
     collections.removeDefinition(definition.id);

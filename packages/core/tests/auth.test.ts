@@ -24,7 +24,10 @@ afterAll(() => {
 
 describe('UsersService — invitations et sessions', () => {
   test('full flow: invite → accept → login → session → targeted revoke → logout', async () => {
-    const { token: inviteToken } = users.createInvitation({ email: 'Maire@Grigny.fr', role: 'admin' });
+    const { token: inviteToken } = users.createInvitation({
+      email: 'Maire@Grigny.fr',
+      role: 'admin',
+    });
 
     const user = await users.acceptInvitation(inviteToken, {
       name: 'Le Maire',
@@ -62,9 +65,14 @@ describe('UsersService — invitations et sessions', () => {
 
   test('revoking a session that belongs to someone else is refused', async () => {
     const { token } = users.createInvitation({ email: 'autre@grigny.fr', role: 'redacteur' });
-    const other = await users.acceptInvitation(token, { name: 'Autre', password: 'password-solide' });
+    const other = await users.acceptInvitation(token, {
+      name: 'Autre',
+      password: 'password-solide',
+    });
     const login = await users.login('autre@grigny.fr', 'password-solide');
-    expect(() => users.revokeOwnSession('someone-else', login!.session.sessionId)).toThrow(CommunError);
+    expect(() => users.revokeOwnSession('someone-else', login!.session.sessionId)).toThrow(
+      CommunError,
+    );
     expect(users.verifySession(login!.token)).not.toBeNull();
     expect(other.role).toBe('redacteur');
   });
@@ -75,7 +83,9 @@ describe('UsersService — invitations et sessions', () => {
 
   test('an expired invitation is refused without leaking account info', async () => {
     const { token } = users.createInvitation({ email: 'agent@grigny.fr', role: 'redacteur' });
-    db.run(sql`UPDATE invitations SET expires_at = '2000-01-01T00:00:00.000Z' WHERE used_at IS NULL`);
+    db.run(
+      sql`UPDATE invitations SET expires_at = '2000-01-01T00:00:00.000Z' WHERE used_at IS NULL`,
+    );
     await expect(
       users.acceptInvitation(token, { name: 'Agent', password: 'some-password-1' }),
     ).rejects.toThrow('invitation invalide ou expirée');

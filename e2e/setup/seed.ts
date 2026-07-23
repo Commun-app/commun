@@ -29,7 +29,11 @@ switch (command) {
   }
   case 'organization': {
     if (!core.services.organization.get()) {
-      core.services.organization.init({ name: 'Commune E2E', slug: 'commune-e2e', type: 'commune' });
+      core.services.organization.init({
+        name: 'Commune E2E',
+        slug: 'commune-e2e',
+        type: 'commune',
+      });
     }
     console.log(JSON.stringify({ initialized: true }));
     break;
@@ -53,7 +57,11 @@ switch (command) {
     const collections = core.services.collections;
     const existing = collections.listEntries('news').find((entry) => entry.slug === slug);
     if (!existing) {
-      const published = collections.createEntry('news', { title: 'Fête du village', slug, data: {} });
+      const published = collections.createEntry('news', {
+        title: 'Fête du village',
+        slug,
+        data: {},
+      });
       collections.updateEntry(published.id, { status: 'published' });
       collections.createEntry('news', { title: 'Brouillon e2e', slug: `${slug}-draft`, data: {} });
     }

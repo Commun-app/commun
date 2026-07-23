@@ -39,9 +39,12 @@ Then('listing users succeeds', async ({ world }) => {
   expect(response.status).toBe(200);
 });
 
-Then('inviting {string} as redacteur returns a single-use link', async ({ world }, email: string) => {
-  const response = await call('users.invite', world.sessionToken!, { email, role: 'redacteur' });
-  expect(response.status).toBe(200);
-  const body = (await response.json()) as { result: { data: { token: string } } };
-  expect(body.result.data.token.length).toBeGreaterThan(20);
-});
+Then(
+  'inviting {string} as redacteur returns a single-use link',
+  async ({ world }, email: string) => {
+    const response = await call('users.invite', world.sessionToken!, { email, role: 'redacteur' });
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { result: { data: { token: string } } };
+    expect(body.result.data.token.length).toBeGreaterThan(20);
+  },
+);

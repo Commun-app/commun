@@ -31,7 +31,9 @@ export const collectionsRouter = router({
       .query(({ ctx, input }) => ctx.services.collections.listEntries(input.collectionId)),
     create: protectedProcedure
       .input(z.object({ collectionId: z.string(), data: collectionEntryCreateSchema }))
-      .mutation(({ ctx, input }) => ctx.services.collections.createEntry(input.collectionId, input.data)),
+      .mutation(({ ctx, input }) =>
+        ctx.services.collections.createEntry(input.collectionId, input.data),
+      ),
     update: protectedProcedure
       .input(z.object({ id: z.string(), data: collectionEntryUpdateSchema }))
       .mutation(({ ctx, input }) => ctx.services.collections.updateEntry(input.id, input.data)),

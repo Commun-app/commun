@@ -58,7 +58,12 @@ export class MediaService {
   }
 
   /** Step 2 (iso legacy `POST /media/:org`): confirm the S3 object, record the media row. */
-  async finalize(input: { key: string; filename: string; mime: string; alt?: string }): Promise<Media> {
+  async finalize(input: {
+    key: string;
+    filename: string;
+    mime: string;
+    alt?: string;
+  }): Promise<Media> {
     const head = await this.storage.head(input.key);
     if (!head) {
       throw new CommunError(ERR.INVALID_STATE, `objet non trouvé sur le stockage: ${input.key}`);
@@ -81,7 +86,10 @@ export class MediaService {
     return this.repository.list();
   }
 
-  updateEditorial(id: string, input: { alt?: string | null; caption?: string | null; filename?: string }): Media {
+  updateEditorial(
+    id: string,
+    input: { alt?: string | null; caption?: string | null; filename?: string },
+  ): Media {
     const updated = this.repository.update(id, input);
     if (!updated) throw new CommunError(ERR.NOT_FOUND, `média introuvable: ${id}`);
     return updated;

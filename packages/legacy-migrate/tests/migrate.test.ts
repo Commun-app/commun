@@ -47,7 +47,9 @@ describe('legacy migration (sample dump)', () => {
     const db = connectDb(outDir);
     const org = new OrganizationRepository(db).get();
     expect(org?.name).toBe('Ville de Grigny');
-    expect((org?.legacyExtra as Record<string, unknown>).legacyId).toBe('64a000000000000000000001');
+    expect((org?.legacyExtra as Record<string, unknown> | undefined)?.legacyId).toBe(
+      '64a000000000000000000001',
+    );
   });
 
   test('legacy news collection merges into the seeded default; entries keep status and scheduling', () => {
@@ -84,7 +86,9 @@ describe('legacy migration (sample dump)', () => {
 
   test('media manifest lists every object with its referencing entries', () => {
     expect(report.media.count).toBe(2);
-    const cover = report.media.manifest.find((entry) => entry.legacyId === '64d000000000000000000001')!;
+    const cover = report.media.manifest.find(
+      (entry) => entry.legacyId === '64d000000000000000000001',
+    )!;
     expect(cover.referencedBy).toHaveLength(1);
   });
 

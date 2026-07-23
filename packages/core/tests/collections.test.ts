@@ -44,7 +44,11 @@ describe('CollectionsService', () => {
   });
 
   test('rejects a select field without options', () => {
-    const parsed = fieldDefinitionSchema.safeParse({ name: 'state', label: 'État', type: 'select' });
+    const parsed = fieldDefinitionSchema.safeParse({
+      name: 'state',
+      label: 'État',
+      type: 'select',
+    });
     expect(parsed.success).toBe(false);
   });
 
@@ -73,9 +77,17 @@ describe('CollectionsService', () => {
   });
 
   test('slugs are unique per collection with a domain-level error', () => {
-    collections.createEntry('events', { title: 'Marché', slug: 'marche', data: { start_date: '2026-08-01' } });
+    collections.createEntry('events', {
+      title: 'Marché',
+      slug: 'marche',
+      data: { start_date: '2026-08-01' },
+    });
     expect(() =>
-      collections.createEntry('events', { title: 'Doublon', slug: 'marche', data: { start_date: '2026-08-02' } }),
+      collections.createEntry('events', {
+        title: 'Doublon',
+        slug: 'marche',
+        data: { start_date: '2026-08-02' },
+      }),
     ).toThrow('déjà utilisé');
     // The same slug in ANOTHER collection is fine.
     collections.createEntry('news', { title: 'Marché', slug: 'marche', data: {} });
@@ -83,9 +95,17 @@ describe('CollectionsService', () => {
 
   test('scheduling: drafts and future publishedAt stay off the public plane', () => {
     collections.createEntry('news', { title: 'Brouillon', slug: 'brouillon', data: {} });
-    const published = collections.createEntry('news', { title: 'Publiée', slug: 'publiee', data: {} });
+    const published = collections.createEntry('news', {
+      title: 'Publiée',
+      slug: 'publiee',
+      data: {},
+    });
     collections.updateEntry(published.id, { status: 'published' });
-    const scheduled = collections.createEntry('news', { title: 'Programmée', slug: 'programmee', data: {} });
+    const scheduled = collections.createEntry('news', {
+      title: 'Programmée',
+      slug: 'programmee',
+      data: {},
+    });
     collections.updateEntry(scheduled.id, {
       status: 'published',
       publishedAt: new Date(Date.now() + 86_400_000).toISOString(),

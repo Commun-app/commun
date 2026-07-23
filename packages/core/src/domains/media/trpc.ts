@@ -22,8 +22,10 @@ export const mediaRouter = router({
   update: protectedProcedure
     .input(z.object({ id: z.string(), data: mediaUpdateSchema }))
     .mutation(({ ctx, input }) => ctx.services.media.updateEditorial(input.id, input.data)),
-  remove: protectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
-    await ctx.services.media.remove(input.id);
-    return { removed: input.id };
-  }),
+  remove: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.services.media.remove(input.id);
+      return { removed: input.id };
+    }),
 });

@@ -50,7 +50,8 @@ export class CollectionsService {
 
   getDefinition(idOrSlug: string): CollectionDefinition {
     const found =
-      this.repository.findDefinitionBySlug(idOrSlug) ?? this.repository.findDefinitionById(idOrSlug);
+      this.repository.findDefinitionBySlug(idOrSlug) ??
+      this.repository.findDefinitionById(idOrSlug);
     if (!found) throw new CommunError(ERR.NOT_FOUND, `collection introuvable: ${idOrSlug}`);
     return found;
   }
@@ -89,7 +90,10 @@ export class CollectionsService {
     return this.repository.listEntries(this.getDefinition(collectionIdOrSlug).id);
   }
 
-  listPublishedEntries(collectionIdOrSlug: string, now = new Date().toISOString()): CollectionEntry[] {
+  listPublishedEntries(
+    collectionIdOrSlug: string,
+    now = new Date().toISOString(),
+  ): CollectionEntry[] {
     return this.repository.listPublishedEntries(this.getDefinition(collectionIdOrSlug).id, now);
   }
 

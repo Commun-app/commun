@@ -19,10 +19,13 @@ When('I request the news content without a token', async ({ world }) => {
   world.status = response.status;
 });
 
-Given('an API token and a published news entry {string} plus a draft', ({ world }, slug: string) => {
-  world.apiToken = seed<{ token: string }>('api-token', String(Date.now())).token;
-  seed('news-entry', slug);
-});
+Given(
+  'an API token and a published news entry {string} plus a draft',
+  ({ world }, slug: string) => {
+    world.apiToken = seed<{ token: string }>('api-token', String(Date.now())).token;
+    seed('news-entry', slug);
+  },
+);
 
 Given('an API token', ({ world }) => {
   world.apiToken = seed<{ token: string }>('api-token', String(Date.now())).token;
@@ -68,15 +71,18 @@ When('the admin creates a collection {string}', async ({ world }, slug: string) 
   expect(response.status).toBe(200);
 });
 
-When('creates a draft entry {string} in {string}', async ({ world }, slug: string, collection: string) => {
-  const response = await trpc('collections.entries.create', world.sessionToken!, {
-    collectionId: collection,
-    data: { title: 'Premier communiqué', slug, data: { body: 'Bonjour' } },
-  });
-  expect(response.status).toBe(200);
-  const body = (await response.json()) as { result: { data: { id: string } } };
-  world.entryId = body.result.data.id;
-});
+When(
+  'creates a draft entry {string} in {string}',
+  async ({ world }, slug: string, collection: string) => {
+    const response = await trpc('collections.entries.create', world.sessionToken!, {
+      collectionId: collection,
+      data: { title: 'Premier communiqué', slug, data: { body: 'Bonjour' } },
+    });
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { result: { data: { id: string } } };
+    world.entryId = body.result.data.id;
+  },
+);
 
 Then('the content plane for {string} is empty', async ({ world }, collection: string) => {
   const response = await fetch(`${API_URL}/api/content/${collection}`, {
@@ -94,13 +100,16 @@ When('the entry is published', async ({ world }) => {
   expect(response.status).toBe(200);
 });
 
-Then('the content plane for {string} contains {string}', async ({ world }, collection: string, slug: string) => {
-  const response = await fetch(`${API_URL}/api/content/${collection}`, {
-    headers: { authorization: `Bearer ${world.apiToken}` },
-  });
-  const body = (await response.json()) as Record<string, Array<{ slug: string }>>;
-  expect(body[collection]!.map((entry) => entry.slug)).toContain(slug);
-});
+Then(
+  'the content plane for {string} contains {string}',
+  async ({ world }, collection: string, slug: string) => {
+    const response = await fetch(`${API_URL}/api/content/${collection}`, {
+      headers: { authorization: `Bearer ${world.apiToken}` },
+    });
+    const body = (await response.json()) as Record<string, Array<{ slug: string }>>;
+    expect(body[collection]!.map((entry) => entry.slug)).toContain(slug);
+  },
+);
 
 // ── Legacy-compat plane (/api/v1) ────────────────────────────────────────────
 

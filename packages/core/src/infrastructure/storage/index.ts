@@ -24,5 +24,11 @@ export function createStorage(env: CoreEnv): StorageDriver {
       secretKey: env.COMMUN_S3_SECRET_KEY,
     });
   }
-  return { kind: 'unconfigured', presignedPutUrl: unconfigured, head: unconfigured, remove: unconfigured, url: unconfigured };
+  return {
+    kind: 'unconfigured',
+    presignedPutUrl: unconfigured,
+    head: unconfigured,
+    remove: unconfigured,
+    url: unconfigured,
+  };
 }

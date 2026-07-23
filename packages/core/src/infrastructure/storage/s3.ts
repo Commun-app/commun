@@ -36,7 +36,9 @@ export function createS3Storage(config: S3Config): StorageDriver {
       ),
     async head(key) {
       try {
-        const result = await client.send(new HeadObjectCommand({ Bucket: config.bucket, Key: key }));
+        const result = await client.send(
+          new HeadObjectCommand({ Bucket: config.bucket, Key: key }),
+        );
         return { size: result.ContentLength ?? 0 };
       } catch {
         return null;

@@ -26,7 +26,9 @@ const main = defineCommand({
     writeFileSync(reportPath, JSON.stringify(report, null, 2));
 
     for (const collection of report.collections) {
-      const invalid = collection.entriesInvalid ? ` (${collection.entriesInvalid} invalides → legacy_extra)` : '';
+      const invalid = collection.entriesInvalid
+        ? ` (${collection.entriesInvalid} invalides → legacy_extra)`
+        : '';
       consola.info(
         `${collection.legacyName} → ${collection.slug}: ${collection.entries} entrées${invalid}, ` +
           `${collection.fieldsMapped} champs mappés` +

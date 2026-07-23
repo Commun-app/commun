@@ -48,17 +48,26 @@ export function mapAttributeDefinition(attribute: LegacyDoc): MappedField {
       : undefined;
 
   const field: FieldDefinition = {
-    name: legacyName.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^_+/, '').toLowerCase() || 'field',
+    name:
+      legacyName
+        .replace(/[^a-zA-Z0-9_]/g, '_')
+        .replace(/^_+/, '')
+        .toLowerCase() || 'field',
     label: String((attribute.headings as LegacyDoc | undefined)?.label ?? legacyName),
     type,
     required: Boolean(attribute.required),
     ...(type === 'select' && options?.length ? { options } : {}),
     ...(type === 'relation'
-      ? { target: String((attribute.componentOptions as LegacyDoc | undefined)?.collection ?? 'unknown') }
+      ? {
+          target: String(
+            (attribute.componentOptions as LegacyDoc | undefined)?.collection ?? 'unknown',
+          ),
+        }
       : {}),
   };
   // A select without options cannot survive validation — degrade to text.
-  if (type === 'select' && !options?.length) return { field: { ...field, type: 'text' }, legacyComponent, legacyName };
+  if (type === 'select' && !options?.length)
+    return { field: { ...field, type: 'text' }, legacyComponent, legacyName };
   return { field, legacyComponent, legacyName };
 }
 
@@ -79,7 +88,10 @@ export interface MappedEntry {
  * `legacy_extra`. Media/relation values keep their legacy ids — remapped by
  * the writer once targets are inserted.
  */
-export function mapRecord(record: LegacyDoc, fieldsByLegacyName: Map<string, FieldDefinition>): MappedEntry {
+export function mapRecord(
+  record: LegacyDoc,
+  fieldsByLegacyName: Map<string, FieldDefinition>,
+): MappedEntry {
   const attributes = Array.isArray(record.attributes) ? (record.attributes as LegacyDoc[]) : [];
   const byName = new Map(attributes.map((attribute) => [String(attribute.name), attribute.value]));
 

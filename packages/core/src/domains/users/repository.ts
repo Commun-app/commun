@@ -57,13 +57,20 @@ export class UsersRepository {
     return this.db.insert(sessions).values(input).returning().get();
   }
 
-  findActiveSessionWithUser(tokenHash: string, now: string): { session: Session; user: User } | undefined {
+  findActiveSessionWithUser(
+    tokenHash: string,
+    now: string,
+  ): { session: Session; user: User } | undefined {
     return this.db
       .select({ session: sessions, user: users })
       .from(sessions)
       .innerJoin(users, eq(users.id, sessions.userId))
       .where(
-        and(eq(sessions.tokenHash, tokenHash), isNull(sessions.revokedAt), gt(sessions.expiresAt, now)),
+        and(
+          eq(sessions.tokenHash, tokenHash),
+          isNull(sessions.revokedAt),
+          gt(sessions.expiresAt, now),
+        ),
       )
       .get();
   }
@@ -80,7 +87,9 @@ export class UsersRepository {
     return this.db
       .select()
       .from(sessions)
-      .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt), gt(sessions.expiresAt, now)))
+      .where(
+        and(eq(sessions.userId, userId), isNull(sessions.revokedAt), gt(sessions.expiresAt, now)),
+      )
       .orderBy(desc(sessions.createdAt))
       .all();
   }
@@ -105,7 +114,11 @@ export class UsersRepository {
       .select()
       .from(invitations)
       .where(
-        and(eq(invitations.tokenHash, tokenHash), isNull(invitations.usedAt), gt(invitations.expiresAt, now)),
+        and(
+          eq(invitations.tokenHash, tokenHash),
+          isNull(invitations.usedAt),
+          gt(invitations.expiresAt, now),
+        ),
       )
       .get();
   }
@@ -153,7 +166,10 @@ export class UsersRepository {
   // ── Housekeeping ───────────────────────────────────────────────────────────
 
   purgeExpired(now: string): void {
-    this.db.delete(sessions).where(or(lt(sessions.expiresAt, now), isNotNull(sessions.revokedAt))).run();
+    this.db
+      .delete(sessions)
+      .where(or(lt(sessions.expiresAt, now), isNotNull(sessions.revokedAt)))
+      .run();
     this.db
       .delete(invitations)
       .where(or(lt(invitations.expiresAt, now), isNotNull(invitations.usedAt)))

@@ -39,7 +39,10 @@ export class UsersService {
 
   // ── Sessions ───────────────────────────────────────────────────────────────
 
-  async login(email: string, password: string): Promise<{ token: string; session: AuthSession } | null> {
+  async login(
+    email: string,
+    password: string,
+  ): Promise<{ token: string; session: AuthSession } | null> {
     const user = this.repository.findUserByEmail(email.toLowerCase());
     // Always run one argon2 verification — unknown emails cost the same as known ones.
     const verified = await this.verifyPassword(password, user?.passwordHash ?? DUMMY_HASH);
@@ -50,7 +53,11 @@ export class UsersService {
   createSession(user: User): { token: string; session: AuthSession } {
     const token = randomBytes(32).toString('base64url');
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
-    const row = this.repository.insertSession({ tokenHash: sha256(token), userId: user.id, expiresAt });
+    const row = this.repository.insertSession({
+      tokenHash: sha256(token),
+      userId: user.id,
+      expiresAt,
+    });
     return { token, session: { sessionId: row.id, user, expiresAt } };
   }
 

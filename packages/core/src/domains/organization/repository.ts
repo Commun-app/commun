@@ -11,7 +11,11 @@ export class OrganizationRepository {
   }
 
   insert(input: NewOrganization): Organization {
-    return this.db.insert(organization).values({ ...input, id: 1 }).returning().get();
+    return this.db
+      .insert(organization)
+      .values({ ...input, id: 1 })
+      .returning()
+      .get();
   }
 
   update(input: Partial<NewOrganization>): Organization | undefined {

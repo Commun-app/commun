@@ -31,7 +31,11 @@ When('the invitee accepts the invitation and sets a password', async ({ world })
   const response = await fetch(trpcUrl('auth.acceptInvitation'), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ token: world.inviteToken, name: 'E2E Admin', password: 'mot-de-passe-e2e' }),
+    body: JSON.stringify({
+      token: world.inviteToken,
+      name: 'E2E Admin',
+      password: 'mot-de-passe-e2e',
+    }),
   });
   expect(response.status).toBe(200);
   world.body = await response.json();

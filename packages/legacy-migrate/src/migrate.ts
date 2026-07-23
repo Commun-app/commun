@@ -24,7 +24,10 @@ export interface MigrationReport {
     entriesInvalid: number;
     attributesToLegacyExtra: number;
   }>;
-  media: { count: number; manifest: Array<{ legacyId: string; targetKey: string; referencedBy: string[] }> };
+  media: {
+    count: number;
+    manifest: Array<{ legacyId: string; targetKey: string; referencedBy: string[] }>;
+  };
   errors: string[];
 }
 
@@ -79,7 +82,11 @@ export function migrateOrganization(options: {
   );
   const legacyRecords = readCollection(options.dumpDir, 'records');
   const seededSlugs = new Map(
-    db.select().from(collectionDefinitions).all().map((definition) => [definition.slug, definition]),
+    db
+      .select()
+      .from(collectionDefinitions)
+      .all()
+      .map((definition) => [definition.slug, definition]),
   );
   /** legacy record _id → new entry id (relation remapping). */
   const entryIdByLegacyId = new Map<string, string>();
@@ -109,7 +116,10 @@ export function migrateOrganization(options: {
     let definition = seededSlugs.get(slug);
     if (definition) {
       db.update(collectionDefinitions)
-        .set({ fields, legacyExtra: { editor: legacyCollection.editor, display: legacyCollection.display } })
+        .set({
+          fields,
+          legacyExtra: { editor: legacyCollection.editor, display: legacyCollection.display },
+        })
         .where(eq(collectionDefinitions.id, definition.id))
         .run();
     } else {
@@ -127,7 +137,9 @@ export function migrateOrganization(options: {
 
     // ── Records → entries ────────────────────────────────────────────────────
     const collectionId = idOf(legacyCollection._id);
-    const records = legacyRecords.filter((record) => idOf(record.relatedCollection) === collectionId);
+    const records = legacyRecords.filter(
+      (record) => idOf(record.relatedCollection) === collectionId,
+    );
     let inserted = 0;
     let invalid = 0;
     let extraCount = 0;
@@ -140,7 +152,10 @@ export function migrateOrganization(options: {
       const data = parsed.success ? parsed.data : {};
       if (!parsed.success) {
         invalid += 1;
-        Object.assign(entry.legacyExtra, { _invalidData: entry.data, _validationError: parsed.error.message });
+        Object.assign(entry.legacyExtra, {
+          _invalidData: entry.data,
+          _validationError: parsed.error.message,
+        });
       }
       const row = db
         .insert(collectionEntries)

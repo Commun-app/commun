@@ -43,7 +43,4 @@ export const publishedWhere = (
   table: { status: SQLiteColumn; publishedAt: SQLiteColumn },
   now: string = new Date().toISOString(),
 ): SQL =>
-  and(
-    eq(table.status, 'published'),
-    or(isNull(table.publishedAt), lte(table.publishedAt, now)),
-  )!;
+  and(eq(table.status, 'published'), or(isNull(table.publishedAt), lte(table.publishedAt, now)))!;

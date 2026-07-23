@@ -21,18 +21,29 @@ export class CollectionsRepository {
   }
 
   findDefinitionBySlug(slug: string): CollectionDefinition | undefined {
-    return this.db.select().from(collectionDefinitions).where(eq(collectionDefinitions.slug, slug)).get();
+    return this.db
+      .select()
+      .from(collectionDefinitions)
+      .where(eq(collectionDefinitions.slug, slug))
+      .get();
   }
 
   findDefinitionById(id: string): CollectionDefinition | undefined {
-    return this.db.select().from(collectionDefinitions).where(eq(collectionDefinitions.id, id)).get();
+    return this.db
+      .select()
+      .from(collectionDefinitions)
+      .where(eq(collectionDefinitions.id, id))
+      .get();
   }
 
   insertDefinition(input: NewCollectionDefinition): CollectionDefinition {
     return this.db.insert(collectionDefinitions).values(input).returning().get();
   }
 
-  updateDefinition(id: string, input: Partial<NewCollectionDefinition>): CollectionDefinition | undefined {
+  updateDefinition(
+    id: string,
+    input: Partial<NewCollectionDefinition>,
+  ): CollectionDefinition | undefined {
     return this.db
       .update(collectionDefinitions)
       .set(input)
@@ -42,7 +53,11 @@ export class CollectionsRepository {
   }
 
   deleteDefinition(id: string): CollectionDefinition | undefined {
-    return this.db.delete(collectionDefinitions).where(eq(collectionDefinitions.id, id)).returning().get();
+    return this.db
+      .delete(collectionDefinitions)
+      .where(eq(collectionDefinitions.id, id))
+      .returning()
+      .get();
   }
 
   // ── Entries ────────────────────────────────────────────────────────────────
@@ -60,7 +75,12 @@ export class CollectionsRepository {
     return this.db
       .select()
       .from(collectionEntries)
-      .where(and(eq(collectionEntries.collectionId, collectionId), publishedWhere(collectionEntries, now)))
+      .where(
+        and(
+          eq(collectionEntries.collectionId, collectionId),
+          publishedWhere(collectionEntries, now),
+        ),
+      )
       .orderBy(desc(collectionEntries.createdAt))
       .all();
   }
@@ -74,7 +94,12 @@ export class CollectionsRepository {
   }
 
   updateEntry(id: string, input: Partial<NewCollectionEntry>): CollectionEntry | undefined {
-    return this.db.update(collectionEntries).set(input).where(eq(collectionEntries.id, id)).returning().get();
+    return this.db
+      .update(collectionEntries)
+      .set(input)
+      .where(eq(collectionEntries.id, id))
+      .returning()
+      .get();
   }
 
   deleteEntry(id: string): CollectionEntry | undefined {

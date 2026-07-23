@@ -15,11 +15,14 @@
     "build:docs": "cd docs && bun run build",
     "install:docs": "cd docs && bun install",
     "typecheck": "bun --filter '@commun/*' typecheck",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
     "test": "bun --filter @commun/core --filter @commun/legacy-migrate test",
     "test:e2e": "bddgen && playwright test",
     "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist apps/*/node_modules apps/*/.nitro apps/*/.output docs/node_modules docs/.output docs/.docs"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.5",
     "@playwright/test": "^1.50.0",
     "@trpc/client": "^11.17.0",
     "@types/bun": "latest",

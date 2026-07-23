@@ -51,7 +51,9 @@ export const authRouter = router({
 
   /** Consume an invitation link and set the password (public, single-use). */
   acceptInvitation: procedure
-    .input(z.object({ token: z.string().min(1), name: z.string().min(1), password: z.string().min(10) }))
+    .input(
+      z.object({ token: z.string().min(1), name: z.string().min(1), password: z.string().min(10) }),
+    )
     .mutation(async ({ ctx, input }) => {
       const user = await ctx.services.users.acceptInvitation(input.token, input);
       return { user: publicUser(user) };
@@ -70,7 +72,10 @@ export const usersRouter = router({
     .input(
       z.object({
         id: z.string(),
-        data: z.object({ name: z.string().min(1).optional(), role: z.enum(['admin', 'redacteur']).optional() }),
+        data: z.object({
+          name: z.string().min(1).optional(),
+          role: z.enum(['admin', 'redacteur']).optional(),
+        }),
       }),
     )
     .mutation(({ ctx, input }) => publicUser(ctx.services.users.updateUser(input.id, input.data))),
@@ -85,12 +90,10 @@ export const apiTokensRouter = router({
   list: adminProcedure.query(({ ctx }) => ctx.services.users.listApiTokens()),
 
   /** The plaintext token is returned ONCE — only its hash is stored. */
-  create: adminProcedure
-    .input(z.object({ name: z.string().min(1) }))
-    .mutation(({ ctx, input }) => {
-      const { token, record } = ctx.services.users.createApiToken(input.name);
-      return { token, id: record.id, name: record.name };
-    }),
+  create: adminProcedure.input(z.object({ name: z.string().min(1) })).mutation(({ ctx, input }) => {
+    const { token, record } = ctx.services.users.createApiToken(input.name);
+    return { token, id: record.id, name: record.name };
+  }),
 
   revoke: adminProcedure.input(z.object({ id: z.string() })).mutation(({ ctx, input }) => {
     ctx.services.users.revokeApiToken(input.id);

@@ -9,7 +9,10 @@ export const ERR = {
 export type ErrorCode = (typeof ERR)[keyof typeof ERR];
 
 export class CommunError extends Error {
-  constructor(public readonly code: ErrorCode, message?: string) {
+  constructor(
+    public readonly code: ErrorCode,
+    message?: string,
+  ) {
     super(message ?? code);
     this.name = 'CommunError';
   }
