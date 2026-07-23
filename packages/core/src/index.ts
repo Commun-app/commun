@@ -31,9 +31,8 @@ export function createCore({ env }: { env?: CoreEnv } = {}): Core {
     collections: new CollectionsService(new CollectionsRepository(db), media),
   };
 
-  // Boot housekeeping: SQLite has no TTL indexes (unlike the legacy Mongo).
-  users.purgeExpired();
-
+  // No side effects here (review): boot housekeeping (purgeExpired) is the
+  // API's job — see apps/api/server/plugins/core.ts.
   return { env: e, db, storage, services };
 }
 

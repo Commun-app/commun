@@ -1,19 +1,16 @@
 import { defineHandler } from 'nitro';
 import { HTTPError } from 'h3';
-import { requireApiToken } from '../../../../services/content-auth.ts';
-import { useCore } from '../../../../services/context.ts';
 
 /**
  * Legacy-compat plane (iso `service-records` `GET /api/v1/content/deployment`):
  * the payload the CURRENT site builds consume — `_theme` (visual identity),
  * `_pages` (legacy page definitions), `slugs` (static page paths + published
- * `/collection/slug` paths). Wrapped like the legacy http component.
+ * `/collection/slug` paths). Token guard: server/middleware/api-token.ts.
  */
-export default defineHandler((event) => {
-  requireApiToken(event.req as unknown as Request);
-  const { organization, collections } = useCore().services;
+export default defineHandler(async (event) => {
+  const { organization, collections } = event.context.core.services;
 
-  const settings = organization.get();
+  const settings = await organization.get();
   if (!settings) throw new HTTPError({ status: 404, message: 'collectivité non initialisée' });
 
   const deployment = (settings.deployment ?? {}) as {
@@ -34,7 +31,7 @@ export default defineHandler((event) => {
       sort: deployment.sort ?? null,
       _theme: deployment.theme ?? settings.theme ?? null,
       _pages: deployment.definition ?? [],
-      slugs: [...pageSlugs, ...collections.publishedSlugs()],
+      slugs: [...pageSlugs, ...(await collections.publishedSlugs())],
     },
   };
 });

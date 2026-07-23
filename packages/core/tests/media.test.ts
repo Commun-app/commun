@@ -29,7 +29,6 @@ describe('MediaService — iso legacy presigned flow', () => {
     expect(key.endsWith('/photo_mairie.png')).toBe(true);
 
     const row = await media.finalize({ key, filename: 'photo mairie.png', mime: 'image/png' });
-    expect(row.driver).toBe('s3');
     expect(row.size).toBe(1234);
     expect(await media.url(row.id)).toContain('?signed');
 

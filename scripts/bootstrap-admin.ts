@@ -16,12 +16,12 @@ if (!email?.includes('@')) {
 }
 
 const core = createCore();
-if (core.services.users.hasAnyUser()) {
+if (await core.services.users.hasAnyUser()) {
   consola.error('Des utilisateurs existent déjà — le bootstrap est refusé.');
   process.exit(1);
 }
 
-const { token, expiresAt } = core.services.users.createInvitation({ email, role: 'admin' });
+const { token, expiresAt } = await core.services.users.createInvitation({ email, role: 'admin' });
 consola.box(
   `Invitation admin créée pour ${email}\n\n` +
     `Lien (usage unique, expire le ${expiresAt}) :\n` +

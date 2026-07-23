@@ -1,27 +1,49 @@
-import type { z } from 'zod';
+import { z } from 'zod';
 import { CommunError, ERR } from '../../common/errors/index.ts';
-import { buildDataSchema, type FieldDefinition } from './fields.ts';
 import type { CollectionsRepository } from './repository.ts';
 import type { MediaService } from '../media/service.ts';
-import type { CollectionDefinition, CollectionEntry } from './schema.ts';
+import type { CollectionDefinition, Entry, FieldDefinition, FieldType } from './schema.ts';
 import type {
-  collectionDefinitionCreateSchema,
-  collectionDefinitionUpdateSchema,
-  collectionEntryCreateSchema,
-  collectionEntryUpdateSchema,
-} from './validation.ts';
+  DefinitionCreateDto,
+  DefinitionUpdateDto,
+  EntryCreateDto,
+  EntryUpdateDto,
+} from './dto.ts';
 
-type DefinitionCreate = z.infer<typeof collectionDefinitionCreateSchema>;
-type DefinitionUpdate = z.infer<typeof collectionDefinitionUpdateSchema>;
-type EntryCreate = z.infer<typeof collectionEntryCreateSchema>;
-type EntryUpdate = z.infer<typeof collectionEntryUpdateSchema>;
+const FIELD_VALUE_SCHEMAS: Record<FieldType, z.ZodType> = {
+  text: z.string(),
+  'rich-text': z.record(z.string(), z.unknown()),
+  number: z.number(),
+  boolean: z.boolean(),
+  date: z.iso.datetime({ offset: true }).or(z.iso.date()),
+  media: z.string(), // media id
+  relation: z.string(), // target entry id
+  select: z.string(),
+};
+
+/**
+ * Build the Zod schema validating an entry's `data` from a collection
+ * definition — the generated-validation requirement of the spec. Exported
+ * standalone: the offline migration CLI uses it too.
+ */
+export function buildDataSchema(fields: FieldDefinition[]): z.ZodType<Record<string, unknown>> {
+  const shape: Record<string, z.ZodType> = {};
+  for (const field of fields) {
+    let valueSchema = FIELD_VALUE_SCHEMAS[field.type];
+    if (field.type === 'select' && field.options?.length) {
+      valueSchema = z.enum(field.options as [string, ...string[]]);
+    }
+    shape[field.name] = field.required ? valueSchema : valueSchema.nullable().optional();
+  }
+  return z.strictObject(shape) as z.ZodType<Record<string, unknown>>;
+}
 
 /** SQLite unique-index violations surface as raw errors — translate the slug case. */
 function mapSlugConflict(error: unknown, collectionSlug: string, entrySlug: string): unknown {
   if (
     error instanceof Error &&
     error.message.includes('UNIQUE constraint failed') &&
-    error.message.includes('collection_entries.slug')
+    error.message.includes('entries.slug')
   ) {
     return new CommunError(
       ERR.INVALID_STATE,
@@ -44,30 +66,30 @@ export class CollectionsService {
 
   // ── Definitions ────────────────────────────────────────────────────────────
 
-  listDefinitions(): CollectionDefinition[] {
+  async listDefinitions(): Promise<CollectionDefinition[]> {
     return this.repository.listDefinitions();
   }
 
-  getDefinition(idOrSlug: string): CollectionDefinition {
+  async getDefinition(idOrSlug: string): Promise<CollectionDefinition> {
     const found =
-      this.repository.findDefinitionBySlug(idOrSlug) ??
-      this.repository.findDefinitionById(idOrSlug);
+      (await this.repository.findDefinitionBySlug(idOrSlug)) ??
+      (await this.repository.findDefinitionById(idOrSlug));
     if (!found) throw new CommunError(ERR.NOT_FOUND, `collection introuvable: ${idOrSlug}`);
     return found;
   }
 
-  createDefinition(input: DefinitionCreate): CollectionDefinition {
+  async createDefinition(input: DefinitionCreateDto): Promise<CollectionDefinition> {
     return this.repository.insertDefinition(input);
   }
 
-  updateDefinition(id: string, input: DefinitionUpdate): CollectionDefinition {
-    const updated = this.repository.updateDefinition(id, input);
+  async updateDefinition(id: string, input: DefinitionUpdateDto): Promise<CollectionDefinition> {
+    const updated = await this.repository.updateDefinition(id, input);
     if (!updated) throw new CommunError(ERR.NOT_FOUND, `collection introuvable: ${id}`);
     return updated;
   }
 
-  removeDefinition(id: string): void {
-    if (!this.repository.deleteDefinition(id)) {
+  async removeDefinition(id: string): Promise<void> {
+    if (!(await this.repository.deleteDefinition(id))) {
       throw new CommunError(ERR.NOT_FOUND, `collection introuvable: ${id}`);
     }
   }
@@ -75,7 +97,7 @@ export class CollectionsService {
   // ── Entries ────────────────────────────────────────────────────────────────
 
   private validateData(definition: CollectionDefinition, data: Record<string, unknown>) {
-    const schema = buildDataSchema(definition.fields as FieldDefinition[]);
+    const schema = buildDataSchema(definition.fields);
     const parsed = schema.safeParse(data);
     if (!parsed.success) {
       throw new CommunError(
@@ -86,15 +108,18 @@ export class CollectionsService {
     return parsed.data;
   }
 
-  listEntries(collectionIdOrSlug: string): CollectionEntry[] {
-    return this.repository.listEntries(this.getDefinition(collectionIdOrSlug).id);
+  async listEntries(collectionIdOrSlug: string): Promise<Entry[]> {
+    return this.repository.listEntries((await this.getDefinition(collectionIdOrSlug)).id);
   }
 
-  listPublishedEntries(
+  async listPublishedEntries(
     collectionIdOrSlug: string,
     now = new Date().toISOString(),
-  ): CollectionEntry[] {
-    return this.repository.listPublishedEntries(this.getDefinition(collectionIdOrSlug).id, now);
+  ): Promise<Entry[]> {
+    return this.repository.listPublishedEntries(
+      (await this.getDefinition(collectionIdOrSlug)).id,
+      now,
+    );
   }
 
   /**
@@ -106,12 +131,11 @@ export class CollectionsService {
   async listPublishedEntriesResolved(
     collectionIdOrSlug: string,
     now = new Date().toISOString(),
-  ): Promise<Array<CollectionEntry & { data: Record<string, unknown> }>> {
-    const definition = this.getDefinition(collectionIdOrSlug);
-    const fields = definition.fields as FieldDefinition[];
-    const mediaFields = fields.filter((field) => field.type === 'media');
-    const richTextFields = fields.filter((field) => field.type === 'rich-text');
-    const entries = this.repository.listPublishedEntries(definition.id, now);
+  ): Promise<Array<Entry & { data: Record<string, unknown> }>> {
+    const definition = await this.getDefinition(collectionIdOrSlug);
+    const mediaFields = definition.fields.filter((field) => field.type === 'media');
+    const richTextFields = definition.fields.filter((field) => field.type === 'rich-text');
+    const entries = await this.repository.listPublishedEntries(definition.id, now);
     if (mediaFields.length === 0 && richTextFields.length === 0) return entries;
 
     return Promise.all(
@@ -163,9 +187,9 @@ export class CollectionsService {
    */
   async legacyRecordsPayload(): Promise<Record<string, Record<string, unknown>>> {
     const records: Record<string, Record<string, unknown>> = {};
-    for (const definition of this.repository.listDefinitions()) {
-      const entries = await this.listPublishedEntriesResolved(definition.id);
-      for (const entry of entries) {
+    for (const definition of await this.repository.listDefinitions()) {
+      const resolved = await this.listPublishedEntriesResolved(definition.id);
+      for (const entry of resolved) {
         records[entry.id] = {
           _id: entry.id,
           title: entry.title,
@@ -181,40 +205,39 @@ export class CollectionsService {
   }
 
   /** Public slugs of every published entry (`/collection/entry`), for the deployment payload. */
-  publishedSlugs(now = new Date().toISOString()): string[] {
-    return this.repository
-      .listDefinitions()
-      .flatMap((definition) =>
-        this.repository
-          .listPublishedEntries(definition.id, now)
-          .map((entry) => `/${definition.slug}/${entry.slug}`),
-      );
+  async publishedSlugs(now = new Date().toISOString()): Promise<string[]> {
+    const slugs: string[] = [];
+    for (const definition of await this.repository.listDefinitions()) {
+      const published = await this.repository.listPublishedEntries(definition.id, now);
+      slugs.push(...published.map((entry) => `/${definition.slug}/${entry.slug}`));
+    }
+    return slugs;
   }
 
-  createEntry(collectionIdOrSlug: string, input: EntryCreate): CollectionEntry {
-    const definition = this.getDefinition(collectionIdOrSlug);
+  async createEntry(collectionIdOrSlug: string, input: EntryCreateDto): Promise<Entry> {
+    const definition = await this.getDefinition(collectionIdOrSlug);
     const data = this.validateData(definition, input.data);
     try {
-      return this.repository.insertEntry({ ...input, data, collectionId: definition.id });
+      return await this.repository.insertEntry({ ...input, data, collectionId: definition.id });
     } catch (error) {
       throw mapSlugConflict(error, definition.slug, input.slug);
     }
   }
 
-  updateEntry(id: string, input: EntryUpdate): CollectionEntry {
-    const existing = this.repository.findEntryById(id);
+  async updateEntry(id: string, input: EntryUpdateDto): Promise<Entry> {
+    const existing = await this.repository.findEntryById(id);
     if (!existing) throw new CommunError(ERR.NOT_FOUND, `entrée introuvable: ${id}`);
-    const definition = this.getDefinition(existing.collectionId);
+    const definition = await this.getDefinition(existing.collectionId);
     const data = input.data ? this.validateData(definition, input.data) : undefined;
     try {
-      return this.repository.updateEntry(id, { ...input, ...(data ? { data } : {}) })!;
+      return (await this.repository.updateEntry(id, { ...input, ...(data ? { data } : {}) }))!;
     } catch (error) {
       throw mapSlugConflict(error, definition.slug, input.slug ?? existing.slug);
     }
   }
 
-  removeEntry(id: string): void {
-    if (!this.repository.deleteEntry(id)) {
+  async removeEntry(id: string): Promise<void> {
+    if (!(await this.repository.deleteEntry(id))) {
       throw new CommunError(ERR.NOT_FOUND, `entrée introuvable: ${id}`);
     }
   }

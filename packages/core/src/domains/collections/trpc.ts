@@ -1,11 +1,6 @@
 import { z } from 'zod';
 import { adminProcedure, protectedProcedure, router } from '../../infrastructure/trpc/index.ts';
-import {
-  collectionDefinitionCreateSchema,
-  collectionDefinitionUpdateSchema,
-  collectionEntryCreateSchema,
-  collectionEntryUpdateSchema,
-} from './validation.ts';
+import { definitionCreateDto, definitionUpdateDto, entryCreateDto, entryUpdateDto } from './dto.ts';
 
 // Transport layer only: every handler delegates to the CollectionsService.
 export const collectionsRouter = router({
@@ -15,13 +10,13 @@ export const collectionsRouter = router({
     .input(z.object({ idOrSlug: z.string() }))
     .query(({ ctx, input }) => ctx.services.collections.getDefinition(input.idOrSlug)),
   create: adminProcedure
-    .input(collectionDefinitionCreateSchema)
+    .input(definitionCreateDto)
     .mutation(({ ctx, input }) => ctx.services.collections.createDefinition(input)),
   update: adminProcedure
-    .input(z.object({ id: z.string(), data: collectionDefinitionUpdateSchema }))
+    .input(z.object({ id: z.string(), data: definitionUpdateDto }))
     .mutation(({ ctx, input }) => ctx.services.collections.updateDefinition(input.id, input.data)),
-  remove: adminProcedure.input(z.object({ id: z.string() })).mutation(({ ctx, input }) => {
-    ctx.services.collections.removeDefinition(input.id);
+  remove: adminProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
+    await ctx.services.collections.removeDefinition(input.id);
     return { removed: input.id };
   }),
 
@@ -30,16 +25,18 @@ export const collectionsRouter = router({
       .input(z.object({ collectionId: z.string() }))
       .query(({ ctx, input }) => ctx.services.collections.listEntries(input.collectionId)),
     create: protectedProcedure
-      .input(z.object({ collectionId: z.string(), data: collectionEntryCreateSchema }))
+      .input(z.object({ collectionId: z.string(), data: entryCreateDto }))
       .mutation(({ ctx, input }) =>
         ctx.services.collections.createEntry(input.collectionId, input.data),
       ),
     update: protectedProcedure
-      .input(z.object({ id: z.string(), data: collectionEntryUpdateSchema }))
+      .input(z.object({ id: z.string(), data: entryUpdateDto }))
       .mutation(({ ctx, input }) => ctx.services.collections.updateEntry(input.id, input.data)),
-    remove: protectedProcedure.input(z.object({ id: z.string() })).mutation(({ ctx, input }) => {
-      ctx.services.collections.removeEntry(input.id);
-      return { removed: input.id };
-    }),
+    remove: protectedProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await ctx.services.collections.removeEntry(input.id);
+        return { removed: input.id };
+      }),
   }),
 });

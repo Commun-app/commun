@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import {
-  collectionEntries,
+  entries as entriesTable,
   connectDb,
   CollectionsRepository,
   CollectionsService,
@@ -43,23 +43,23 @@ afterAll(() => {
 });
 
 describe('legacy migration (sample dump)', () => {
-  test('organization singleton is populated with legacy metadata preserved', () => {
+  test('organization singleton is populated with legacy metadata preserved', async () => {
     const db = connectDb(outDir);
-    const org = new OrganizationRepository(db).get();
+    const org = await new OrganizationRepository(db).get();
     expect(org?.name).toBe('Ville de Grigny');
     expect((org?.legacyExtra as Record<string, unknown> | undefined)?.legacyId).toBe(
       '64a000000000000000000001',
     );
   });
 
-  test('legacy news collection merges into the seeded default; entries keep status and scheduling', () => {
+  test('legacy news collection merges into the seeded default; entries keep status and scheduling', async () => {
     const db = connectDb(outDir);
     const news = report.collections.find((collection) => collection.slug === 'news')!;
     expect(news.entries).toBe(2);
     // handler-schedules has no Commun equivalent → reported unmapped, value in legacy_extra.
     expect(news.fieldsUnmapped.join(' ')).toContain('widget3d');
 
-    const published = servicesOf(db, outDir).listPublishedEntries('news');
+    const published = await servicesOf(db, outDir).listPublishedEntries('news');
     expect(published.map((entry) => entry.slug)).toEqual(['fete-de-la-ville']);
     const extra = published[0]?.legacyExtra as Record<string, unknown>;
     expect(extra.widget3d).toEqual({ periods: [] });
@@ -77,8 +77,8 @@ describe('legacy migration (sample dump)', () => {
     const db = connectDb(outDir);
     const broken = db
       .select()
-      .from(collectionEntries)
-      .where(eq(collectionEntries.slug, 'marche-casse'))
+      .from(entriesTable)
+      .where(eq(entriesTable.slug, 'marche-casse'))
       .get()!;
     const extra = broken.legacyExtra as Record<string, unknown>;
     expect(extra._invalidData).toBeDefined();
@@ -92,13 +92,13 @@ describe('legacy migration (sample dump)', () => {
     expect(cover.referencedBy).toHaveLength(1);
   });
 
-  test('re-running the migration is idempotent (fresh rebuild)', () => {
+  test('re-running the migration is idempotent (fresh rebuild)', async () => {
     const second = migrateOrganization({ dumpDir: FIXTURE, orgSlug: 'grigny', outDir });
     expect(second.collections.map((collection) => collection.entries)).toEqual(
       report.collections.map((collection) => collection.entries),
     );
     const db = connectDb(outDir);
-    expect(servicesOf(db, outDir).listPublishedEntries('news')).toHaveLength(1);
+    expect(await servicesOf(db, outDir).listPublishedEntries('news')).toHaveLength(1);
   });
 
   test('unknown organization produces an explicit error', () => {

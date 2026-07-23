@@ -11,6 +11,7 @@ CREATE TABLE `organization` (
 	`email` text,
 	`website` text,
 	`theme` text,
+	`deployment` text,
 	`social` text,
 	`legacy_extra` text,
 	`created_at` text NOT NULL,
@@ -67,7 +68,6 @@ CREATE TABLE `media` (
 	`size` integer NOT NULL,
 	`alt` text,
 	`caption` text,
-	`driver` text NOT NULL,
 	`objects` text NOT NULL,
 	`meta_data` text,
 	`legacy_extra` text,
@@ -87,7 +87,7 @@ CREATE TABLE `collection_definitions` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `collection_definitions_slug_unique` ON `collection_definitions` (`slug`);--> statement-breakpoint
-CREATE TABLE `collection_entries` (
+CREATE TABLE `entries` (
 	`id` text PRIMARY KEY NOT NULL,
 	`collection_id` text NOT NULL,
 	`title` text NOT NULL,
@@ -101,4 +101,4 @@ CREATE TABLE `collection_entries` (
 	FOREIGN KEY (`collection_id`) REFERENCES `collection_definitions`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `collection_entries_slug_unique` ON `collection_entries` (`collection_id`,`slug`);
+CREATE UNIQUE INDEX `entries_slug_unique` ON `entries` (`collection_id`,`slug`);

@@ -5,22 +5,15 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1784803720061,
+      "when": 1784824681839,
       "tag": "0000_init",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "6",
-      "when": 1784803720477,
+      "when": 1784824682237,
       "tag": "0001_seed-default-collections",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1784812277547,
-      "tag": "0002_organization-deployment",
       "breakpoints": true
     }
   ]

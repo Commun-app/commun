@@ -24,7 +24,7 @@ afterAll(() => {
 
 describe('UsersService — invitations et sessions', () => {
   test('full flow: invite → accept → login → session → targeted revoke → logout', async () => {
-    const { token: inviteToken } = users.createInvitation({
+    const { token: inviteToken } = await users.createInvitation({
       email: 'Maire@Grigny.fr',
       role: 'admin',
     });
@@ -49,22 +49,22 @@ describe('UsersService — invitations et sessions', () => {
     expect(first).not.toBeNull();
 
     // Liste des appareils : 2 sessions actives, la courante est marquée.
-    const list = users.listSessions(user.id, second!.session.sessionId);
+    const list = await users.listSessions(user.id, second!.session.sessionId);
     expect(list).toHaveLength(2);
     expect(list.find((s) => s.current)?.id).toBe(second!.session.sessionId);
 
     // Révocation ciblée de la première session — la seconde reste valide.
-    users.revokeOwnSession(user.id, first!.session.sessionId);
-    expect(users.verifySession(first!.token)).toBeNull();
-    expect(users.verifySession(second!.token)?.user.email).toBe('maire@grigny.fr');
+    await users.revokeOwnSession(user.id, first!.session.sessionId);
+    expect(await users.verifySession(first!.token)).toBeNull();
+    expect((await users.verifySession(second!.token))?.user.email).toBe('maire@grigny.fr');
 
     // Logout de la session courante.
-    users.revokeSession(second!.session.sessionId);
-    expect(users.verifySession(second!.token)).toBeNull();
+    await users.revokeSession(second!.session.sessionId);
+    expect(await users.verifySession(second!.token)).toBeNull();
   });
 
   test('revoking a session that belongs to someone else is refused', async () => {
-    const { token } = users.createInvitation({ email: 'autre@grigny.fr', role: 'redacteur' });
+    const { token } = await users.createInvitation({ email: 'autre@grigny.fr', role: 'redacteur' });
     const other = await users.acceptInvitation(token, {
       name: 'Autre',
       password: 'password-solide',
@@ -73,16 +73,16 @@ describe('UsersService — invitations et sessions', () => {
     expect(() => users.revokeOwnSession('someone-else', login!.session.sessionId)).toThrow(
       CommunError,
     );
-    expect(users.verifySession(login!.token)).not.toBeNull();
+    expect(await users.verifySession(login!.token)).not.toBeNull();
     expect(other.role).toBe('redacteur');
   });
 
-  test('a forged session token verifies to null', () => {
-    expect(users.verifySession('forged-token')).toBeNull();
+  test('a forged session token verifies to null', async () => {
+    expect(await users.verifySession('forged-token')).toBeNull();
   });
 
   test('an expired invitation is refused without leaking account info', async () => {
-    const { token } = users.createInvitation({ email: 'agent@grigny.fr', role: 'redacteur' });
+    const { token } = await users.createInvitation({ email: 'agent@grigny.fr', role: 'redacteur' });
     db.run(
       sql`UPDATE invitations SET expires_at = '2000-01-01T00:00:00.000Z' WHERE used_at IS NULL`,
     );

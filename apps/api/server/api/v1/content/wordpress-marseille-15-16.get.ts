@@ -1,7 +1,6 @@
 import { defineHandler } from 'nitro';
 import { consola } from 'consola';
-import staticJson from '../../../../data/politicus-mairie-marseille-15-16.json';
-import { useCore } from '../../../../services/context.ts';
+import staticJson from '../../../data/politicus-mairie-marseille-15-16.json';
 
 /**
  * Legacy-compat plane (iso `service-records`
@@ -11,17 +10,19 @@ import { useCore } from '../../../../services/context.ts';
  * with signed URLs (matched by the legacy `order` field = WordPress user id).
  * Unauthenticated, exactly like the legacy route.
  */
-export default defineHandler(async () => {
+export default defineHandler(async (event) => {
   const payload = structuredClone(staticJson) as {
     data?: { users?: Array<{ _id: string | number; avatar?: { objects?: unknown } }> };
   };
 
   try {
-    const { organization, collections, media } = useCore().services;
-    if (organization.get()?.slug !== 'marseille15-16' || !payload.data?.users) return payload;
+    const { organization, collections, media } = event.context.core.services;
+    if ((await organization.get())?.slug !== 'marseille15-16' || !payload.data?.users) {
+      return payload;
+    }
 
     const avatarByOrder = new Map<string, Record<string, string>>();
-    for (const entry of collections.listPublishedEntries('collaborators')) {
+    for (const entry of await collections.listPublishedEntries('collaborators')) {
       const order = entry.data.order;
       const cover = entry.data.cover;
       const mediaId = Array.isArray(cover) ? cover[0] : cover;

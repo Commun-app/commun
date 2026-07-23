@@ -28,7 +28,7 @@ Le schéma SHALL être single-tenant : la configuration de la collectivité est 
 - **THEN** un unique enregistrement de settings est retourné, sans notion de tenant multiple
 
 ### Requirement: Collections génériques comme modèle de contenu principal
-Le contenu SHALL être modélisé par le moteur de collections : définitions en base (nom, slug, champs choisis dans un jeu fermé de 8 types — text, rich-text, number, boolean, date, media, relation, select), validation Zod générée depuis la définition, entrées avec titre/slug/données typées et cycle de publication. Les entrées invalides SHALL être rejetées, et le slug d'une entrée SHALL être unique au sein de sa collection (les slugs sont des segments de route du site publié).
+Le contenu SHALL être modélisé par le moteur de collections : définitions en base (nom, slug, champs choisis dans un jeu fermé de 8 types — text, rich-text, number, boolean, date, media, relation, select), validation Zod générée depuis la définition, entrées (table `entries`) avec titre/slug/données typées et cycle de publication. Les entrées invalides SHALL être rejetées, et le slug d'une entrée SHALL être unique au sein de sa collection (les slugs sont des segments de route du site publié).
 
 #### Scenario: Création d'une collection et d'une entrée valide
 - **WHEN** un admin définit une collection « marchés publics » avec des champs typés et qu'une entrée conforme est créée

@@ -2,15 +2,18 @@ import { eq } from 'drizzle-orm';
 import type { StoreDb } from '../../infrastructure/db/index.ts';
 import { organization, type NewOrganization, type Organization } from './schema.ts';
 
-/** All database access of the organization domain (singleton row, id = 1). */
+/**
+ * All database access of the organization domain (singleton row, id = 1).
+ * Methods are async by contract even though bun:sqlite executes synchronously.
+ */
 export class OrganizationRepository {
   constructor(private readonly db: StoreDb) {}
 
-  get(): Organization | undefined {
+  async get(): Promise<Organization | undefined> {
     return this.db.select().from(organization).where(eq(organization.id, 1)).get();
   }
 
-  insert(input: NewOrganization): Organization {
+  async insert(input: NewOrganization): Promise<Organization> {
     return this.db
       .insert(organization)
       .values({ ...input, id: 1 })
@@ -18,7 +21,7 @@ export class OrganizationRepository {
       .get();
   }
 
-  update(input: Partial<NewOrganization>): Organization | undefined {
+  async update(input: Partial<NewOrganization>): Promise<Organization | undefined> {
     return this.db.update(organization).set(input).where(eq(organization.id, 1)).returning().get();
   }
 }

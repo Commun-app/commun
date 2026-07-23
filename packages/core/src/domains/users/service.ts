@@ -43,17 +43,17 @@ export class UsersService {
     email: string,
     password: string,
   ): Promise<{ token: string; session: AuthSession } | null> {
-    const user = this.repository.findUserByEmail(email.toLowerCase());
+    const user = await this.repository.findUserByEmail(email.toLowerCase());
     // Always run one argon2 verification — unknown emails cost the same as known ones.
     const verified = await this.verifyPassword(password, user?.passwordHash ?? DUMMY_HASH);
     if (!user?.passwordHash || !verified) return null;
     return this.createSession(user);
   }
 
-  createSession(user: User): { token: string; session: AuthSession } {
+  async createSession(user: User): Promise<{ token: string; session: AuthSession }> {
     const token = randomBytes(32).toString('base64url');
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
-    const row = this.repository.insertSession({
+    const row = await this.repository.insertSession({
       tokenHash: sha256(token),
       userId: user.id,
       expiresAt,
@@ -61,19 +61,20 @@ export class UsersService {
     return { token, session: { sessionId: row.id, user, expiresAt } };
   }
 
-  verifySession(token: string): AuthSession | null {
-    const row = this.repository.findActiveSessionWithUser(sha256(token), nowIso());
+  async verifySession(token: string): Promise<AuthSession | null> {
+    const row = await this.repository.findActiveSessionWithUser(sha256(token), nowIso());
     if (!row) return null;
     return { sessionId: row.session.id, user: row.user, expiresAt: row.session.expiresAt };
   }
 
-  revokeSession(sessionId: string): void {
-    this.repository.revokeSession(sessionId, nowIso());
+  async revokeSession(sessionId: string): Promise<void> {
+    await this.repository.revokeSession(sessionId, nowIso());
   }
 
   /** Active sessions of a user (device list — legacy `account/me` parity). */
-  listSessions(userId: string, currentSessionId: string) {
-    return this.repository.listActiveSessionsByUser(userId, nowIso()).map((session) => ({
+  async listSessions(userId: string, currentSessionId: string) {
+    const sessions = await this.repository.listActiveSessionsByUser(userId, nowIso());
+    return sessions.map((session) => ({
       id: session.id,
       createdAt: session.createdAt,
       expiresAt: session.expiresAt,
@@ -82,28 +83,28 @@ export class UsersService {
   }
 
   /** Revoke ONE of the caller's own sessions (targeted device logout). */
-  revokeOwnSession(userId: string, sessionId: string): void {
-    const session = this.repository.findSessionById(sessionId);
+  async revokeOwnSession(userId: string, sessionId: string): Promise<void> {
+    const session = await this.repository.findSessionById(sessionId);
     if (!session || session.userId !== userId) {
       throw new CommunError(ERR.NOT_FOUND, `session introuvable: ${sessionId}`);
     }
-    this.repository.revokeSession(sessionId, nowIso());
+    await this.repository.revokeSession(sessionId, nowIso());
   }
 
   /** Boot housekeeping — SQLite has no TTL indexes, unlike the legacy Mongo. */
-  purgeExpired(): void {
-    this.repository.purgeExpired(nowIso());
+  async purgeExpired(): Promise<void> {
+    await this.repository.purgeExpired(nowIso());
   }
 
   // ── Invitations ────────────────────────────────────────────────────────────
 
-  createInvitation(input: { email: string; role: 'admin' | 'redacteur' }): {
-    token: string;
-    expiresAt: string;
-  } {
+  async createInvitation(input: {
+    email: string;
+    role: 'admin' | 'redacteur';
+  }): Promise<{ token: string; expiresAt: string }> {
     const token = randomBytes(32).toString('base64url');
     const expiresAt = new Date(Date.now() + INVITATION_TTL_MS).toISOString();
-    this.repository.insertInvitation({
+    await this.repository.insertInvitation({
       email: input.email.toLowerCase(),
       role: input.role,
       tokenHash: sha256(token),
@@ -118,38 +119,41 @@ export class UsersService {
    * refused without leaking whether the email exists.
    */
   async acceptInvitation(token: string, input: { name: string; password: string }): Promise<User> {
-    const invitation = this.repository.findValidInvitation(sha256(token), nowIso());
+    const invitation = await this.repository.findValidInvitation(sha256(token), nowIso());
     if (!invitation) throw new CommunError(ERR.INVALID_STATE, 'invitation invalide ou expirée');
 
-    const user = this.repository.activateUser({
+    const user = await this.repository.activateUser({
       email: invitation.email,
       name: input.name,
       passwordHash: await this.hashPassword(input.password),
       role: invitation.role,
     });
-    this.repository.markInvitationUsed(invitation.id, nowIso());
+    await this.repository.markInvitationUsed(invitation.id, nowIso());
     return user;
   }
 
   // ── Users management ───────────────────────────────────────────────────────
 
-  listUsers(): User[] {
+  async listUsers(): Promise<User[]> {
     return this.repository.listUsers();
   }
 
-  hasAnyUser(): boolean {
+  async hasAnyUser(): Promise<boolean> {
     return this.repository.hasAnyUser();
   }
 
-  removeUser(actorId: string, id: string): void {
+  async removeUser(actorId: string, id: string): Promise<void> {
     if (id === actorId) {
       throw new CommunError(ERR.INVALID_STATE, 'impossible de supprimer son propre compte');
     }
-    this.repository.deleteUser(id);
+    await this.repository.deleteUser(id);
   }
 
-  updateUser(id: string, input: { name?: string; role?: 'admin' | 'redacteur' }): User {
-    const updated = this.repository.updateUser(id, input);
+  async updateUser(
+    id: string,
+    input: { name?: string; role?: 'admin' | 'redacteur' },
+  ): Promise<User> {
+    const updated = await this.repository.updateUser(id, input);
     if (!updated) throw new CommunError(ERR.NOT_FOUND, `utilisateur introuvable: ${id}`);
     return updated;
   }
@@ -157,25 +161,25 @@ export class UsersService {
   // ── API tokens (machine plane) ─────────────────────────────────────────────
 
   /** The plaintext token is returned ONCE — only its sha256 lands in the database. */
-  createApiToken(name: string): { token: string; record: ApiToken } {
+  async createApiToken(name: string): Promise<{ token: string; record: ApiToken }> {
     const token = `commun_${randomBytes(24).toString('base64url')}`;
-    const record = this.repository.insertApiToken({ name, tokenHash: sha256(token) });
+    const record = await this.repository.insertApiToken({ name, tokenHash: sha256(token) });
     return { token, record };
   }
 
   /** True if the bearer token matches a non-revoked API token (stamps lastUsedAt). */
-  verifyApiToken(token: string): boolean {
-    const found = this.repository.findActiveApiToken(sha256(token));
+  async verifyApiToken(token: string): Promise<boolean> {
+    const found = await this.repository.findActiveApiToken(sha256(token));
     if (!found) return false;
-    this.repository.touchApiToken(found.id, nowIso());
+    await this.repository.touchApiToken(found.id, nowIso());
     return true;
   }
 
-  revokeApiToken(id: string): void {
-    this.repository.revokeApiToken(id, nowIso());
+  async revokeApiToken(id: string): Promise<void> {
+    await this.repository.revokeApiToken(id, nowIso());
   }
 
-  listApiTokens() {
+  async listApiTokens() {
     return this.repository.listApiTokens();
   }
 }

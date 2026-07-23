@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import {
   collectionDefinitions,
-  collectionEntries,
+  entries as entriesTable,
   connectDb,
   organization,
   buildDataSchema,
@@ -158,7 +158,7 @@ export function migrateOrganization(options: {
         });
       }
       const row = db
-        .insert(collectionEntries)
+        .insert(entriesTable)
         .values({
           collectionId: definition.id,
           title: entry.title,

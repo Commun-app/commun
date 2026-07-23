@@ -3,12 +3,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { connectDb } from '../src/infrastructure/db/index.ts';
-import { fieldDefinitionSchema } from '../src/domains/collections/fields.ts';
+import { fieldDefinitionSchema } from '../src/domains/collections/schema.ts';
 import { CollectionsRepository } from '../src/domains/collections/repository.ts';
 import { CollectionsService } from '../src/domains/collections/service.ts';
 import { MediaRepository } from '../src/domains/media/repository.ts';
 import { MediaService } from '../src/domains/media/service.ts';
-import { collectionDefinitionCreateSchema } from '../src/domains/collections/validation.ts';
+import { definitionCreateDto } from '../src/domains/collections/dto.ts';
 import { CommunError } from '../src/common/errors/index.ts';
 import { createFakeStorage } from './helpers/storage.ts';
 
@@ -52,12 +52,12 @@ describe('CollectionsService', () => {
     expect(parsed.success).toBe(false);
   });
 
-  test('creates a definition and validates entries against the generated schema', () => {
-    const input = collectionDefinitionCreateSchema.parse(publicTenders);
-    const definition = collections.createDefinition(input);
-    expect(collections.getDefinition('public-tenders').id).toBe(definition.id);
+  test('creates a definition and validates entries against the generated schema', async () => {
+    const input = definitionCreateDto.parse(publicTenders);
+    const definition = await collections.createDefinition(input);
+    expect((await collections.getDefinition('public-tenders')).id).toBe(definition.id);
 
-    const entry = collections.createEntry(definition.id, {
+    const entry = await collections.createEntry(definition.id, {
       title: 'Réfection de la voirie',
       slug: 'refection-voirie',
       data: { deadline: '2026-09-01', state: 'open' },
@@ -66,52 +66,52 @@ describe('CollectionsService', () => {
     expect(entry.collectionId).toBe(definition.id);
   });
 
-  test('rejects entry data violating the definition', () => {
-    expect(() =>
+  test('rejects entry data violating the definition', async () => {
+    await expect(
       collections.createEntry('public-tenders', {
         title: 'Entrée invalide',
         slug: 'entree-invalide',
         data: { state: 'cancelled' },
       }),
-    ).toThrow(CommunError);
+    ).rejects.toThrow(CommunError);
   });
 
-  test('slugs are unique per collection with a domain-level error', () => {
-    collections.createEntry('events', {
+  test('slugs are unique per collection with a domain-level error', async () => {
+    await collections.createEntry('events', {
       title: 'Marché',
       slug: 'marche',
       data: { start_date: '2026-08-01' },
     });
-    expect(() =>
+    await expect(
       collections.createEntry('events', {
         title: 'Doublon',
         slug: 'marche',
         data: { start_date: '2026-08-02' },
       }),
-    ).toThrow('déjà utilisé');
+    ).rejects.toThrow('déjà utilisé');
     // The same slug in ANOTHER collection is fine.
-    collections.createEntry('news', { title: 'Marché', slug: 'marche', data: {} });
+    await collections.createEntry('news', { title: 'Marché', slug: 'marche', data: {} });
   });
 
-  test('scheduling: drafts and future publishedAt stay off the public plane', () => {
-    collections.createEntry('news', { title: 'Brouillon', slug: 'brouillon', data: {} });
-    const published = collections.createEntry('news', {
+  test('scheduling: drafts and future publishedAt stay off the public plane', async () => {
+    await collections.createEntry('news', { title: 'Brouillon', slug: 'brouillon', data: {} });
+    const published = await collections.createEntry('news', {
       title: 'Publiée',
       slug: 'publiee',
       data: {},
     });
-    collections.updateEntry(published.id, { status: 'published' });
-    const scheduled = collections.createEntry('news', {
+    await collections.updateEntry(published.id, { status: 'published' });
+    const scheduled = await collections.createEntry('news', {
       title: 'Programmée',
       slug: 'programmee',
       data: {},
     });
-    collections.updateEntry(scheduled.id, {
+    await collections.updateEntry(scheduled.id, {
       status: 'published',
       publishedAt: new Date(Date.now() + 86_400_000).toISOString(),
     });
 
-    const visible = collections.listPublishedEntries('news');
+    const visible = await collections.listPublishedEntries('news');
     expect(visible.map((entry) => entry.slug)).toEqual(['publiee']);
   });
 
@@ -119,7 +119,7 @@ describe('CollectionsService', () => {
     const { key } = await media.requestUpload('une.png', 'image/png');
     const uploaded = await media.finalize({ key, filename: 'une.png', mime: 'image/png' });
 
-    const entry = collections.createEntry('news', {
+    const entry = await collections.createEntry('news', {
       title: 'Avec image',
       slug: 'avec-image',
       data: {
@@ -130,7 +130,7 @@ describe('CollectionsService', () => {
         },
       },
     });
-    collections.updateEntry(entry.id, { status: 'published' });
+    await collections.updateEntry(entry.id, { status: 'published' });
 
     const [resolved] = await collections.listPublishedEntriesResolved('news');
     const cover = resolved!.data.cover as { id: string; url: string };

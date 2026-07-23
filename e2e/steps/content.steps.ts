@@ -14,8 +14,8 @@ const trpc = (procedure: string, token: string, input?: unknown) =>
 
 // ── /api/content plane ───────────────────────────────────────────────────────
 
-When('I request the news content without a token', async ({ world }) => {
-  const response = await fetch(`${API_URL}/api/content/news`);
+When('I request the legacy records payload without a token', async ({ world }) => {
+  const response = await fetch(`${API_URL}/api/v1/content/records`);
   world.status = response.status;
 });
 
@@ -35,26 +35,24 @@ Given('an initialized organization', () => {
   seed('organization');
 });
 
-When('I request the news content with the token', async ({ world }) => {
-  const response = await fetch(`${API_URL}/api/content/news`, {
+When('I request the legacy records payload with the token', async ({ world }) => {
+  const response = await fetch(`${API_URL}/api/v1/content/records`, {
     headers: { authorization: `Bearer ${world.apiToken}` },
   });
   world.status = response.status;
   world.body = await response.json();
 });
 
-When('I request the {string} content with the token', async ({ world }, domain: string) => {
-  const response = await fetch(`${API_URL}/api/content/${domain}`, {
-    headers: { authorization: `Bearer ${world.apiToken}` },
-  });
-  world.status = response.status;
-});
-
-Then('only {string} is returned', ({ world }, slug: string) => {
-  expect(world.status).toBe(200);
-  const body = world.body as { news: Array<{ slug: string }> };
-  expect(body.news.map((entry) => entry.slug)).toEqual([slug]);
-});
+Then(
+  'the records payload contains the slug {string} but not {string}',
+  ({ world }, visible: string, hidden: string) => {
+    expect(world.status).toBe(200);
+    const body = world.body as { data: { records: Record<string, { slug: string }> } };
+    const slugs = Object.values(body.data.records).map((record) => record.slug);
+    expect(slugs).toContain(visible);
+    expect(slugs).not.toContain(hidden);
+  },
+);
 
 Then('the content plane answers {int}', ({ world }, status: number) => {
   expect(world.status).toBe(status);
@@ -84,13 +82,19 @@ When(
   },
 );
 
-Then('the content plane for {string} is empty', async ({ world }, collection: string) => {
-  const response = await fetch(`${API_URL}/api/content/${collection}`, {
-    headers: { authorization: `Bearer ${world.apiToken}` },
-  });
-  const body = (await response.json()) as Record<string, unknown[]>;
-  expect(body[collection]).toEqual([]);
-});
+Then(
+  'the records payload has no entry for collection {string}',
+  async ({ world }, collection: string) => {
+    const response = await fetch(`${API_URL}/api/v1/content/records`, {
+      headers: { authorization: `Bearer ${world.apiToken}` },
+    });
+    const body = (await response.json()) as {
+      data: { records: Record<string, { relatedCollection: string }> };
+    };
+    const collections = Object.values(body.data.records).map((record) => record.relatedCollection);
+    expect(collections).not.toContain(collection);
+  },
+);
 
 When('the entry is published', async ({ world }) => {
   const response = await trpc('collections.entries.update', world.sessionToken!, {
@@ -99,17 +103,6 @@ When('the entry is published', async ({ world }) => {
   });
   expect(response.status).toBe(200);
 });
-
-Then(
-  'the content plane for {string} contains {string}',
-  async ({ world }, collection: string, slug: string) => {
-    const response = await fetch(`${API_URL}/api/content/${collection}`, {
-      headers: { authorization: `Bearer ${world.apiToken}` },
-    });
-    const body = (await response.json()) as Record<string, Array<{ slug: string }>>;
-    expect(body[collection]!.map((entry) => entry.slug)).toContain(slug);
-  },
-);
 
 // ── Legacy-compat plane (/api/v1) ────────────────────────────────────────────
 

@@ -3,24 +3,27 @@ import type { StoreDb } from '../../infrastructure/db/index.ts';
 import { publishedWhere } from '../../infrastructure/db/helpers.ts';
 import {
   collectionDefinitions,
-  collectionEntries,
+  entries,
   type CollectionDefinition,
-  type CollectionEntry,
+  type Entry,
   type NewCollectionDefinition,
-  type NewCollectionEntry,
+  type NewEntry,
 } from './schema.ts';
 
-/** All database access of the collections domain. */
+/**
+ * All database access of the collections domain. Methods are async by
+ * contract (layering decision) even though bun:sqlite executes synchronously.
+ */
 export class CollectionsRepository {
   constructor(private readonly db: StoreDb) {}
 
   // ── Definitions ────────────────────────────────────────────────────────────
 
-  listDefinitions(): CollectionDefinition[] {
+  async listDefinitions(): Promise<CollectionDefinition[]> {
     return this.db.select().from(collectionDefinitions).all();
   }
 
-  findDefinitionBySlug(slug: string): CollectionDefinition | undefined {
+  async findDefinitionBySlug(slug: string): Promise<CollectionDefinition | undefined> {
     return this.db
       .select()
       .from(collectionDefinitions)
@@ -28,7 +31,7 @@ export class CollectionsRepository {
       .get();
   }
 
-  findDefinitionById(id: string): CollectionDefinition | undefined {
+  async findDefinitionById(id: string): Promise<CollectionDefinition | undefined> {
     return this.db
       .select()
       .from(collectionDefinitions)
@@ -36,14 +39,14 @@ export class CollectionsRepository {
       .get();
   }
 
-  insertDefinition(input: NewCollectionDefinition): CollectionDefinition {
+  async insertDefinition(input: NewCollectionDefinition): Promise<CollectionDefinition> {
     return this.db.insert(collectionDefinitions).values(input).returning().get();
   }
 
-  updateDefinition(
+  async updateDefinition(
     id: string,
     input: Partial<NewCollectionDefinition>,
-  ): CollectionDefinition | undefined {
+  ): Promise<CollectionDefinition | undefined> {
     return this.db
       .update(collectionDefinitions)
       .set(input)
@@ -52,7 +55,7 @@ export class CollectionsRepository {
       .get();
   }
 
-  deleteDefinition(id: string): CollectionDefinition | undefined {
+  async deleteDefinition(id: string): Promise<CollectionDefinition | undefined> {
     return this.db
       .delete(collectionDefinitions)
       .where(eq(collectionDefinitions.id, id))
@@ -62,47 +65,37 @@ export class CollectionsRepository {
 
   // ── Entries ────────────────────────────────────────────────────────────────
 
-  listEntries(collectionId: string): CollectionEntry[] {
+  async listEntries(collectionId: string): Promise<Entry[]> {
     return this.db
       .select()
-      .from(collectionEntries)
-      .where(eq(collectionEntries.collectionId, collectionId))
-      .orderBy(desc(collectionEntries.createdAt))
+      .from(entries)
+      .where(eq(entries.collectionId, collectionId))
+      .orderBy(desc(entries.createdAt))
       .all();
   }
 
-  listPublishedEntries(collectionId: string, now: string): CollectionEntry[] {
+  async listPublishedEntries(collectionId: string, now: string): Promise<Entry[]> {
     return this.db
       .select()
-      .from(collectionEntries)
-      .where(
-        and(
-          eq(collectionEntries.collectionId, collectionId),
-          publishedWhere(collectionEntries, now),
-        ),
-      )
-      .orderBy(desc(collectionEntries.createdAt))
+      .from(entries)
+      .where(and(eq(entries.collectionId, collectionId), publishedWhere(entries, now)))
+      .orderBy(desc(entries.createdAt))
       .all();
   }
 
-  findEntryById(id: string): CollectionEntry | undefined {
-    return this.db.select().from(collectionEntries).where(eq(collectionEntries.id, id)).get();
+  async findEntryById(id: string): Promise<Entry | undefined> {
+    return this.db.select().from(entries).where(eq(entries.id, id)).get();
   }
 
-  insertEntry(input: NewCollectionEntry): CollectionEntry {
-    return this.db.insert(collectionEntries).values(input).returning().get();
+  async insertEntry(input: NewEntry): Promise<Entry> {
+    return this.db.insert(entries).values(input).returning().get();
   }
 
-  updateEntry(id: string, input: Partial<NewCollectionEntry>): CollectionEntry | undefined {
-    return this.db
-      .update(collectionEntries)
-      .set(input)
-      .where(eq(collectionEntries.id, id))
-      .returning()
-      .get();
+  async updateEntry(id: string, input: Partial<NewEntry>): Promise<Entry | undefined> {
+    return this.db.update(entries).set(input).where(eq(entries.id, id)).returning().get();
   }
 
-  deleteEntry(id: string): CollectionEntry | undefined {
-    return this.db.delete(collectionEntries).where(eq(collectionEntries.id, id)).returning().get();
+  async deleteEntry(id: string): Promise<Entry | undefined> {
+    return this.db.delete(entries).where(eq(entries.id, id)).returning().get();
   }
 }

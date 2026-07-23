@@ -21,15 +21,11 @@ L'API SHALL exposer le router tRPC de `@commun/core` sur `/api/trpc` (catch-all 
 - **THEN** l'API répond avec une erreur UNAUTHORIZED et n'exécute pas l'opération
 
 ### Requirement: Plan public REST
-L'API SHALL exposer des routes REST h3 publiques restreintes au strict minimum et en LECTURE SEULE : contenu publié par collection (destiné au build des sites, authentifié par token API) et objets médias du driver local. Toute autre surface d'API SHALL être exposée via tRPC. (La soumission de formulaires citoyens, fonctionnalité nouvelle, est hors périmètre phase 1 — review 2026-07-23.)
-
-#### Scenario: Récupération du contenu au build
-- **WHEN** le build d'un site appelle `/api/content/<slug>` avec un token API valide
-- **THEN** l'API retourne le contenu publié de la collection (ou les settings pour `organization`) en JSON, prêt pour Nuxt Content
+Le plan REST public SHALL se limiter aux routes legacy-compat `/api/v1/content/*` (lecture seule) — le plan de contenu moderne par collection est reporté au change de la layer de thèmes (phase 3), qui définira son propre contrat (review 2026-07-23). Toute autre surface d'API SHALL être exposée via tRPC.
 
 #### Scenario: Résolution des médias dans le contenu
 - **WHEN** une entrée publiée référence des médias (champ `media` ou nœud image/file dans un rich-text)
-- **THEN** le plan contenu retourne des URLs chargeables (`{id, url}` pour les champs, `attrs.src` dans le rich-text) — parité avec la résolution signée du legacy
+- **THEN** le payload records retourne des URLs chargeables (`{id, url}` pour les champs, `attrs.src` dans le rich-text) — parité avec la résolution signée du legacy
 
 ### Requirement: Plan legacy-compat pour les builds actuels
 L'API SHALL exposer, sous les chemins legacy exacts, les routes que les builds de sites ACTUELS consomment sans modification : `GET /api/v1/content/records` (map plate des entrées publiées par id, médias résolus, enveloppe `{ name, description, data }` legacy), `GET /api/v1/content/deployment` (`_theme`, `_pages`, `slugs`) et `GET /api/v1/content/wordpress-marseille-15-16` (JSON statique, avatars enrichis quand l'instance est marseille15-16, sans authentification — iso legacy). Les deux premières SHALL accepter le header `Authorization` brut (sans préfixe Bearer) envoyé par les clients legacy.

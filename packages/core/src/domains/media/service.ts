@@ -4,6 +4,7 @@ import { CommunError, ERR } from '../../common/errors/index.ts';
 import type { StorageDriver } from '../../infrastructure/storage/index.ts';
 import type { MediaRepository } from './repository.ts';
 import type { Media } from './schema.ts';
+import type { MediaFinalizeDto, MediaUpdateDto } from './dto.ts';
 
 /** Closed allowlist: images, PDF and common office documents. Never executables. */
 export const ALLOWED_MIME = new Set([
@@ -58,22 +59,16 @@ export class MediaService {
   }
 
   /** Step 2 (iso legacy `POST /media/:org`): confirm the S3 object, record the media row. */
-  async finalize(input: {
-    key: string;
-    filename: string;
-    mime: string;
-    alt?: string;
-  }): Promise<Media> {
+  async finalize(input: MediaFinalizeDto): Promise<Media> {
     const head = await this.storage.head(input.key);
     if (!head) {
       throw new CommunError(ERR.INVALID_STATE, `objet non trouvé sur le stockage: ${input.key}`);
     }
-    const row = this.repository.insert({
+    const row = await this.repository.insert({
       filename: sanitizeFilename(input.filename),
       mime: input.mime,
       size: head.size,
       alt: input.alt ?? null,
-      driver: 's3',
       objects: { original: input.key, variants: {} },
     });
     // TODO(fin de phase): produire réellement les variantes. Le legacy publiait
@@ -82,31 +77,28 @@ export class MediaService {
     return row;
   }
 
-  list(): Media[] {
+  async list(): Promise<Media[]> {
     return this.repository.list();
   }
 
-  updateEditorial(
-    id: string,
-    input: { alt?: string | null; caption?: string | null; filename?: string },
-  ): Media {
-    const updated = this.repository.update(id, input);
+  async updateEditorial(id: string, input: MediaUpdateDto): Promise<Media> {
+    const updated = await this.repository.update(id, input);
     if (!updated) throw new CommunError(ERR.NOT_FOUND, `média introuvable: ${id}`);
     return updated;
   }
 
   /** Delete the row AND every stored object (original + variants). */
   async remove(id: string): Promise<void> {
-    const row = this.repository.findById(id);
+    const row = await this.repository.findById(id);
     if (!row) throw new CommunError(ERR.NOT_FOUND, `média introuvable: ${id}`);
     const objects = row.objects as MediaObjects;
     await this.storage.remove([objects.original, ...Object.values(objects.variants ?? {})]);
-    this.repository.delete(id);
+    await this.repository.delete(id);
   }
 
   /** Signed GET URL of a media's original object (null if the media is unknown). */
   async url(id: string): Promise<string | null> {
-    const row = this.repository.findById(id);
+    const row = await this.repository.findById(id);
     if (!row) return null;
     return this.storage.url((row.objects as MediaObjects).original);
   }

@@ -19,14 +19,14 @@ afterAll(() => {
 });
 
 describe('UsersService — API tokens', () => {
-  test('created token verifies, revoked token does not, plaintext is never stored', () => {
-    const { token, record } = users.createApiToken('site-build');
+  test('created token verifies, revoked token does not, plaintext is never stored', async () => {
+    const { token, record } = await users.createApiToken('site-build');
     expect(token.startsWith('commun_')).toBe(true);
     expect(record.tokenHash).not.toContain(token);
-    expect(users.verifyApiToken(token)).toBe(true);
-    expect(users.verifyApiToken('commun_forged')).toBe(false);
+    expect(await users.verifyApiToken(token)).toBe(true);
+    expect(await users.verifyApiToken('commun_forged')).toBe(false);
 
-    users.revokeApiToken(record.id);
-    expect(users.verifyApiToken(token)).toBe(false);
+    await users.revokeApiToken(record.id);
+    expect(await users.verifyApiToken(token)).toBe(false);
   });
 });

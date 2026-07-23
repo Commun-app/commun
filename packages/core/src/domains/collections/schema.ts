@@ -1,4 +1,5 @@
 import { sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { z } from 'zod';
 import {
   createdAt,
   id,
@@ -8,28 +9,77 @@ import {
   updatedAt,
 } from '../../infrastructure/db/helpers.ts';
 
+// ── Field model ──────────────────────────────────────────────────────────────
+// The CLOSED set of field types available to collections. Extending this set
+// is a spec-level decision — arbitrary field types are exactly the legacy
+// JSON free-for-all this design replaces.
+
+export const FIELD_TYPES = [
+  'text',
+  'rich-text',
+  'number',
+  'boolean',
+  'date',
+  'media',
+  'relation',
+  'select',
+] as const;
+
+export type FieldType = (typeof FIELD_TYPES)[number];
+
+export const fieldDefinitionSchema = z
+  .object({
+    /** Machine name of the field inside `data`. */
+    name: z.string().regex(/^[a-z][a-z0-9_]*$/, 'nom de champ invalide (snake_case attendu)'),
+    label: z.string().min(1),
+    type: z.enum(FIELD_TYPES),
+    required: z.boolean().default(false),
+    /** Choices — required for `select`. */
+    options: z.array(z.string().min(1)).optional(),
+    /** Target collection slug — required for `relation`. */
+    target: z.string().optional(),
+  })
+  .check((ctx) => {
+    if (ctx.value.type === 'select' && !ctx.value.options?.length) {
+      ctx.issues.push({
+        code: 'custom',
+        message: 'options requises pour un champ select',
+        input: ctx.value,
+      });
+    }
+    if (ctx.value.type === 'relation' && !ctx.value.target) {
+      ctx.issues.push({
+        code: 'custom',
+        message: 'target requis pour un champ relation',
+        input: ctx.value,
+      });
+    }
+  });
+
+export type FieldDefinition = z.infer<typeof fieldDefinitionSchema>;
+
+// ── Tables ───────────────────────────────────────────────────────────────────
+
 /**
  * Collection definitions — the primary content model of Commun (sanitised
  * heir of the legacy `attributes/editor/display` engine). Standard content
  * (news, events, officials, projects) ships as seeded collections via a
- * Drizzle migration; communes extend freely. Field types come from a CLOSED
- * set (validated by the domain's Zod schemas): text, rich-text, number,
- * boolean, date, media, relation, select.
+ * Drizzle migration; communes extend freely.
  */
 export const collectionDefinitions = sqliteTable('collection_definitions', {
   id: id(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   description: text('description'),
-  fields: text('fields', { mode: 'json' }).$type<unknown[]>().notNull(),
+  fields: text('fields', { mode: 'json' }).$type<FieldDefinition[]>().notNull(),
   legacyExtra: legacyExtra(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
 
 /** Entries of a collection — validated against the definition's fields. */
-export const collectionEntries = sqliteTable(
-  'collection_entries',
+export const entries = sqliteTable(
+  'entries',
   {
     id: id(),
     collectionId: text('collection_id')
@@ -45,10 +95,10 @@ export const collectionEntries = sqliteTable(
     updatedAt: updatedAt(),
   },
   // Slugs are route segments on the published site — unique per collection.
-  (table) => [uniqueIndex('collection_entries_slug_unique').on(table.collectionId, table.slug)],
+  (table) => [uniqueIndex('entries_slug_unique').on(table.collectionId, table.slug)],
 );
 
 export type CollectionDefinition = typeof collectionDefinitions.$inferSelect;
 export type NewCollectionDefinition = typeof collectionDefinitions.$inferInsert;
-export type CollectionEntry = typeof collectionEntries.$inferSelect;
-export type NewCollectionEntry = typeof collectionEntries.$inferInsert;
+export type Entry = typeof entries.$inferSelect;
+export type NewEntry = typeof entries.$inferInsert;

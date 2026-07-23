@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { connectDb, type StoreDb } from '../src/infrastructure/db/index.ts';
 import { organization } from '../src/domains/organization/schema.ts';
-import { collectionEntries } from '../src/domains/collections/schema.ts';
+import { entries } from '../src/domains/collections/schema.ts';
 import { CollectionsRepository } from '../src/domains/collections/repository.ts';
 import { CollectionsService } from '../src/domains/collections/service.ts';
 import { MediaRepository } from '../src/domains/media/repository.ts';
@@ -35,24 +35,21 @@ describe('schema — core domains', () => {
     expect(rows[0]?.name).toBe('Grigny');
   });
 
-  test('the seed migration created the four default collections', () => {
-    const slugs = collections
-      .listDefinitions()
-      .map((definition) => definition.slug)
-      .sort();
+  test('the seed migration created the four default collections', async () => {
+    const slugs = (await collections.listDefinitions()).map((definition) => definition.slug).sort();
     expect(slugs).toEqual(['events', 'news', 'officials', 'projects']);
   });
 
-  test('entries cascade-delete with their collection definition', () => {
-    const definition = collections.getDefinition('projects');
-    collections.createEntry(definition.id, {
+  test('entries cascade-delete with their collection definition', async () => {
+    const definition = await collections.getDefinition('projects');
+    await collections.createEntry(definition.id, {
       title: 'Place du marché',
       slug: 'place-du-marche',
       data: {},
     });
-    expect(db.select().from(collectionEntries).all()).toHaveLength(1);
+    expect(db.select().from(entries).all()).toHaveLength(1);
 
-    collections.removeDefinition(definition.id);
-    expect(db.select().from(collectionEntries).all()).toHaveLength(0);
+    await collections.removeDefinition(definition.id);
+    expect(db.select().from(entries).all()).toHaveLength(0);
   });
 });

@@ -1,6 +1,7 @@
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { createdAt, id, legacyExtra, updatedAt } from '../../infrastructure/db/helpers.ts';
 
+// No storage-driver column: S3 is the only backend (review 2026-07-23).
 export const media = sqliteTable('media', {
   id: id(),
   filename: text('filename').notNull(),
@@ -8,11 +9,9 @@ export const media = sqliteTable('media', {
   size: integer('size').notNull(),
   alt: text('alt'),
   caption: text('caption'),
-  /** Storage driver that holds the objects. */
-  driver: text('driver', { enum: ['local', 's3'] }).notNull(),
   /**
    * Storage keys: `{ original: string, variants: { [name]: string } }` —
-   * webp variants are generated asynchronously after upload.
+   * webp variants arrive with the real resize implementation (end of phase).
    */
   objects: text('objects', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
   metaData: text('meta_data', { mode: 'json' }).$type<Record<string, unknown>>(),

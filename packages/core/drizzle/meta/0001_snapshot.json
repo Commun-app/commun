@@ -1,6 +1,6 @@
 {
-  "id": "01646798-1858-4243-81c3-feb0718fa43c",
-  "prevId": "51ebc48b-36f9-4d1d-860c-1ef8c4171f1b",
+  "id": "dcaf4e06-e71e-4582-b6f4-735cd75f9d6f",
+  "prevId": "bad583b7-36ed-4a1a-9c69-c54f34269ec0",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
@@ -88,6 +88,13 @@
         },
         "theme": {
           "name": "theme",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deployment": {
+          "name": "deployment",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -443,13 +450,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "driver": {
-          "name": "driver",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "objects": {
           "name": "objects",
           "type": "text",
@@ -566,8 +566,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "collection_entries": {
-      "name": "collection_entries",
+    "entries": {
+      "name": "entries",
       "columns": {
         "id": {
           "name": "id",
@@ -642,8 +642,8 @@
         }
       },
       "indexes": {
-        "collection_entries_slug_unique": {
-          "name": "collection_entries_slug_unique",
+        "entries_slug_unique": {
+          "name": "entries_slug_unique",
           "columns": [
             "collection_id",
             "slug"
@@ -652,9 +652,9 @@
         }
       },
       "foreignKeys": {
-        "collection_entries_collection_id_collection_definitions_id_fk": {
-          "name": "collection_entries_collection_id_collection_definitions_id_fk",
-          "tableFrom": "collection_entries",
+        "entries_collection_id_collection_definitions_id_fk": {
+          "name": "entries_collection_id_collection_definitions_id_fk",
+          "tableFrom": "entries",
           "columnsFrom": [
             "collection_id"
           ],
