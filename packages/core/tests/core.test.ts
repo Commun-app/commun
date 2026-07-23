@@ -10,7 +10,7 @@ describe('createCore', () => {
     try {
       const core = createCore({ env: parseEnv({ COMMUN_DATA_DIR: dataDir }) });
       const health = await core.services.health.check();
-      expect(health.ok).toBe(true);
+      expect(health.status).toBe('ok');
       expect(health.service).toBe('@commun/core');
       expect(health.db.ok).toBe(true);
       expect(core.storage.kind).toBe('unconfigured');

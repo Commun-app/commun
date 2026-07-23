@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { protectedProcedure, router } from '../../infrastructure/trpc/index.ts';
-import { mediaFinalizeDto, mediaRequestUploadDto, mediaUpdateDto } from './dto.ts';
+import { mediaFinalizeDto, mediaRequestUploadDto, mediaUpdateDto } from './dtos/index.ts';
 
 // Transport layer only — iso legacy upload flow: requestUpload (pre-signed
 // PUT URL) → direct client upload to S3 → finalize (records the row).

@@ -1,8 +1,8 @@
 import { defineMiddleware, HTTPError } from 'h3';
 
 /**
- * API-token guard of the public content plane (review: middleware, not a
- * service — https://nitro.build/docs/routing#middleware). Guards exactly the
+ * API-token guard of the public content plane (numbered middleware — order matters,
+ * it must run after 2.session). Guards exactly the
  * token-protected legacy-compat routes; the wordpress route is public (iso
  * legacy) and the tRPC plane carries its own session auth. Accepts
  * `Authorization: Bearer <token>` AND the raw `Authorization: <token>` form

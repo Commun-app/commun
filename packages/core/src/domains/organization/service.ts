@@ -1,7 +1,7 @@
 import { CommunError, ERR } from '../../common/errors/index.ts';
 import type { OrganizationRepository } from './repository.ts';
 import type { Organization } from './schema.ts';
-import type { OrganizationInitDto, OrganizationUpdateDto } from './dto.ts';
+import type { OrganizationInitDto, OrganizationUpdateDto } from './dtos/index.ts';
 
 /** Instance settings — a singleton: initialised once, then only updated. */
 export class OrganizationService {

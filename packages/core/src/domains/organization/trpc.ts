@@ -1,5 +1,5 @@
 import { adminProcedure, protectedProcedure, router } from '../../infrastructure/trpc/index.ts';
-import { organizationInitDto, organizationUpdateDto } from './dto.ts';
+import { organizationInitDto, organizationUpdateDto } from './dtos/index.ts';
 
 // Transport layer only: every handler delegates to the OrganizationService.
 export const organizationRouter = router({

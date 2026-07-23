@@ -1,18 +1,18 @@
 import { sql } from 'drizzle-orm';
 import type { StoreDb } from '../db/index.ts';
 
+/** The health payload — served AS-IS by GET /health and trpc health.ping. */
 export interface HealthStatus {
-  ok: boolean;
+  status: 'ok' | 'degraded';
   service: string;
   time: string;
   db: { ok: boolean };
 }
 
 /**
- * Connectivity snapshot for operators and probes: the API is up and its
+ * Connectivity snapshot for operators and probes: the instance is up and its
  * database answers. Lives in `infrastructure/` as an observability concern;
- * the tRPC `health` router is a thin transport over it. More probes (media
- * storage, site build) are added here as the system grows.
+ * both transports (REST route, tRPC ping) return its payload untouched.
  */
 export class HealthService {
   constructor(private readonly db: StoreDb) {}
@@ -25,7 +25,7 @@ export class HealthService {
       dbOk = false;
     }
     return {
-      ok: dbOk,
+      status: dbOk ? 'ok' : 'degraded',
       service: '@commun/core',
       time: new Date().toISOString(),
       db: { ok: dbOk },

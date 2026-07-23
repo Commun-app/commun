@@ -84,6 +84,13 @@ Passe exhaustive sur les 33 actions HTTP des 4 services legacy (media/members/or
 - **Abandonné (mort ou jamais fonctionnel dans le legacy)** : `media.update`/`media.delete` (fichiers 100 % commentés), `users.invite` (stub vide), `password/recover` (aucun email jamais envoyé), branche changement d'email de `email/confirm`, `wordpress-marseille-15-16` (client en dur, sans auth), `devices/fetch-all` (consommé uniquement par l'ancien SSG abandonné).
 - **Reste à arbitrer (produit)** : `deployments` POST/GET (déclencheur + statut Vercel — utilisé par le bouton publier de l'admin legacy) → probablement remplacé par le build auto-hébergé de la phase 3 ; à trancher au cadrage phase 2/3. `GET /content/deployment` (payload `_theme`/`_pages`/`slugs` consommé par les thèmes actuels) → couvert par `/api/content/organization` (theme) + collections ; les `_pages` JSON-driven appartiennent à l'ancien SSG abandonné, la layer phase 3 consommera le nouveau plan.
 
+## Résolu par review Zed, 4e passe (2026-07-23)
+
+- **DTOs en dossier** : chaque domaine porte un dossier `dtos/` avec **un fichier par agrégat** (`users/dtos/{auth,user,api-token}.dto.ts`, `collections/dtos/{definition,entry}.dto.ts`, `media/dtos/{upload,media}.dto.ts`, `organization/dtos/organization.dto.ts`) + un barrel. Le grain « un fichier par DTO individuel » a été écarté : les DTOs sont de petits schémas Zod de 3-10 lignes partageant imports et constantes — l'agrégat est le bon niveau ; on scinde si un fichier grossit.
+- **Plugin sans intermédiaire** : le hook runtime `request` attache `event.context.core` directement depuis le plugin (le typage beta expose `HTTPEvent` sans `context` — cast localisé documenté) ; le middleware `0.core` et le holder `core-instance.ts` disparaissent.
+- **Middleware numérotés** (l'ordre d'exécution est le nom de fichier) : `1.cors` → `2.session` (la résolution du Bearer vit là, `services/context.ts` disparaît, le catch-all tRPC assemble son contexte depuis `event.context`) → `3.api-token`.
+- **Health en DTO unique** : `HealthStatus` (`status/service/time/db`) exporté par le core et servi TEL QUEL par `GET /health` et `trpc health.ping` — plus de reconstruction d'objet dans le transport.
+
 ## Résolu par review Zed, 3e passe (2026-07-23)
 
 - **Anatomie d'un domaine figée** : `schema.ts` (tables Drizzle + modèle de données — les types de champs des collections y vivent), `dto.ts` (contrats d'entrée/sortie tRPC, dont la projection `toPublicUser`), `repository.ts` (classe, tout le Drizzle), `service.ts` (classe, comportement), `trpc.ts` (transport pur). Les fichiers `validation.ts` et `fields.ts` disparaissent.

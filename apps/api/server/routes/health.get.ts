@@ -1,11 +1,5 @@
 import { defineHandler } from 'nitro';
 
-export default defineHandler(async (event) => {
-  const health = await event.context.core.services.health.check();
-  return {
-    status: health.ok ? 'ok' : 'degraded',
-    service: '@commun/api',
-    time: health.time,
-    db: health.db,
-  };
-});
+// Returns the HealthStatus DTO from @commun/core untouched (review: no
+// object rebuilding in the transport layer).
+export default defineHandler((event) => event.context.core.services.health.check());

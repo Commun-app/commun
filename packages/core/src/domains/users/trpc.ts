@@ -13,7 +13,7 @@ import {
   loginDto,
   toPublicUser,
   userUpdateDto,
-} from './dto.ts';
+} from './dtos/index.ts';
 
 // Transport layer only: every handler delegates to the UsersService, inputs
 // and outputs go through the domain DTOs.

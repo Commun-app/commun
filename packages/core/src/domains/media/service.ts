@@ -4,7 +4,7 @@ import { CommunError, ERR } from '../../common/errors/index.ts';
 import type { StorageDriver } from '../../infrastructure/storage/index.ts';
 import type { MediaRepository } from './repository.ts';
 import type { Media } from './schema.ts';
-import type { MediaFinalizeDto, MediaUpdateDto } from './dto.ts';
+import type { MediaFinalizeDto, MediaUpdateDto } from './dtos/index.ts';
 
 /** Closed allowlist: images, PDF and common office documents. Never executables. */
 export const ALLOWED_MIME = new Set([

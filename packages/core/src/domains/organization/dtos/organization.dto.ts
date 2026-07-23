@@ -1,9 +1,8 @@
 import { createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 import type { z } from 'zod';
-import { organization } from './schema.ts';
+import { organization } from '../schema.ts';
 
-// tRPC input contracts of the organization domain (system columns excluded).
-
+// System columns are never accepted from the outside.
 const OMIT = { id: true, createdAt: true, updatedAt: true, legacyExtra: true } as const;
 
 export const organizationInitDto = createInsertSchema(organization).omit(OMIT);

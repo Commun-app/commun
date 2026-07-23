@@ -13,7 +13,7 @@ When('I request the API health endpoint', async ({ request, world }) => {
 
 Then('the API reports it is healthy', async ({ world }) => {
   expect(world.status).toBe(200);
-  expect(world.body).toMatchObject({ status: 'ok', service: '@commun/api' });
+  expect(world.body).toMatchObject({ status: 'ok', service: '@commun/core' });
 });
 
 When('I query the core health check', async ({ world }) => {
@@ -21,8 +21,8 @@ When('I query the core health check', async ({ world }) => {
 });
 
 Then('it reports database connectivity', ({ world }) => {
-  const health = world.body as { ok: boolean; service: string; db: { ok: boolean } };
-  expect(health.ok).toBe(true);
+  const health = world.body as { status: string; service: string; db: { ok: boolean } };
+  expect(health.status).toBe('ok');
   expect(health.service).toBe('@commun/core');
   expect(health.db.ok).toBe(true);
 });

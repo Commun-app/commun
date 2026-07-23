@@ -8,7 +8,7 @@ import { CollectionsRepository } from '../src/domains/collections/repository.ts'
 import { CollectionsService } from '../src/domains/collections/service.ts';
 import { MediaRepository } from '../src/domains/media/repository.ts';
 import { MediaService } from '../src/domains/media/service.ts';
-import { definitionCreateDto } from '../src/domains/collections/dto.ts';
+import { definitionCreateDto } from '../src/domains/collections/dtos/definition.dto.ts';
 import { CommunError } from '../src/common/errors/index.ts';
 import { createFakeStorage } from './helpers/storage.ts';
 

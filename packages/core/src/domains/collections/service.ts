@@ -8,7 +8,7 @@ import type {
   DefinitionUpdateDto,
   EntryCreateDto,
   EntryUpdateDto,
-} from './dto.ts';
+} from './dtos/index.ts';
 
 const FIELD_VALUE_SCHEMAS: Record<FieldType, z.ZodType> = {
   text: z.string(),

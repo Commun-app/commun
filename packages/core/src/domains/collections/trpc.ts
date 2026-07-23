@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { adminProcedure, protectedProcedure, router } from '../../infrastructure/trpc/index.ts';
-import { definitionCreateDto, definitionUpdateDto, entryCreateDto, entryUpdateDto } from './dto.ts';
+import {
+  definitionCreateDto,
+  definitionUpdateDto,
+  entryCreateDto,
+  entryUpdateDto,
+} from './dtos/index.ts';
 
 // Transport layer only: every handler delegates to the CollectionsService.
 export const collectionsRouter = router({
