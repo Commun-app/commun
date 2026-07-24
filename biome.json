@@ -10,6 +10,7 @@
       "!**/test-results",
       "!**/drizzle/meta",
       "!apps/api/server/data",
+      "!apps/admin",
       "!bun.lock"
     ]
   },
