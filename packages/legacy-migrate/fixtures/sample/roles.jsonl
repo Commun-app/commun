@@ -1,0 +1,2 @@
+{"_id":{"$oid":"64e000000000000000000001"},"name":"Poulp'us root","permissions":["manage:all"]}
+{"_id":{"$oid":"64e000000000000000000002"},"name":"Editeur de contenu","permissions":["read:organizations","publish:records","create:records","read:records","read:collections","update:records","delete:records"]}

@@ -9,6 +9,7 @@ import {
   entries as entriesTable,
   connectDb,
   organization,
+  users as usersTable,
   buildDataSchema,
   type FieldDefinition,
   type StoreDb,
@@ -32,6 +33,7 @@ export interface MigrationReport {
     manifest: Array<{ legacyId: string; targetKey: string; referencedBy: string[] }>;
   };
   tokens?: number;
+  users?: number;
   errors: string[];
 }
 
@@ -127,6 +129,8 @@ export function migrateOrganization(options: {
       .all()
       .map((definition) => [definition.slug, definition]),
   );
+  /** Seeds réutilisés par une collection legacy (les autres seront retirés). */
+  const reusedSeedIds = new Set<string>();
   /** legacy record _id → new entry id (relation remapping). */
   const entryIdByLegacyId = new Map<string, string>();
   const mediaReferences = new Map<string, string[]>();
@@ -141,6 +145,19 @@ export function migrateOrganization(options: {
     const fields: FieldDefinition[] = [];
     const unmapped: string[] = [];
     const fieldsByLegacyName = new Map<string, FieldDefinition>();
+    // Attributs colonnes (title/name/slug) réellement DÉFINIS par la collection
+    // (non cachés) : seuls ceux-là écrasent le champ document (iso legacy).
+    const definedColumns = new Set(
+      attributes
+        .filter((attribute) => {
+          const name = String(attribute.name);
+          if (!['title', 'name', 'slug'].includes(name)) return false;
+          const options = attribute.options as LegacyDoc | undefined;
+          const componentOptions = attribute.componentOptions as LegacyDoc | undefined;
+          return !options?.hidden && !componentOptions?.hidden;
+        })
+        .map((attribute) => String(attribute.name)),
+    );
     for (const attribute of attributes) {
       const mapped = mapAttributeDefinition(attribute);
       if (mapped.field) {
@@ -152,15 +169,24 @@ export function migrateOrganization(options: {
     }
 
     // Reuse a seeded default collection when slugs collide, else create.
+    // Iso legacy : la définition legacy REMPLACE intégralement le seed
+    // (nom, éditeur, affichage… — sinon l'admin montrerait « Agenda » à la
+    // place d'« Evènement(s) » et perdrait la config d'éditeur).
     let definition = seededSlugs.get(slug);
     if (definition) {
+      reusedSeedIds.add(definition.id);
       db.update(collectionDefinitions)
         .set({
+          name: legacyName,
+          description: (legacyCollection.description as string | undefined) ?? null,
           fields,
-          legacyExtra: { editor: legacyCollection.editor, display: legacyCollection.display },
+          editor: (legacyCollection.editor as Record<string, unknown> | undefined) ?? null,
+          display: (legacyCollection.display as Record<string, unknown> | undefined) ?? null,
+          headings: (legacyCollection.headings as Record<string, unknown> | undefined) ?? null,
         })
         .where(eq(collectionDefinitions.id, definition.id))
         .run();
+      definition = { ...definition, name: legacyName };
     } else {
       definition = db
         .insert(collectionDefinitions)
@@ -188,7 +214,7 @@ export function migrateOrganization(options: {
     const usedSlugs = new Set<string>();
 
     for (const record of records) {
-      const entry = mapRecord(record, fieldsByLegacyName);
+      const entry = mapRecord(record, fieldsByLegacyName, definedColumns);
       if (usedSlugs.has(entry.slug)) {
         const base = entry.slug;
         let suffix = 1;
@@ -210,12 +236,16 @@ export function migrateOrganization(options: {
       const row = db
         .insert(entriesTable)
         .values({
+          // Id legacy PRÉSERVÉ (golden-master + relations sans remap + iso).
+          id: entry.legacyId,
           collectionId: definition.id,
           title: entry.title,
           slug: entry.slug,
           data,
           status: entry.status,
           publishedAt: entry.publishedAt,
+          ...(entry.createdAt ? { createdAt: entry.createdAt } : {}),
+          ...(entry.updatedAt ? { updatedAt: entry.updatedAt } : {}),
           legacyExtra: { legacyId: entry.legacyId, ...entry.legacyExtra },
         })
         .returning()
@@ -238,9 +268,24 @@ export function migrateOrganization(options: {
     });
   }
 
+  // ── Purge des seeds produit non réclamés (iso legacy) ──────────────────────
+  // Les collections par défaut (news/events/officials/projects) servent les
+  // instances NEUVES ; sur une migration, seules les collections du legacy
+  // doivent exister — un seed sans équivalent resterait vide et dupliquerait
+  // la navigation de l'admin.
+  for (const definition of seededSlugs.values()) {
+    if (reusedSeedIds.has(definition.id)) continue;
+    db.delete(collectionDefinitions).where(eq(collectionDefinitions.id, definition.id)).run();
+  }
+
   // ── Media manifest (objects transferred separately, phase 4) ───────────────
-  const legacyMedia = readCollection(options.dumpDir, 'media').filter(
-    (doc) => idOf(doc.organization) === orgId || doc.organization === undefined,
+  const allMedia = readCollection(options.dumpDir, 'media');
+  const legacyMedia = allMedia.filter(
+    (doc) =>
+      idOf(doc.organization) === orgId ||
+      doc.organization === undefined ||
+      // Médias référencés par les entrées mais possédés par une org gabarit.
+      mediaReferences.has(idOf(doc._id)),
   );
   for (const doc of legacyMedia) {
     const legacyId = idOf(doc._id);
@@ -288,14 +333,54 @@ export function migrateOrganization(options: {
   }
   report.tokens = legacyTokens.length;
 
+  // ── Utilisateurs (continuité de bascule) ───────────────────────────────────
+  // Import : membres de l'organisation + comptes racine plateforme
+  // (rôle legacy `manage:all` → admin ; « Editeur de contenu » → redacteur).
+  // Les hash bcrypt legacy ($2a) restent vérifiables par Bun.password :
+  // les mots de passe existants continuent de fonctionner tels quels.
+  const legacyRoles = new Map(
+    readCollection(options.dumpDir, 'roles').map((doc) => [
+      idOf(doc._id),
+      Array.isArray(doc.permissions) ? (doc.permissions as unknown[]).map(String) : [],
+    ]),
+  );
+  const isRootRole = (roleId: string) => (legacyRoles.get(roleId) ?? []).includes('manage:all');
+  const seenEmails = new Set<string>();
+  let importedUsers = 0;
+  for (const doc of readCollection(options.dumpDir, 'users')) {
+    const memberships = Array.isArray(doc.organizations) ? (doc.organizations as LegacyDoc[]) : [];
+    const membership = memberships.find((entry) => idOf(entry.organization) === orgId);
+    const isRoot = memberships.some((entry) => isRootRole(idOf(entry.role)));
+    if (!membership && !isRoot) continue;
+
+    const email = String(doc.emailAddress ?? '').toLowerCase();
+    const passwordHash = String(doc.encryptedPassword ?? '');
+    if (!email || !passwordHash || seenEmails.has(email)) continue;
+    seenEmails.add(email);
+
+    db.insert(usersTable)
+      .values({
+        email,
+        name:
+          [doc.firstName, doc.lastName].filter(Boolean).join(' ') ||
+          email.split('@')[0] ||
+          email,
+        passwordHash,
+        role: isRoot || isRootRole(idOf(membership?.role)) ? 'admin' : 'redacteur',
+      })
+      .run();
+    importedUsers++;
+  }
+  report.users = importedUsers;
+
   // ── Relations inverses (iso legacy `records[]`) ────────────────────────────
   // Post-passe : remappe les tableaux records[] legacy vers les nouveaux ids.
   for (const record of orgRecords) {
     const newId = entryIdByLegacyId.get(idOf(record._id));
     if (!newId || !Array.isArray(record.records)) continue;
-    const related = (record.records as unknown[])
-      .map((ref) => entryIdByLegacyId.get(idOf(ref)))
-      .filter((id): id is string => Boolean(id));
+    // Iso legacy : ids BRUTS conservés, y compris les références orphelines
+    // (les ids d'entrées sont préservés, aucun remap nécessaire).
+    const related = (record.records as unknown[]).map(idOf).filter(Boolean);
     if (related.length > 0) {
       db.update(entriesTable).set({ related }).where(eq(entriesTable.id, newId)).run();
     }

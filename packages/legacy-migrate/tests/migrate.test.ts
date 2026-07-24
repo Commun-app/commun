@@ -4,7 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import {
+  collectionDefinitions,
   entries as entriesTable,
+  users as usersTable,
   connectDb,
   CollectionsRepository,
   CollectionsService,
@@ -63,6 +65,27 @@ describe('legacy migration (sample dump)', () => {
     expect(published.map((entry) => entry.slug)).toEqual(['fete-de-la-ville']);
     const extra = published[0]?.legacyExtra as Record<string, unknown>;
     expect(extra.widget3d).toEqual({ periods: [] });
+
+    // La définition legacy REMPLACE le seed : nom et éditeur legacy conservés.
+    const definition = db
+      .select()
+      .from(collectionDefinitions)
+      .all()
+      .find((row) => row.slug === 'news')!;
+    expect(definition.name).toBe('Actualités');
+    expect(definition.editor).not.toBeNull();
+  });
+
+  test('seeds produit non réclamés par le legacy : supprimés (pas de doublons vides)', () => {
+    const db = connectDb(outDir);
+    const slugs = db
+      .select()
+      .from(collectionDefinitions)
+      .all()
+      .map((row) => row.slug)
+      .sort();
+    // news réutilisé par le legacy ; events/officials/projects (seeds) purgés.
+    expect(slugs).toEqual(['news', 'tenders']);
   });
 
   test('custom legacy collection becomes a new definition with typed fields', () => {
@@ -90,6 +113,23 @@ describe('legacy migration (sample dump)', () => {
       (entry) => entry.legacyId === '64d000000000000000000001',
     )!;
     expect(cover.referencedBy).toHaveLength(1);
+  });
+
+  test('users : membres de l\'org + racines plateforme, rôles mappés, hash conservé', () => {
+    expect(report.users).toBe(2);
+    const db = connectDb(outDir);
+    const all = db.select().from(usersTable).all();
+    // Racine plateforme (manage:all, pas membre de grigny) → admin.
+    expect(all.find((u) => u.email === 'root@poulp.us')?.role).toBe('admin');
+    // Membre grigny « Editeur de contenu » → redacteur, email normalisé minuscules.
+    const redac = all.find((u) => u.email === 'redac@grigny91.fr')!;
+    expect(redac.role).toBe('redacteur');
+    expect(redac.name).toBe('Rédac Grigny');
+    // Hash bcrypt legacy conservé tel quel (vérifiable par Bun.password).
+    expect(redac.passwordHash?.startsWith('$2a$13$')).toBe(true);
+    // Membre d'une AUTRE org et compte sans mot de passe : exclus.
+    expect(all.some((u) => u.email === 'autre@ailleurs.fr')).toBe(false);
+    expect(all.some((u) => u.email === 'sans-mdp@grigny91.fr')).toBe(false);
   });
 
   test('re-running the migration is idempotent (fresh rebuild)', async () => {
