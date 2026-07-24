@@ -94,6 +94,13 @@ describe('CollectionsService', () => {
     expect(other.slug).toBe('marche-de-noel');
   });
 
+  test('getEntry : renvoie une entrée par id, NOT_FOUND sinon', async () => {
+    const entry = await collections.createEntry('news', { title: 'Lisible', data: {} });
+    const found = await collections.getEntry(entry.id);
+    expect(found.title).toBe('Lisible');
+    expect(collections.getEntry('inconnu')).rejects.toThrow('entrée introuvable');
+  });
+
   test('update partiel iso legacy : data fusionné champ par champ', async () => {
     const entry = await collections.createEntry('events', {
       title: 'Brocante',

@@ -18,6 +18,7 @@ export default defineHandler(async (event) => {
     definition?: Array<{ path?: string }>;
     sort?: unknown;
   };
+  const theme = deployment.theme ?? settings.theme ?? undefined;
   const pageSlugs = (deployment.definition ?? [])
     .map((page) => page.path ?? '')
     .filter((path) => path && !path.includes(':'));
@@ -26,12 +27,14 @@ export default defineHandler(async (event) => {
     name: 'success',
     description: 'Action succeed.',
     data: {
-      _id: settings.id,
+      // Iso legacy : l'ObjectId d'origine de l'organisation.
+      _id: (settings.legacyExtra as { legacyId?: string } | null)?.legacyId ?? settings.id,
       name: settings.name,
-      sort: deployment.sort ?? null,
+      ...(deployment.sort !== undefined ? { sort: deployment.sort } : {}),
       // Iso legacy `_parseRecursively` : les chaînes `_media:<id>` de _theme/_pages
-      // sont remplacées par le média signé.
-      _theme: await media.resolveMediaPlaceholders(deployment.theme ?? settings.theme ?? null),
+      // sont remplacées par le média signé. Clé OMISE quand le thème est absent
+      // (iso JSON legacy — cas réel : cmar-paca sans deployment.theme).
+      ...(theme !== undefined ? { _theme: await media.resolveMediaPlaceholders(theme) } : {}),
       _pages: await media.resolveMediaPlaceholders(deployment.definition ?? []),
       slugs: [...pageSlugs, ...(await collections.publishedSlugs())],
     },

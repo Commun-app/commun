@@ -30,6 +30,9 @@ export const collectionsRouter = router({
   }),
 
   entries: router({
+    get: protectedProcedure
+      .input(z.object({ id: z.string() }))
+      .query(({ ctx, input }) => ctx.services.collections.getEntry(input.id)),
     // Iso legacy: pagination skip/limit (défaut 20), tri updatedAt desc.
     list: protectedProcedure
       .input(

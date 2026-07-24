@@ -34,7 +34,8 @@ export type FieldType = (typeof FIELD_TYPES)[number];
 export const fieldDefinitionSchema = z
   .object({
     /** Machine name of the field inside `data`. */
-    name: z.string().regex(/^[a-z][a-z0-9_]*$/, 'nom de champ invalide (snake_case attendu)'),
+    // Casse preservée iso legacy (directParent, paymentMethods…).
+    name: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/, 'nom de champ invalide'),
     label: z.string().min(1),
     type: z.enum(FIELD_TYPES),
     required: z.boolean().default(false),

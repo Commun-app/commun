@@ -69,11 +69,8 @@ export function mapAttributeDefinition(attribute: LegacyDoc): MappedField {
 
   const componentOptions = attribute.componentOptions as LegacyDoc | undefined;
   const field: FieldDefinition = {
-    name:
-      legacyName
-        .replace(/[^a-zA-Z0-9_]/g, '_')
-        .replace(/^_+/, '')
-        .toLowerCase() || 'field',
+    // Casse préservée (le payload legacy sert les noms tels quels).
+    name: legacyName.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^_+/, '') || 'field',
     label: String((attribute.headings as LegacyDoc | undefined)?.label ?? legacyName),
     type,
     required: Boolean(attribute.required),
@@ -116,6 +113,8 @@ export interface MappedEntry {
   publishedAt: string | null;
   legacyExtra: Record<string, unknown>;
   legacyId: string;
+  createdAt: string | null;
+  updatedAt: string | null;
   mediaRefs: string[];
 }
 
@@ -128,12 +127,27 @@ export interface MappedEntry {
 export function mapRecord(
   record: LegacyDoc,
   fieldsByLegacyName: Map<string, FieldDefinition>,
+  definedColumns: Set<string> = COLUMN_ATTRIBUTES,
 ): MappedEntry {
   const attributes = Array.isArray(record.attributes) ? (record.attributes as LegacyDoc[]) : [];
   const byName = new Map(attributes.map((attribute) => [String(attribute.name), attribute.value]));
 
-  const title = String(byName.get('title') ?? byName.get('name') ?? record.title ?? 'Sans titre');
-  const slug = String(byName.get('slug') ?? record.slug ?? idOf(record._id));
+  // Iso legacy `parseDataAttributes` : la valeur d'attribut n'écrase le champ
+  // DOCUMENT que si la collection DÉFINIT cet attribut (sinon l'attribut est
+  // ignoré — cas réel : slug d'attribut périmé sur cmar-paca).
+  const title = String(
+    (definedColumns.has('title') ? byName.get('title') : undefined) ??
+      record.title ??
+      byName.get('title') ??
+      byName.get('name') ??
+      'Sans titre',
+  );
+  const slug = String(
+    (definedColumns.has('slug') ? byName.get('slug') : undefined) ??
+      record.slug ??
+      byName.get('slug') ??
+      idOf(record._id),
+  );
 
   const data: Record<string, unknown> = {};
   const legacyExtra: Record<string, unknown> = {};
@@ -149,15 +163,10 @@ export function mapRecord(
     let value: unknown = raw;
     if (raw == null) continue;
     switch (field.type) {
-      case 'number': {
-        const parsed = Number.parseFloat(String(raw).replace(',', '.'));
-        if (Number.isNaN(parsed)) {
-          legacyExtra[name] = raw; // valeur non numérique préservée
-          continue;
-        }
-        value = parsed;
+      case 'number':
+        // Iso legacy : la valeur est servie BRUTE (souvent une string "2").
+        value = raw;
         break;
-      }
       case 'boolean':
         value = Boolean(raw);
         break;
@@ -214,6 +223,8 @@ export function mapRecord(
     publishedAt: dateOf(record.publishedAt),
     legacyExtra,
     legacyId: idOf(record._id),
+    createdAt: dateOf(record.createdAt),
+    updatedAt: dateOf(record.updatedAt),
     mediaRefs,
   };
 }

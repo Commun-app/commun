@@ -11,12 +11,13 @@ import type {
   EntryUpdateDto,
 } from './dtos/index.ts';
 
-const stepSchema = z.object({ title: z.string().optional(), content: z.unknown().optional() });
+// Iso legacy : les étapes sont des objets riches (_id, name, description…) servis tels quels.
+const stepSchema = z.record(z.string(), z.unknown());
 
 const FIELD_VALUE_SCHEMAS: Record<FieldType, z.ZodType> = {
   text: z.string(),
   'rich-text': z.record(z.string(), z.unknown()),
-  number: z.number(),
+  number: z.number().or(z.string()), // iso legacy : souvent stocké/servi en string
   boolean: z.boolean(),
   date: z.iso.datetime({ offset: true }).or(z.iso.date()),
   media: z.string().or(z.array(z.string())), // media id(s) — iso legacy, un champ media peut être multiple
@@ -138,6 +139,12 @@ export class CollectionsService {
     return this.repository.listEntries((await this.getDefinition(collectionIdOrSlug)).id);
   }
 
+  async getEntry(id: string): Promise<Entry> {
+    const found = await this.repository.findEntryById(id);
+    if (!found) throw new CommunError(ERR.NOT_FOUND, `entrée introuvable: ${id}`);
+    return found;
+  }
+
   /** Paginated admin listing — iso legacy (skip/limit 20, tri updatedAt desc). */
   async listEntriesPaginated(
     collectionIdOrSlug: string,
@@ -255,13 +262,11 @@ export class CollectionsService {
           const steps = Array.isArray(value) ? value : [];
           data[field.name] = await Promise.all(
             steps.map(async (step) => {
-              const s = step as { title?: string; content?: unknown };
+              const s = step as Record<string, unknown>;
+              if (s.content == null) return s;
               return {
                 ...s,
-                content:
-                  s.content == null
-                    ? s.content
-                    : JSON.stringify(await this.resolveRichTextMedia(s.content)),
+                content: JSON.stringify(await this.resolveRichTextMedia(s.content)),
               };
             }),
           );
@@ -272,6 +277,9 @@ export class CollectionsService {
           const records = await Promise.all(
             ids
               .filter((v): v is string => typeof v === 'string' && v.length > 0)
+              // Iso legacy `Media.find({_id: {$in}})` : Mongo renvoie les
+              // documents triés par _id CROISSANT, pas dans l'ordre du champ.
+              .sort()
               .map((mediaId) => this.media.toLegacyMedia(mediaId)),
           );
           data[field.name] = records.filter((record) => record !== null);
@@ -329,13 +337,15 @@ export class CollectionsService {
       );
       for (const entry of published) {
         if (definition.slug === 'events' && this.hasEmptySchedules(entry)) continue;
+        // Iso legacy `select('-status -path')` : status exclu du payload public.
         records[entry.id] = {
           _id: entry.id,
           title: entry.title,
           slug: entry.slug,
           relatedCollection: definition.slug,
-          status: entry.status,
-          publishedAt: entry.publishedAt,
+          // Iso Mongoose toJSON : champ omis quand absent (records publiés
+          // sans publishedAt existent dans le dump).
+          ...(entry.publishedAt != null ? { publishedAt: entry.publishedAt } : {}),
           ...(await this.resolveEntryData(definition, entry)),
           // Iso legacy `records[]` (relations, entretenues bidirectionnellement) —
           // APRÈS le spread : prime sur un éventuel champ de données homonyme.
@@ -351,11 +361,9 @@ export class CollectionsService {
     const slugs: string[] = [];
     for (const definition of await this.repository.listDefinitions()) {
       const published = await this.repository.listPublishedEntries(definition.id, now);
-      slugs.push(
-        ...published
-          .filter((entry) => !(definition.slug === 'events' && this.hasEmptySchedules(entry)))
-          .map((entry) => `/${definition.slug}/${entry.slug}`),
-      );
+      // Iso legacy : le filtre des events sans période ne s'applique QU'À
+      // content/records — les slugs du deployment listent tout le publié.
+      slugs.push(...published.map((entry) => `/${definition.slug}/${entry.slug}`));
     }
     return slugs;
   }

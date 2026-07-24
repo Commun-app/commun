@@ -44,9 +44,10 @@ type MediaObjects = { original: string; variants: Record<string, string> };
  */
 export interface LegacyMedia {
   _id: string;
+  id: string;
   originalName: string;
   mime: string;
-  metaData: Record<string, unknown> | null;
+  metaData?: Record<string, unknown>;
   objects: Record<string, string>;
 }
 
@@ -147,14 +148,24 @@ export class MediaService {
   async toLegacyMedia(id: string): Promise<LegacyMedia | null> {
     const row = await this.repository.findById(id);
     if (!row) return null;
-    const url = await this.storage.url((row.objects as MediaObjects).original);
-    const objects: Record<string, string> = { original: url };
-    for (const variant of LEGACY_VARIANTS) objects[variant] = url;
+    const originalKey = (row.objects as MediaObjects).original;
+    const originalUrl = await this.storage.url(originalKey);
+    const objects: Record<string, string> = { original: originalUrl };
+    // Iso legacy : les clés de variantes suivent la convention du worker de
+    // resize (`<id>-original.<ext>` → `<id>-webp-<taille>.webp`) — les objets
+    // existent réellement sur le bucket historique. Hors convention (nouveaux
+    // uploads), les variantes pointent sur l'original.
+    const base = originalKey.match(/^(.*)-original\.[^.]+$/)?.[1];
+    for (const variant of LEGACY_VARIANTS) {
+      objects[variant] = base ? await this.storage.url(`${base}-${variant}.webp`) : originalUrl;
+    }
     return {
       _id: row.id,
+      id: row.id, // virtual Mongoose `id` — présent dans le payload legacy
       originalName: row.filename,
       mime: row.mime,
-      metaData: row.metaData ?? null,
+      // Iso Mongoose toJSON : le champ est omis quand il est absent.
+      ...(row.metaData ? { metaData: row.metaData } : {}),
       objects,
     };
   }
@@ -164,10 +175,19 @@ export class MediaService {
    * and replace `_media:<id>` strings with the signed legacy media record.
    */
   async resolveMediaPlaceholders(node: unknown): Promise<unknown> {
-    if (typeof node === 'string' && node.startsWith('_media:')) {
-      return (await this.toLegacyMedia(node.slice('_media:'.length))) ?? node;
-    }
+    const isPlaceholder = (v: unknown): v is string =>
+      typeof v === 'string' && v.startsWith('_media:');
+    // Iso legacy `_fetchMediaRecords` : une valeur `_media:` (ou un tableau de
+    // `_media:`) est remplacée par un TABLEAU PLAT de records signés.
+    const resolveList = async (ids: string[]): Promise<unknown[]> => {
+      const records = await Promise.all(
+        ids.map((v) => this.toLegacyMedia(v.slice('_media:'.length))),
+      );
+      return records.filter((record) => record !== null);
+    };
+    if (isPlaceholder(node)) return resolveList([node]);
     if (Array.isArray(node)) {
+      if (node.length > 0 && node.every(isPlaceholder)) return resolveList(node as string[]);
       return Promise.all(node.map((child) => this.resolveMediaPlaceholders(child)));
     }
     if (node !== null && typeof node === 'object') {
