@@ -33,7 +33,8 @@ chemin legacy (sites Vercel + plan REST golden-testé) reste le filet jusqu'à p
   - ordonnancement corrigé : sync PUIS deploy (le legacy déployait avant la sync)
 - [x] Emails transactionnels par **webhook** (invitations ; « mot de passe oublié » — décision 27/07 : le core ne connaît aucun fournisseur, payload signé HMAC avec email pré-rédigé ; le SaaS branchera un relais privé → Loops)
 - [x] Passe sécurité de base (rate limiting, headers) — le legacy exposé n'est plus touché
-- [ ] Revue E2E Quentin + couverture minimum vital ; clôture OpenSpec
+- [ ] Revue E2E Quentin (« qu'est-ce qu'on teste ») + couverture minimum vital ; clôture OpenSpec (`/opsx:verify` + archivage)
+- [ ] **Revue finale de la codebase sur GitHub** : repo privé initialisé, PR de revue intégrale (`main → branche orpheline vide` : tout le code commentable ligne par ligne), retours traités sur la même PR
 
 **Critère de sortie** : une instance vit une semaine sans intervention (contenus, jobs, sites publiés).
 
