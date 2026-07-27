@@ -6,10 +6,6 @@
     <p class="mt-4 font-light text-sm text-gray-600">
       {{ message }}
     </p>
-    <p class="mt-6 rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-      Bientôt disponible — en attendant, demandez à un administrateur de vous
-      renvoyer une invitation.
-    </p>
     <form v-if="!isSent" class="mt-12 space-y-6" @submit.prevent="_recoverPassword">
       <input-text
         place-holder="Adresse email"
@@ -24,7 +20,7 @@
       <button-primary
         type="submit"
         :label="isLoading ? 'Envoie en cours' : 'Continuer'"
-        :disabled="true"
+        :disabled="!emailAddress"
         :loading="isLoading"
         class="w-full"
       />

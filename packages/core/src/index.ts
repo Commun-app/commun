@@ -8,6 +8,7 @@
 import type { Core, CoreEnv } from './common/types/index.ts';
 import { parseEnv } from './common/env/index.ts';
 import { connectDb } from './infrastructure/db/index.ts';
+import { createEmail } from './infrastructure/email/index.ts';
 import { HealthService } from './infrastructure/health/index.ts';
 import { createStorage } from './infrastructure/storage/index.ts';
 import { UsersRepository, UsersService } from './domains/users/index.ts';
@@ -20,8 +21,12 @@ export function createCore({ env }: { env?: CoreEnv } = {}): Core {
 
   const db = connectDb(e.COMMUN_DATA_DIR, e.COMMUN_MIGRATIONS_DIR);
   const storage = createStorage(e);
+  const email = createEmail(e);
 
-  const users = new UsersService(new UsersRepository(db));
+  const users = new UsersService(new UsersRepository(db), {
+    email,
+    adminUrl: e.COMMUN_ADMIN_URL,
+  });
   const media = new MediaService(new MediaRepository(db), storage);
   const services = {
     health: new HealthService(db),
@@ -45,6 +50,7 @@ export {
   type S3Config,
 } from './infrastructure/storage/index.ts';
 export { HealthService, type HealthStatus } from './infrastructure/health/index.ts';
+export { createEmail, type EmailDriver, type EmailMessage } from './infrastructure/email/index.ts';
 export { CommunError, ERR, type ErrorCode } from './common/errors/index.ts';
 export type {
   Core,

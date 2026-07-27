@@ -23,14 +23,15 @@ const _entranceAPI = class EntranceAPI extends ModelAPI {
     return this.trpc.auth.acceptInvitation.mutate({ token, name, password })
   }
 
-  // Récupération de mot de passe : pas d'équivalent serveur tant que l'envoi
-  // de mails (tâche 9.9) n'est pas porté — écrans conservés mais inertes.
-  async recoverPassword() {
-    throw new Error('E_NOT_AVAILABLE_YET')
+  /** Mot de passe oublié (9.9) : réponse toujours ok (pas d'énumération). */
+  async recoverPassword(emailAddress) {
+    return this.trpc.auth.requestPasswordReset.mutate({ email: emailAddress })
   }
 
-  async updatePassword() {
-    throw new Error('E_NOT_AVAILABLE_YET')
+  /** Le lien du mail de reset pointe sur /password/define/<token> — même
+   * acceptation d'invitation, sans nom (conservé côté serveur). */
+  async updatePassword({ token, password }) {
+    return this.trpc.auth.acceptInvitation.mutate({ token, password })
   }
 
   async confirmEmail() {

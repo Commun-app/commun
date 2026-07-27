@@ -74,10 +74,10 @@
 - [x] 9.6 Entries ISO : slugify(fr) auto + suffixe incrémental, update PARTIEL (merge champ par champ), `publishedAt` auto à la publication, pagination skip/limit(20) + tri updatedAt desc, relations bidirectionnelles (`related` maintenu + migré)
 - [x] 9.7 Audit trail `createdBy`/`updatedBy` (organization, definitions, entries, media) + métadonnées d'appareil des sessions (`ua`/`ip`, listées) ; `users.get` unitaire + `users.update` élargi (email)
 - [x] 9.8 Collections : `editor`/`display`/`headings` en colonnes éditables + capturés par la CLI ; `organization.settings` en colonne dédiée (fix mapping settings→theme)
-- [ ] 9.9 **Emails transactionnels via Loops** (demande Quentin) : invitations + « mot de passe oublié » réel (le legacy n'envoyait jamais d'email) — change dédié
+- [x] 9.9 **Emails transactionnels via Loops** (demande Quentin) : invitations + « mot de passe oublié » réel (le legacy n'envoyait jamais d'email) — change dédié
 - [ ] 9.10 **Jobs legacy → Nitro tasks** (décision Quentin) : job-ssg-deploy et job-data-sync (APIDAE/Airtable) rapatriés en tasks appelant les services directement ; config `injector` migrée si simple — change dédié (avance la phase 4)
 - [x] 9.11 **Admin legacy → client tRPC** (décision Quentin) : remplacer le client REST `_factory` de admin-fix par un client tRPC — aucune modification côté serveur ; prérequis du test admin
-- [ ] 9.12 Transverse sécurité (rate limiting, X-Request-Id, helmet/HSTS) → phase sécurité ultérieure (arbitré)
+- [x] 9.12 Transverse sécurité (rate limiting, X-Request-Id, helmet/HSTS) → phase sécurité ultérieure (arbitré)
 
 ## 8. Clôture
 

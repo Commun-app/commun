@@ -1,5 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
+import { consola } from 'consola';
 import { CommunError, ERR } from '../../common/errors/index.ts';
+import type { EmailDriver, EmailMessage } from '../../infrastructure/email/index.ts';
 import type { UsersRepository } from './repository.ts';
 import type { ApiToken, User } from './schema.ts';
 
@@ -31,7 +33,19 @@ export interface AuthSession {
  * Everything token-like is random (crypto), shown once, stored hashed.
  */
 export class UsersService {
-  constructor(private readonly repository: UsersRepository) {}
+  constructor(
+    private readonly repository: UsersRepository,
+    private readonly options: { email?: EmailDriver; adminUrl?: string } = {},
+  ) {}
+
+  /** Envoi d'email best-effort : un échec Loops ne casse jamais le flux. */
+  private async sendEmail(message: EmailMessage): Promise<void> {
+    try {
+      await this.options.email?.send(message);
+    } catch (error) {
+      consola.warn(`[email] échec d'envoi ${message.template} → ${message.to}: ${String(error)}`);
+    }
+  }
 
   // ── Passwords ──────────────────────────────────────────────────────────────
 
@@ -124,21 +138,53 @@ export class UsersService {
       tokenHash: sha256(token),
       expiresAt,
     });
+    // 9.9 : email d'invitation (le legacy n'en envoyait jamais). Best-effort —
+    // le lien reste retourné à l'admin quoi qu'il arrive.
+    await this.sendEmail({
+      to: input.email.toLowerCase(),
+      template: 'invitation',
+      variables: { url: `${this.options.adminUrl ?? ''}/welcome/${token}` },
+    });
     return { token, expiresAt };
+  }
+
+  /**
+   * « Mot de passe oublié » (9.9) : réutilise le mécanisme d'invitation —
+   * un lien single-use qui redéfinit le mot de passe du compte existant.
+   * Réponse identique que l'email existe ou non (pas d'oracle d'énumération).
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.repository.findUserByEmail(email.toLowerCase());
+    if (!user?.passwordHash) return; // compte inconnu ou jamais activé : silence
+    const token = randomBytes(32).toString('base64url');
+    await this.repository.insertInvitation({
+      email: user.email,
+      role: user.role,
+      tokenHash: sha256(token),
+      expiresAt: new Date(Date.now() + INVITATION_TTL_MS).toISOString(),
+    });
+    await this.sendEmail({
+      to: user.email,
+      template: 'password-reset',
+      variables: { url: `${this.options.adminUrl ?? ''}/password/define/${token}` },
+    });
   }
 
   /**
    * Consume an invitation: activates (or creates) the user with the given
    * password and marks the link used. Expired or already-used links are
-   * refused without leaking whether the email exists.
+   * refused without leaking whether the email exists. `name` is optional for
+   * an EXISTING account (password-reset flow keeps the current name).
    */
-  async acceptInvitation(token: string, input: { name: string; password: string }): Promise<User> {
+  async acceptInvitation(token: string, input: { name?: string; password: string }): Promise<User> {
     const invitation = await this.repository.findValidInvitation(sha256(token), nowIso());
     if (!invitation) throw new CommunError(ERR.INVALID_STATE, 'invitation invalide ou expirée');
 
+    const existing = await this.repository.findUserByEmail(invitation.email);
+    const name = input.name?.trim() || existing?.name || invitation.email.split('@')[0] || 'Membre';
     const user = await this.repository.activateUser({
       email: invitation.email,
-      name: input.name,
+      name,
       passwordHash: await this.hashPassword(input.password),
       role: invitation.role,
     });

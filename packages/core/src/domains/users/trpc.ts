@@ -11,6 +11,7 @@ import {
   apiTokenCreateDto,
   inviteDto,
   loginDto,
+  requestPasswordResetDto,
   toPublicUser,
   userUpdateDto,
 } from './dtos/index.ts';
@@ -55,6 +56,17 @@ export const authRouter = router({
     const user = await ctx.services.users.acceptInvitation(input.token, input);
     return { user: toPublicUser(user) };
   }),
+
+  /**
+   * « Mot de passe oublié » (9.9) — public, réponse TOUJOURS { ok: true }
+   * (pas d'oracle d'énumération) ; l'email ne part que si le compte existe.
+   */
+  requestPasswordReset: procedure
+    .input(requestPasswordResetDto)
+    .mutation(async ({ ctx, input }) => {
+      await ctx.services.users.requestPasswordReset(input.email);
+      return { ok: true };
+    }),
 });
 
 export const usersRouter = router({

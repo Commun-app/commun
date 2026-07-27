@@ -91,3 +91,65 @@ describe('UsersService — invitations et sessions', () => {
     ).rejects.toThrow('invitation invalide ou expirée');
   });
 });
+
+describe('UsersService — emails Loops (9.9)', () => {
+  const sent: Array<{ to: string; template: string; variables: Record<string, string> }> = [];
+  let mailer: UsersService;
+
+  beforeAll(() => {
+    mailer = new UsersService(new UsersRepository(db), {
+      email: {
+        kind: 'loops',
+        send: async (message) => {
+          sent.push(message);
+        },
+      },
+      adminUrl: 'https://admin.grigny.commun.app',
+    });
+  });
+
+  test("l'invitation envoie un email avec le lien /welcome/<token>", async () => {
+    const { token } = await mailer.createInvitation({ email: 'nouvelle@grigny.fr', role: 'redacteur' });
+    const message = sent.at(-1)!;
+    expect(message.to).toBe('nouvelle@grigny.fr');
+    expect(message.template).toBe('invitation');
+    expect(message.variables.url).toBe(`https://admin.grigny.commun.app/welcome/${token}`);
+  });
+
+  test('mot de passe oublié : lien single-use, nom conservé, pas d\'oracle', async () => {
+    await mailer.acceptInvitation((await mailer.createInvitation({ email: 'oubli@grigny.fr', role: 'admin' })).token, {
+      name: 'Tête en l\'air',
+      password: 'premier-mot-de-passe',
+    });
+
+    // Email inconnu : aucune erreur, aucun envoi (réponse indiscernable).
+    const before = sent.length;
+    await mailer.requestPasswordReset('inconnu@nulle-part.fr');
+    expect(sent.length).toBe(before);
+
+    // Compte existant : email de reset avec lien /password/define/<token>.
+    await mailer.requestPasswordReset('oubli@grigny.fr');
+    const message = sent.at(-1)!;
+    expect(message.template).toBe('password-reset');
+    const token = message.variables.url.split('/password/define/')[1]!;
+
+    // Consommation SANS nom : le mot de passe change, le nom est conservé.
+    const user = await mailer.acceptInvitation(token, { password: 'nouveau-mot-de-passe' });
+    expect(user.name).toBe('Tête en l\'air');
+    expect(await mailer.login('oubli@grigny.fr', 'nouveau-mot-de-passe')).not.toBeNull();
+    expect(await mailer.login('oubli@grigny.fr', 'premier-mot-de-passe')).toBeNull();
+  });
+
+  test("un échec d'envoi Loops ne casse pas la création d'invitation", async () => {
+    const broken = new UsersService(new UsersRepository(db), {
+      email: {
+        kind: 'loops',
+        send: async () => {
+          throw new Error('Loops 500');
+        },
+      },
+    });
+    const { token } = await broken.createInvitation({ email: 'resiliente@grigny.fr', role: 'redacteur' });
+    expect(token.length).toBeGreaterThan(20);
+  });
+});
