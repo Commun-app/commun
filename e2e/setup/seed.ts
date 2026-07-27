@@ -8,7 +8,11 @@ import { tmpdir } from 'node:os';
 // Relative import: e2e/ is not a workspace package, @commun/core is unresolvable here.
 import { createCore, parseEnv, UsersRepository } from '../../packages/core/src/index.ts';
 
-const dataDir = process.env.COMMUN_DATA_DIR ?? join(tmpdir(), 'commun-e2e-data');
+// Chemin EXPLICITE uniquement (E2E_DATA_DIR, posé par e2e/steps/instance.ts) :
+// Bun charge automatiquement le .env racine, donc COMMUN_DATA_DIR peut pointer
+// vers une base de dev — le seed ne doit jamais écrire ailleurs que dans la
+// base jetable de l'API sous test.
+const dataDir = process.env.E2E_DATA_DIR ?? join(tmpdir(), 'commun-e2e-data');
 const migrationsDir = join(import.meta.dir, '..', '..', 'packages', 'core', 'drizzle');
 const core = createCore({
   env: parseEnv({ COMMUN_DATA_DIR: dataDir, COMMUN_MIGRATIONS_DIR: migrationsDir }),
