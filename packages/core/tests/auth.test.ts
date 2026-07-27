@@ -92,14 +92,14 @@ describe('UsersService — invitations et sessions', () => {
   });
 });
 
-describe('UsersService — emails Loops (9.9)', () => {
+describe('UsersService — emails transactionnels (9.9)', () => {
   const sent: Array<{ to: string; template: string; variables: Record<string, string> }> = [];
   let mailer: UsersService;
 
   beforeAll(() => {
     mailer = new UsersService(new UsersRepository(db), {
       email: {
-        kind: 'loops',
+        kind: 'webhook',
         send: async (message) => {
           sent.push(message);
         },
@@ -140,12 +140,12 @@ describe('UsersService — emails Loops (9.9)', () => {
     expect(await mailer.login('oubli@grigny.fr', 'premier-mot-de-passe')).toBeNull();
   });
 
-  test("un échec d'envoi Loops ne casse pas la création d'invitation", async () => {
+  test("un échec d'envoi webhook ne casse pas la création d'invitation", async () => {
     const broken = new UsersService(new UsersRepository(db), {
       email: {
-        kind: 'loops',
+        kind: 'webhook',
         send: async () => {
-          throw new Error('Loops 500');
+          throw new Error('webhook 500');
         },
       },
     });

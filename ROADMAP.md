@@ -31,7 +31,7 @@ chemin legacy (sites Vercel + plan REST golden-testé) reste le filet jusqu'à p
   - deploy quotidien + à la demande (GET hook Vercel — trivial, branche le bouton Publier)
   - data-sync ot-pertuis (seul injector ACTIF : 2 pipelines APIDAE unlink + 1 Airtable) — moteur de mapping porté tel quel, I/O via services directs (fin du JWT forgé `@changeme` et des écritures Mongo directes)
   - ordonnancement corrigé : sync PUIS deploy (le legacy déployait avant la sync)
-- [x] Emails transactionnels Loops (invitations ; « mot de passe oublié »)
+- [x] Emails transactionnels par **webhook** (invitations ; « mot de passe oublié » — décision 27/07 : le core ne connaît aucun fournisseur, payload signé HMAC avec email pré-rédigé ; le SaaS branchera un relais privé → Loops)
 - [x] Passe sécurité de base (rate limiting, headers) — le legacy exposé n'est plus touché
 - [ ] Revue E2E Quentin + couverture minimum vital ; clôture OpenSpec
 
@@ -190,6 +190,7 @@ Les mairies ne s'auto-hébergent pas ; l'IA est cloud par nature (pas de clé Mi
 - Jobs : transplant direct en Nitro tasks (pas d'adaptation intermédiaire) ; seul ot-pertuis a un injector actif
 - Infra migration : Scaleway tout-en-un (VPS mutualisé + Object Storage fr-par), backup SQLite → S3 ; Dokploy/Garage = cible SaaS
 - Deux CLIs : CLI d'instance open source ; control plane propriétaire séparé (n'importe jamais `@commun/core`)
+- Emails : le core émet un **webhook générique signé** (payload avec email pré-rédigé FR) — aucun fournisseur dans le core ; le relais → Loops (ou autre) vit dans la stack privée du SaaS, un self-hosteur branche ce qu'il veut
 - Single-tenant ; multi-organisation INTRA-tenant (une org = un site) = évolution future préparée (CASL conservé), pas construite maintenant
 - Le legacy (Poulpus) n'est plus touché ; cessation d'activité en cours, structure juridique à trancher avec Benoit (phase 6)
 - RGAA dans le socle gratuit ; Voxtral (pas Whisper OpenAI) ; blocs contraints Zod (GrapesJS écarté) ; CASL et luxon conservés

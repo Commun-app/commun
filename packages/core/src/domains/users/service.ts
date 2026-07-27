@@ -38,7 +38,7 @@ export class UsersService {
     private readonly options: { email?: EmailDriver; adminUrl?: string } = {},
   ) {}
 
-  /** Envoi d'email best-effort : un échec Loops ne casse jamais le flux. */
+  /** Envoi d'email best-effort : un échec du webhook ne casse jamais le flux. */
   private async sendEmail(message: EmailMessage): Promise<void> {
     try {
       await this.options.email?.send(message);

@@ -1,14 +1,24 @@
+import { createHmac } from 'node:crypto';
 import { consola } from 'consola';
 import type { CoreEnv } from '../../common/types/index.ts';
+import { renderEmail } from './templates.ts';
 
 /**
- * Emails transactionnels via Loops (demande Quentin, tâche 9.9) — le legacy
- * n'envoyait JAMAIS d'email (lien d'invitation copié à la main).
+ * Emails transactionnels par WEBHOOK (décision 27/07/2026) : le core ne
+ * connaît AUCUN fournisseur. L'instance POST un payload documenté sur
+ * `COMMUN_EMAIL_WEBHOOK_URL` ; le récepteur (script du self-hosteur, n8n,
+ * relais privé du SaaS vers Loops…) se charge de l'envoi réel.
  *
- * Non configuré (pas de COMMUN_LOOPS_API_KEY) → driver `disabled` : l'envoi
- * est journalisé et silencieusement ignoré, les flux restent utilisables
- * (le lien d'invitation est toujours retourné à l'admin). L'auto-hébergement
- * fonctionne donc sans compte Loops.
+ * Payload : { template, to, variables, subject, text, sentAt } — l'email est
+ * déjà rédigé (templates FR du core), le récepteur peut le transférer tel
+ * quel ou le recomposer à partir des variables.
+ *
+ * Authenticité : si `COMMUN_EMAIL_WEBHOOK_SECRET` est configuré, le header
+ * `X-Commun-Signature: sha256=<hmac-sha256(corps)>` permet au récepteur de
+ * vérifier l'origine.
+ *
+ * Non configuré → driver `disabled` : envoi journalisé et ignoré, les flux
+ * restent utilisables (lien d'invitation retourné à l'admin).
  */
 
 export type EmailTemplate = 'invitation' | 'password-reset';
@@ -16,53 +26,49 @@ export type EmailTemplate = 'invitation' | 'password-reset';
 export interface EmailMessage {
   to: string;
   template: EmailTemplate;
-  /** Variables du template Loops (dataVariables) — ex : { url, communeName }. */
+  /** Variables métier (ex : { url }) — transmises telles quelles au webhook. */
   variables: Record<string, string>;
 }
 
 export interface EmailDriver {
-  kind: 'loops' | 'disabled';
+  kind: 'webhook' | 'disabled';
   send(message: EmailMessage): Promise<void>;
 }
 
-const LOOPS_API_URL = 'https://app.loops.so/api/v1/transactional';
-
 export function createEmail(env: CoreEnv): EmailDriver {
-  const apiKey = env.COMMUN_LOOPS_API_KEY;
-  const templateIds: Record<EmailTemplate, string | undefined> = {
-    invitation: env.COMMUN_LOOPS_TX_INVITATION,
-    'password-reset': env.COMMUN_LOOPS_TX_PASSWORD_RESET,
-  };
+  const url = env.COMMUN_EMAIL_WEBHOOK_URL;
+  const secret = env.COMMUN_EMAIL_WEBHOOK_SECRET;
 
-  if (!apiKey) {
+  if (!url) {
     return {
       kind: 'disabled',
       async send(message) {
-        consola.info(`[email] Loops non configuré — ${message.template} → ${message.to} ignoré`);
+        consola.info(
+          `[email] webhook non configuré — ${message.template} → ${message.to} ignoré`,
+        );
       },
     };
   }
 
   return {
-    kind: 'loops',
+    kind: 'webhook',
     async send(message) {
-      const transactionalId = templateIds[message.template];
-      if (!transactionalId) {
-        consola.warn(`[email] template Loops manquant pour "${message.template}" — envoi ignoré`);
-        return;
-      }
-      const response = await fetch(LOOPS_API_URL, {
-        method: 'POST',
-        headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-        body: JSON.stringify({
-          transactionalId,
-          email: message.to,
-          dataVariables: message.variables,
-        }),
+      const body = JSON.stringify({
+        ...message,
+        ...renderEmail(message.template, message.variables),
+        sentAt: new Date().toISOString(),
       });
+      const headers: Record<string, string> = { 'content-type': 'application/json' };
+      if (secret) {
+        headers['x-commun-signature'] =
+          `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`;
+      }
+      const response = await fetch(url, { method: 'POST', headers, body });
       if (!response.ok) {
-        throw new Error(`Loops ${response.status}: ${(await response.text()).slice(0, 200)}`);
+        throw new Error(`webhook email ${response.status}: ${(await response.text()).slice(0, 200)}`);
       }
     },
   };
 }
+
+export { renderEmail, type RenderedEmail } from './templates.ts';
