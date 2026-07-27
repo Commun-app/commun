@@ -1,16 +1,24 @@
 Feature: Media library
-  Gestion des médias : URLs signées, allowlist de types, métadonnées.
-  (Les opérations exigeant un bucket réel — finalize, suppression S3, resize —
-  seront couvertes avec le profil MinIO.)
+  Gestion des médias contre un S3 réel (MinIO monté par la suite) :
+  URL présignée d'upload, écriture directe dans le bucket, URL signée de
+  lecture, métadonnées, suppression. (Les variantes resize s'ajouteront ici
+  quand elles seront implémentées.)
 
   Scenario: The upload allowlist refuses SVG
     Given a logged-in "redacteur" session
     When the user requests an upload URL for "logo.svg" of type "image/svg+xml"
     Then the upload request is rejected
 
-  Scenario: A stored media serves signed URLs and editable metadata
-    Given a logged-in "redacteur" session
-    And a stored media "affiche.jpg"
+  Scenario: Full round trip, presigned upload then signed read
+    Given the S3 bucket is provisioned
+    And a logged-in "redacteur" session
+    When the user requests an upload URL for "affiche.jpg" of type "image/jpeg"
+    Then a signed S3 upload URL is delivered
+    When the file bytes are uploaded to the presigned URL
+    And the upload is finalized
     Then the media library lists it with signed object URLs
+    And downloading the signed original URL returns the uploaded bytes
     When the media alt text is updated to "Affiche de la fête"
     Then the media alt text reads "Affiche de la fête"
+    When the media is removed
+    Then the media library no longer lists it

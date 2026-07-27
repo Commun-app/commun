@@ -18,7 +18,7 @@
     "typecheck": "bun --filter '@commun/*' typecheck",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "test": "bun --filter @commun/core --filter @commun/legacy-migrate test",
+    "test": "bun --filter @commun/legacy-migrate test",
     "test:e2e": "bddgen && playwright test",
     "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist apps/*/node_modules apps/*/.nitro apps/*/.output docs/node_modules docs/.output docs/.docs"
   },

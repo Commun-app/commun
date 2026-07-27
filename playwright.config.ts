@@ -35,11 +35,10 @@ export default defineConfig({
         'rm -rf "${TMPDIR:-/tmp}/commun-e2e-data" && ' +
         'COMMUN_DATA_DIR="${TMPDIR:-/tmp}/commun-e2e-data" ' +
         'COMMUN_MIGRATIONS_DIR="$PWD/packages/core/drizzle" ' +
-        // S3 factice : la signature d'URL est LOCALE (aucun réseau requis) —
-        // couvre presign/list ; les opérations exigeant un bucket réel
-        // (finalize, remove, resize) attendent le profil MinIO.
-        'COMMUN_S3_BUCKET=commun-e2e COMMUN_S3_ACCESS_KEY=e2e COMMUN_S3_SECRET_KEY=e2e ' +
-        'COMMUN_S3_ENDPOINT=http://127.0.0.1:9000 COMMUN_S3_REGION=fr-par ' +
+        // S3 réel : MinIO démarré par le second webServer (media.feature
+        // couvre l'aller-retour complet presign → PUT → finalize → lecture).
+        'COMMUN_S3_BUCKET=commun-e2e COMMUN_S3_ACCESS_KEY=e2e-access COMMUN_S3_SECRET_KEY=e2e-secret-key ' +
+        'COMMUN_S3_ENDPOINT=http://127.0.0.1:9102 COMMUN_S3_REGION=fr-par ' +
         // Webhook email : récepteur local démarré par les steps (security.feature)
         // — teste l'émission réelle, signature HMAC comprise.
         'COMMUN_EMAIL_WEBHOOK_URL=http://127.0.0.1:3199/emails ' +
@@ -47,6 +46,18 @@ export default defineConfig({
         'COMMUN_ADMIN_URL=https://admin.e2e.test ' +
         'PORT=3101 bun apps/api/.output/server/index.mjs',
       url: 'http://127.0.0.1:3101/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    {
+      // S3 réel pour media.feature (décision Quentin : monter un vrai S3 en
+      // E2E). Le bucket est provisionné par le seed (`bucket`, idempotent).
+      command:
+        'docker rm -f commun-e2e-minio >/dev/null 2>&1; ' +
+        'docker run --rm --name commun-e2e-minio -p 127.0.0.1:9102:9000 ' +
+        '-e MINIO_ROOT_USER=e2e-access -e MINIO_ROOT_PASSWORD=e2e-secret-key ' +
+        'minio/minio server /data',
+      url: 'http://127.0.0.1:9102/minio/health/live',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },

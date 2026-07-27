@@ -18,7 +18,18 @@ const query = (procedure: string, token: string, input?: unknown) =>
     { headers: { authorization: `Bearer ${token}` } },
   );
 
-// ── Presign (partagé avec infrastructure.feature) ────────────────────────────
+// Octets envoyés au bucket puis relus via l'URL signée (comparaison exacte).
+const FILE_BYTES = new TextEncoder().encode('e2e-jpeg-bytes-ÿØÿ');
+
+// Portés entre steps du même scénario (séquentiels au sein d'une feature).
+let presignedUrl = '';
+let uploadKey = '';
+
+Given('the S3 bucket is provisioned', () => {
+  seed('bucket');
+});
+
+// ── Presign ──────────────────────────────────────────────────────────────────
 
 When(
   'the user requests an upload URL for {string} of type {string}',
@@ -34,16 +45,34 @@ Then('a signed S3 upload URL is delivered', ({ world }) => {
   const body = world.body as { result: { data: { key: string; url: string } } };
   expect(body.result.data.key.length).toBeGreaterThan(5);
   expect(body.result.data.url).toContain('X-Amz-Signature');
+  presignedUrl = body.result.data.url;
+  uploadKey = body.result.data.key;
 });
 
 Then('the upload request is rejected', ({ world }) => {
   expect(world.status).toBe(400);
 });
 
-// ── Bibliothèque (ligne seedée — les opérations S3 réelles attendent MinIO) ──
+// ── Aller-retour S3 réel ─────────────────────────────────────────────────────
 
-Given('a stored media {string}', ({ world }, filename: string) => {
-  world.mediaId = seed<{ id: string }>('media', filename).id;
+When('the file bytes are uploaded to the presigned URL', async () => {
+  const response = await fetch(presignedUrl, {
+    method: 'PUT',
+    headers: { 'content-type': 'image/jpeg' },
+    body: FILE_BYTES,
+  });
+  expect(response.status).toBe(200);
+});
+
+When('the upload is finalized', async ({ world }) => {
+  const response = await mutate('media.finalize', world.sessionToken!, {
+    key: uploadKey,
+    filename: 'affiche.jpg',
+    mime: 'image/jpeg',
+  });
+  expect(response.status).toBe(200);
+  const body = (await response.json()) as { result: { data: { id: string } } };
+  world.mediaId = body.result.data.id;
 });
 
 Then('the media library lists it with signed object URLs', async ({ world }) => {
@@ -56,6 +85,20 @@ Then('the media library lists it with signed object URLs', async ({ world }) => 
   expect(media).toBeTruthy();
   expect(media.objects.original).toContain('X-Amz-Signature');
 });
+
+Then('downloading the signed original URL returns the uploaded bytes', async ({ world }) => {
+  const media = await (async () => {
+    const response = await query('media.get', world.sessionToken!, { id: world.mediaId });
+    expect(response.status).toBe(200);
+    return ((await response.json()) as { result: { data: { objects: { original: string } } } })
+      .result.data;
+  })();
+  const download = await fetch(media.objects.original);
+  expect(download.status).toBe(200);
+  expect(new Uint8Array(await download.arrayBuffer())).toEqual(FILE_BYTES);
+});
+
+// ── Métadonnées & suppression ────────────────────────────────────────────────
 
 When('the media alt text is updated to {string}', async ({ world }, alt: string) => {
   const response = await mutate('media.update', world.sessionToken!, {
@@ -70,4 +113,15 @@ Then('the media alt text reads {string}', async ({ world }, alt: string) => {
   expect(response.status).toBe(200);
   const body = (await response.json()) as { result: { data: { alt: string } } };
   expect(body.result.data.alt).toBe(alt);
+});
+
+When('the media is removed', async ({ world }) => {
+  const response = await mutate('media.remove', world.sessionToken!, { id: world.mediaId });
+  expect(response.status).toBe(200);
+});
+
+Then('the media library no longer lists it', async ({ world }) => {
+  const response = await query('media.list', world.sessionToken!);
+  const body = (await response.json()) as { result: { data: Array<{ id: string }> } };
+  expect(body.result.data.some((row) => row.id === world.mediaId)).toBe(false);
 });

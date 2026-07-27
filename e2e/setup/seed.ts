@@ -6,12 +6,7 @@
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 // Relative import: e2e/ is not a workspace package, @commun/core is unresolvable here.
-import {
-  createCore,
-  media as mediaTable,
-  parseEnv,
-  UsersRepository,
-} from '../../packages/core/src/index.ts';
+import { createCore, parseEnv, UsersRepository } from '../../packages/core/src/index.ts';
 
 // Chemin EXPLICITE uniquement (E2E_DATA_DIR, posé par e2e/steps/instance.ts) :
 // Bun charge automatiquement le .env racine, donc COMMUN_DATA_DIR peut pointer
@@ -64,22 +59,28 @@ switch (command) {
     console.log(JSON.stringify({ token }));
     break;
   }
-  case 'media': {
-    // Ligne média directement en base (finalize exige un HEAD S3 réel —
-    // couvert plus tard par le profil MinIO). Les lectures signent en local.
-    const filename = argument ?? 'e2e.jpg';
-    const row = core.db
-      .insert(mediaTable)
-      .values({
-        filename,
-        mime: 'image/jpeg',
-        size: 1234,
-        objects: { original: `e2e/${filename}`, variants: {} },
-        metaData: { source: 'e2e' },
-      })
-      .returning()
-      .get();
-    console.log(JSON.stringify({ id: row.id }));
+  case 'bucket': {
+    // Provisionne le bucket du MinIO E2E (idempotent) — mêmes valeurs que
+    // playwright.config.ts. Le SDK S3 est résolu depuis packages/core qui le
+    // possède (linker isolé Bun : introuvable depuis e2e/).
+    const { createRequire } = await import('node:module');
+    const requireFromCore = createRequire(
+      new URL('../../packages/core/src/index.ts', import.meta.url).pathname,
+    );
+    const { S3Client, CreateBucketCommand } = requireFromCore('@aws-sdk/client-s3');
+    const client = new S3Client({
+      region: 'fr-par',
+      endpoint: 'http://127.0.0.1:9102',
+      forcePathStyle: true,
+      credentials: { accessKeyId: 'e2e-access', secretAccessKey: 'e2e-secret-key' },
+    });
+    try {
+      await client.send(new CreateBucketCommand({ Bucket: 'commun-e2e' }));
+    } catch (error) {
+      const name = (error as { name?: string }).name ?? '';
+      if (!name.includes('BucketAlready')) throw error;
+    }
+    console.log(JSON.stringify({ bucket: 'commun-e2e' }));
     break;
   }
   case 'news-entry': {
