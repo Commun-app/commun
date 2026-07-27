@@ -79,7 +79,7 @@
 </template>
 
 <script setup>
-import { Interval } from 'luxon'
+import { DateTime, Interval } from 'luxon'
 import listTable from '~/components/data/lists/data-lists-table'
 import selectDate from '~/components/forms/selects/select-date'
 import selectEnum from '~/components/forms/selects/select-enum'
@@ -181,9 +181,14 @@ const _addPeriod = () => {
   if (!selection.value?.periods) {
     selection.value = { periods: [] }
   }
+  // La date AFFICHÉE par défaut compte même sans clic dans le calendrier —
+  // le widget hérité enregistrait des périodes VIDES dans ce cas (fromDate '').
+  const fromDate = periodFromDate.value ||
+    DateTime.now().setZone('Europe/Paris').set({ second: 0, millisecond: 0 }).toISO()
+  const toDate = periodToDate.value || fromDate
   selection.value.periods.push({
-    fromDate: periodFromDate.value,
-    toDate: periodToDate.value,
+    fromDate,
+    toDate,
     periodicity: periodPeriodicity.value
   })
   $emitters('change', selection.value)

@@ -26,9 +26,14 @@ export const updatedAt = () =>
 export const legacyExtra = () =>
   text('legacy_extra', { mode: 'json' }).$type<Record<string, unknown> | null>();
 
-/** Publication lifecycle shared by every publishable content table. */
+/**
+ * Publication lifecycle shared by every publishable content table — iso legacy
+ * (record.constants) : le flux éditorial draft → waiting → ready → published
+ * est piloté par l'admin ; seul `published` est servi sur le plan public.
+ */
+export const PUBLICATION_STATUSES = ['draft', 'waiting', 'ready', 'scheduled', 'published'] as const;
 export const publicationStatus = () =>
-  text('status', { enum: ['draft', 'published'] })
+  text('status', { enum: PUBLICATION_STATUSES })
     .notNull()
     .default('draft');
 

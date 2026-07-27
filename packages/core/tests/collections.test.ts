@@ -113,6 +113,17 @@ describe('CollectionsService', () => {
     expect(updated.data.start_date).toBe('2026-09-01'); // conservé
   });
 
+  test('statuts éditoriaux legacy acceptés, seuls les published servis au public', async () => {
+    const entry = await collections.createEntry('news', { title: 'En validation', data: {} });
+    // Flux admin iso legacy : draft → waiting → ready → published → ready (dé-publier).
+    for (const status of ['waiting', 'ready', 'published', 'ready'] as const) {
+      const updated = await collections.updateEntry(entry.id, { status });
+      expect(updated.status).toBe(status);
+    }
+    const published = await collections.listPublishedEntries('news');
+    expect(published.some((row) => row.id === entry.id)).toBe(false); // ready ≠ public
+  });
+
   test('publishedAt auto-posé au passage à published (iso legacy)', async () => {
     const entry = await collections.createEntry('news', { title: 'Datée', data: {} });
     expect(entry.publishedAt).toBeNull();

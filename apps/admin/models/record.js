@@ -4,6 +4,7 @@ import ModelAPI from "~/models/_factory";
 import {
   entryToRecord,
   getDefinition,
+  getUsersById,
   toServerValue,
 } from "~/models/_commun";
 
@@ -92,8 +93,11 @@ const _recordAPI = class RecordAPI extends ModelAPI {
 
   async read(_id, collection) {
     const definition = await getDefinition(this.trpc, collection);
-    const entry = await this.trpc.collections.entries.get.query({ id: _id });
-    this.repo.save(entryToRecord(definition, entry));
+    const [entry, usersById] = await Promise.all([
+      this.trpc.collections.entries.get.query({ id: _id }),
+      getUsersById(this.trpc),
+    ]);
+    this.repo.save(entryToRecord(definition, entry, usersById));
     return this.repo.find(_id);
   }
 
@@ -118,7 +122,8 @@ const _recordAPI = class RecordAPI extends ModelAPI {
       if (page.length < size) break;
     }
 
-    const records = entries.map((entry) => entryToRecord(definition, entry));
+    const usersById = await getUsersById(this.trpc);
+    const records = entries.map((entry) => entryToRecord(definition, entry, usersById));
     if (queryParams?.skip !== 0) {
       this.repo.save(records);
     } else {
@@ -134,7 +139,7 @@ const _recordAPI = class RecordAPI extends ModelAPI {
       // `data` est requis à la création (le slug est généré serveur, iso legacy).
       data: { status: "draft", ...payload, data: payload.data ?? {} },
     });
-    const saved = entryToRecord(definition, entry);
+    const saved = entryToRecord(definition, entry, await getUsersById(this.trpc));
     this.repo.save(saved);
     return this.repo.find(saved._id);
   }
@@ -145,7 +150,7 @@ const _recordAPI = class RecordAPI extends ModelAPI {
       id: _id,
       data: payload,
     });
-    this.repo.save(entryToRecord(definition, entry));
+    this.repo.save(entryToRecord(definition, entry, await getUsersById(this.trpc)));
     return this.repo.find(_id);
   }
 

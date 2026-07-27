@@ -48,6 +48,29 @@ export const FIELD_TYPE_TO_COMPONENT = {
   json: 'input-text'
 }
 
+// ── Cache module de l'annuaire des membres (affichage « modifié par ») ─────
+let _usersById = null
+
+export async function getUsersById(trpc) {
+  if (!_usersById) {
+    try {
+      const directory = await trpc.users.directory.query()
+      _usersById = new Map(directory.map((user) => [user.id, user]))
+    } catch {
+      // Annuaire indisponible (session expirée…) : affichage sans nom.
+      return new Map()
+    }
+  }
+  return _usersById
+}
+
+/** id utilisateur Commun → objet user legacy attendu par avatar-with-text. */
+export function userRefToLegacy(usersById, id) {
+  if (!id) return {}
+  const user = usersById.get(id)
+  return user ? { _id: id, firstName: user.name, lastName: '' } : {}
+}
+
 // ── Cache module des définitions (rafraîchi par Collection.list/mutations) ──
 let _definitions = null
 
@@ -163,7 +186,7 @@ export function attributeToField(attribute) {
 
 // ── Projections d'entités Commun → enregistrements legacy ──────────────────
 /** Entry Commun → record legacy aplati par onRetrieve côté composants. */
-export function entryToRecord(definition, entry) {
+export function entryToRecord(definition, entry, usersById = new Map()) {
   const fieldsByName = new Map(definition.fields.map((field) => [field.name, field]))
   return {
     _id: entry.id,
@@ -177,8 +200,8 @@ export function entryToRecord(definition, entry) {
       name,
       value: toClientValue(fieldsByName.get(name), value)
     })),
-    createdBy: {},
-    updatedBy: {},
+    createdBy: userRefToLegacy(usersById, entry.createdBy),
+    updatedBy: userRefToLegacy(usersById, entry.updatedBy),
     publishedAt: entry.publishedAt ?? '',
     createdAt: entry.createdAt,
     updatedAt: entry.updatedAt

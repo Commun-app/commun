@@ -2,7 +2,11 @@
   <header class="border-b border-gray-200 relative">
     <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:max-w-7xl lg:px-8">
       <div class="py-5 flex items-center justify-between">
-        <dropdown-workspaces />
+        <!-- Single-tenant : identité de la collectivité, sans sélecteur. -->
+        <nuxt-link :to="`/${workspaceStore.workspaceId || ''}`" class="flex items-center space-x-3">
+          <avatar-circular :place-holder="workspaceStore.workspaceName || 'C'" :media="workspaceStore.workspaceLogo" size="sm" />
+          <span class="font-medium">{{ workspaceStore.workspaceName }}</span>
+        </nuxt-link>
         <div class="flex flex-row items-center justify-center space-x-2">
           <dropdown-publish v-if="displayPublishButton" class="h-10" />
           <button-secondary class="h-10" icon="lucide:message-circle-question" @click="_openForm()" />
@@ -33,9 +37,9 @@
 
 <script setup>
 import { useWorkspaceStore } from '~/store/layout/workspace'
+import avatarCircular from '~/components/elements/avatars/avatar-circular'
 import buttonSecondary from '~/components/elements/buttons/secondary'
 import dropdownPublish from '~/components/layout/navigations/primary/dropdown-publish'
-import dropdownWorkspaces from '~/components/layout/navigations/primary/dropdown-workspaces'
 // import mobileButton from '~/components/template/navigation-section/mobile-section/Button'
 // import mobileMenu from '~/components/template/navigation-section/mobile-section/Menu'
 // import profileDropdown from '~/components/template/navigation-section/ProfileDropdown'
@@ -50,20 +54,12 @@ const $config = useRuntimeConfig()
 const workspaceStore = useWorkspaceStore()
 
 // Prepare constants
+// Single-tenant : les écrans Organisations et Rôles n'ont plus d'objet
+// (une seule collectivité, rôles figés admin/rédacteur) — retirés de la nav.
 const DEFAULT_NAV_ITEMS = [
   {
     title: 'Accueil',
     route: '/overview',
-    permission: 'manage:all'
-  },
-  {
-    title: 'Organisations',
-    route: '/management/organizations',
-    permission: 'manage:all'
-  },
-  {
-    title: 'Rôles',
-    route: '/management/roles',
     permission: 'manage:all'
   },
   {

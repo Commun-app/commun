@@ -109,7 +109,7 @@ export interface MappedEntry {
   title: string;
   slug: string;
   data: Record<string, unknown>;
-  status: 'draft' | 'published';
+  status: 'draft' | 'waiting' | 'ready' | 'scheduled' | 'published';
   publishedAt: string | null;
   legacyExtra: Record<string, unknown>;
   legacyId: string;
@@ -214,7 +214,12 @@ export function mapRecord(
     data[field.name] = value;
   }
 
-  const status = record.status === 'published' ? 'published' : 'draft';
+  // Iso legacy : le statut éditorial est conservé (flux draft → waiting →
+  // ready → published de l'admin) ; valeur inconnue → draft.
+  const STATUSES: readonly string[] = ['draft', 'waiting', 'ready', 'scheduled', 'published'];
+  const status = STATUSES.includes(String(record.status))
+    ? (record.status as MappedEntry['status'])
+    : 'draft';
   return {
     title,
     slug,

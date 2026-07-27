@@ -62,6 +62,15 @@ export const usersRouter = router({
     (await ctx.services.users.listUsers()).map(toPublicUser),
   ),
 
+  /**
+   * Annuaire {id, name} accessible à tout membre connecté — iso legacy :
+   * l'admin affiche « modifié par <nom> » sur les fiches, y compris pour
+   * un rédacteur (qui n'a pas accès à users.list).
+   */
+  directory: protectedProcedure.query(async ({ ctx }) =>
+    (await ctx.services.users.listUsers()).map(({ id, name }) => ({ id, name })),
+  ),
+
   /** Iso legacy: lecture unitaire. */
   get: adminProcedure
     .input(z.object({ id: z.string() }))
