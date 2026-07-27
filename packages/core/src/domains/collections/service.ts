@@ -199,8 +199,24 @@ export class CollectionsService {
     if (!existing) throw new CommunError(ERR.NOT_FOUND, `entrée introuvable: ${id}`);
     const definition = await this.getDefinition(existing.collectionId);
 
+    // Évolution de schéma : une clé de l'ENTRÉE EXISTANTE qui ne correspond
+    // plus à aucun champ (champ retiré de la collection) est conservée telle
+    // quelle hors validation — masquée des payloads (qui itèrent les champs
+    // définis) et restaurée si le champ revient. Les clés inconnues VENANT DE
+    // L'APPEL restent refusées (strictObject sur la partie définie).
+    const definedNames = new Set(definition.fields.map((field) => field.name));
+    const orphanData = Object.fromEntries(
+      Object.entries(existing.data ?? {}).filter(([key]) => !definedNames.has(key)),
+    );
     const mergedData = input.data ? { ...existing.data, ...input.data } : existing.data;
-    const data = input.data ? this.validateData(definition, mergedData) : undefined;
+    const definedData = Object.fromEntries(
+      Object.entries(mergedData).filter(
+        ([key]) => definedNames.has(key) || key in (input.data ?? {}),
+      ),
+    );
+    const data = input.data
+      ? { ...orphanData, ...this.validateData(definition, definedData) }
+      : undefined;
 
     const patch: Partial<Entry> = { ...input, updatedBy: actorId ?? null };
     if (data) patch.data = data;

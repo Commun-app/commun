@@ -110,3 +110,55 @@ Then(
     expect(body.result.data.role).toBe(role);
   },
 );
+
+// ── Suppression de membre & auto-suppression ─────────────────────────────────
+
+When('the admin removes that member', async ({ world }) => {
+  const response = await call('users.update', world.sessionToken!, {});
+  void response; // (garde le helper utilisé si la ligne évolue)
+  const removal = await call('users.remove', world.sessionToken!, { id: world.memberId });
+  expect(removal.status).toBe(200);
+});
+
+Then('the member no longer exists', async ({ world }) => {
+  const input = encodeURIComponent(JSON.stringify({ id: world.memberId }));
+  const response = await fetch(`${API_URL}/api/trpc/users.get?input=${input}`, {
+    headers: { authorization: `Bearer ${world.sessionToken}` },
+  });
+  expect(response.status).toBe(404);
+});
+
+Then('removing their own account is refused', async ({ world }) => {
+  const me = await fetch(`${API_URL}/api/trpc/auth.me`, {
+    headers: { authorization: `Bearer ${world.sessionToken}` },
+  });
+  const myId = ((await me.json()) as { result: { data: { user: { id: string } } } }).result.data
+    .user.id;
+  const response = await call('users.remove', world.sessionToken!, { id: myId });
+  expect(response.status).toBe(400);
+});
+
+// ── Organisation (singleton single-tenant) ───────────────────────────────────
+
+When('the admin updates the organization name to {string}', async ({ world }, name: string) => {
+  const response = await call('organization.update', world.sessionToken!, { name });
+  expect(response.status).toBe(200);
+});
+
+Then('the organization reads {string}', async ({ world }, name: string) => {
+  const response = await fetch(`${API_URL}/api/trpc/organization.get`, {
+    headers: { authorization: `Bearer ${world.sessionToken}` },
+  });
+  expect(response.status).toBe(200);
+  const body = (await response.json()) as { result: { data: { name: string } } };
+  expect(body.result.data.name).toBe(name);
+});
+
+Then('initializing the organization again is refused', async ({ world }) => {
+  const response = await call('organization.init', world.sessionToken!, {
+    name: 'Doublon',
+    slug: 'doublon',
+    type: 'commune',
+  });
+  expect(response.status).toBe(400);
+});

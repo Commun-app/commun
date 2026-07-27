@@ -29,12 +29,19 @@ Feature: Security
     When a password reset is requested for "fantome@e2e.fr"
     Then the API answers ok without emitting any email
 
+  Scenario: An expired invitation is refused
+    Given a virgin instance with an admin invitation for "retardataire@e2e.fr"
+    And the invitations of "retardataire@e2e.fr" are expired
+    Then accepting that invitation is refused as invalid or expired
+
   Scenario: API tokens lifecycle
     Given a logged-in "admin" session
     When the admin creates an API token named "site-build"
     Then the content plane accepts the new token
+    And the token list shows "site-build" as active
     When the admin revokes that token
     Then the content plane refuses the revoked token
+    And the token list shows "site-build" as revoked
 
   Scenario: Session device list and targeted revocation
     Given an activated account "nomade@e2e.fr" named "Agent Nomade"

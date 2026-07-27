@@ -38,6 +38,34 @@ Feature: CMS
     And creates two entries titled "Réunion publique" in "notes"
     Then their slugs are "reunion-publique" and "reunion-publique-1"
 
+  Scenario: Removing a field masks its values without breaking existing entries
+    Given a logged-in "admin" session
+    And an initialized organization
+    And an API token
+    When the admin creates a collection "fiches" with fields "corps" and "note"
+    And creates a published entry in "fiches" with "corps" and "note" filled
+    And the field "note" is removed from the collection "fiches"
+    Then the records payload masks the attribute "note" for that entry
+    And updating the field "corps" of the entry still succeeds
+    When the field "note" is added back to the collection "fiches"
+    Then the records payload serves the attribute "note" again
+
+  Scenario: Entry listing is paginated
+    Given a logged-in "admin" session
+    When the admin creates a collection "annonces"
+    And creates 5 entries in "annonces"
+    Then listing "annonces" with limit 2 returns 2 entries
+    And listing "annonces" with skip 4 returns 1 entry
+
+  Scenario: A future publishedAt keeps a published entry off the public plane
+    Given a logged-in "admin" session
+    And an initialized organization
+    And an API token
+    When the admin creates a collection "convocations"
+    And creates a draft entry "seance-prochaine" in "convocations"
+    And the entry is published with a publishedAt one hour in the future
+    Then the records payload has no entry for collection "convocations"
+
   Scenario: Editorial lifecycle gates public visibility
     Given a logged-in "admin" session
     And an initialized organization

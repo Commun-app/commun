@@ -59,6 +59,19 @@ switch (command) {
     console.log(JSON.stringify({ token }));
     break;
   }
+  case 'expire-invitation': {
+    // Force l'expiration des invitations d'un email (suggestion Quentin :
+    // upsert de l'expiration en base pour simuler le passage du temps).
+    // SQLite direct : drizzle-orm n'est pas résoluble depuis e2e/ (linker isolé).
+    const { Database } = await import('bun:sqlite');
+    const sqlite = new Database(join(dataDir, 'commun.db'));
+    sqlite.run("UPDATE invitations SET expires_at = '2000-01-01T00:00:00.000Z' WHERE email = ?", [
+      argument!.toLowerCase(),
+    ]);
+    sqlite.close();
+    console.log(JSON.stringify({ expired: argument }));
+    break;
+  }
   case 'bucket': {
     // Provisionne le bucket du MinIO E2E (idempotent) — mêmes valeurs que
     // playwright.config.ts. Le SDK S3 est résolu depuis packages/core qui le

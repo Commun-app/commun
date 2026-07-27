@@ -221,3 +221,148 @@ Then('the entry carries an automatic publishedAt', async ({ world }) => {
   const entry = await json<{ publishedAt: string | null }>(response);
   expect(entry.publishedAt).toBeTruthy();
 });
+
+// ── Évolution de schéma (retrait / retour d'un champ) ───────────────────────
+
+const FICHES_FIELDS = {
+  both: [
+    { name: 'corps', label: 'Corps', type: 'text' },
+    { name: 'note', label: 'Note', type: 'text' },
+  ],
+  corpsOnly: [{ name: 'corps', label: 'Corps', type: 'text' }],
+};
+
+When(
+  'the admin creates a collection {string} with fields {string} and {string}',
+  async ({ world }, slug: string, _a: string, _b: string) => {
+    const response = await mutate('collections.create', world.sessionToken!, {
+      name: 'Fiches',
+      slug,
+      fields: FICHES_FIELDS.both,
+    });
+    expect(response.status).toBe(200);
+    world.collectionId = (await json<{ id: string }>(response)).id;
+  },
+);
+
+When(
+  'creates a published entry in {string} with {string} and {string} filled',
+  async ({ world }, slug: string, _a: string, _b: string) => {
+    const response = await mutate('collections.entries.create', world.sessionToken!, {
+      collectionId: slug,
+      data: {
+        title: 'Fiche complète',
+        status: 'published',
+        data: { corps: 'le corps', note: 'la note' },
+      },
+    });
+    expect(response.status).toBe(200);
+    world.entryId = (await json<{ id: string }>(response)).id;
+  },
+);
+
+When(
+  'the field {string} is removed from the collection {string}',
+  async ({ world }, _field: string, _slug: string) => {
+    const response = await mutate('collections.update', world.sessionToken!, {
+      id: world.collectionId,
+      data: { fields: FICHES_FIELDS.corpsOnly },
+    });
+    expect(response.status).toBe(200);
+  },
+);
+
+When(
+  'the field {string} is added back to the collection {string}',
+  async ({ world }, _field: string, _slug: string) => {
+    const response = await mutate('collections.update', world.sessionToken!, {
+      id: world.collectionId,
+      data: { fields: FICHES_FIELDS.both },
+    });
+    expect(response.status).toBe(200);
+  },
+);
+
+async function recordAttributes(world: { apiToken?: string; entryId?: string }) {
+  const response = await fetch(`${API_URL}/api/v1/content/records`, {
+    headers: { authorization: `Bearer ${world.apiToken}` },
+  });
+  expect(response.status).toBe(200);
+  const body = (await response.json()) as {
+    data: { records: Record<string, Record<string, unknown>> };
+  };
+  return body.data.records[world.entryId!];
+}
+
+Then(
+  'the records payload masks the attribute {string} for that entry',
+  async ({ world }, field: string) => {
+    const record = await recordAttributes(world);
+    expect(record).toBeTruthy();
+    expect(record).not.toHaveProperty(field);
+  },
+);
+
+Then(
+  'updating the field {string} of the entry still succeeds',
+  async ({ world }, field: string) => {
+    const response = await mutate('collections.entries.update', world.sessionToken!, {
+      id: world.entryId,
+      data: { data: { [field]: 'corps corrigé' } },
+    });
+    expect(response.status).toBe(200);
+  },
+);
+
+Then(
+  'the records payload serves the attribute {string} again',
+  async ({ world }, field: string) => {
+    const record = await recordAttributes(world);
+    // La valeur orpheline a été CONSERVÉE pendant le retrait du champ.
+    expect(record[field]).toBe('la note');
+  },
+);
+
+// ── Pagination ───────────────────────────────────────────────────────────────
+
+When('creates {int} entries in {string}', async ({ world }, count: number, slug: string) => {
+  for (let i = 0; i < count; i++) {
+    const response = await mutate('collections.entries.create', world.sessionToken!, {
+      collectionId: slug,
+      data: { title: `Annonce ${i + 1}`, data: {} },
+    });
+    expect(response.status).toBe(200);
+  }
+});
+
+Then(
+  'listing {string} with limit {int} returns {int} entries',
+  async ({ world }, slug: string, limit: number, expected: number) => {
+    const response = await query('collections.entries.list', world.sessionToken!, {
+      collectionId: slug,
+      limit,
+    });
+    expect(await json<unknown[]>(response)).toHaveLength(expected);
+  },
+);
+
+Then(
+  'listing {string} with skip {int} returns {int} entry',
+  async ({ world }, slug: string, skip: number, expected: number) => {
+    const response = await query('collections.entries.list', world.sessionToken!, {
+      collectionId: slug,
+      skip,
+    });
+    expect(await json<unknown[]>(response)).toHaveLength(expected);
+  },
+);
+
+// ── Publication programmée ───────────────────────────────────────────────────
+
+When('the entry is published with a publishedAt one hour in the future', async ({ world }) => {
+  const response = await mutate('collections.entries.update', world.sessionToken!, {
+    id: world.entryId,
+    data: { status: 'published', publishedAt: new Date(Date.now() + 3600_000).toISOString() },
+  });
+  expect(response.status).toBe(200);
+});

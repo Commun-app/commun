@@ -25,3 +25,17 @@ Feature: Users
     And another member exists with role "redacteur"
     When the admin renames that member to "Agent Renommé" with role "admin"
     Then the member appears as "Agent Renommé" with role "admin"
+
+  Scenario: An admin removes a member but never their own account
+    Given a logged-in "admin" session
+    And another member exists with role "redacteur"
+    When the admin removes that member
+    Then the member no longer exists
+    And removing their own account is refused
+
+  Scenario: The organization settings are readable and editable by the admin
+    Given a logged-in "admin" session
+    And an initialized organization
+    When the admin updates the organization name to "Commune Renommée"
+    Then the organization reads "Commune Renommée"
+    And initializing the organization again is refused

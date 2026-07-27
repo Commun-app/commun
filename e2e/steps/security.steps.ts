@@ -257,3 +257,47 @@ When('the other device session is revoked', async ({ world }) => {
 Then('the session list shows {int} active device', async ({ world }, count: number) => {
   expect(await listSessions(world.sessionToken!)).toHaveLength(count);
 });
+
+// ── Invitation expirée ───────────────────────────────────────────────────────
+
+Given('the invitations of {string} are expired', ({}, email: string) => {
+  seed('expire-invitation', email);
+});
+
+Then('accepting that invitation is refused as invalid or expired', async ({ world }) => {
+  const response = await fetch(trpcUrl('auth.acceptInvitation'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      token: world.inviteToken,
+      name: 'Tardif',
+      password: 'assez-long-pourtant',
+    }),
+  });
+  expect(response.status).toBe(400);
+});
+
+// ── Listing des tokens API ───────────────────────────────────────────────────
+
+async function findTokenInList(world: { sessionToken?: string }, name: string) {
+  const response = await fetch(trpcUrl('apiTokens.list'), {
+    headers: { authorization: `Bearer ${world.sessionToken}` },
+  });
+  expect(response.status).toBe(200);
+  const body = (await response.json()) as {
+    result: { data: Array<{ name: string; revokedAt: string | null }> };
+  };
+  return body.result.data.find((token) => token.name === name);
+}
+
+Then('the token list shows {string} as active', async ({ world }, name: string) => {
+  const token = await findTokenInList(world, name);
+  expect(token).toBeTruthy();
+  expect(token!.revokedAt).toBeNull();
+});
+
+Then('the token list shows {string} as revoked', async ({ world }, name: string) => {
+  const token = await findTokenInList(world, name);
+  expect(token).toBeTruthy();
+  expect(token!.revokedAt).not.toBeNull();
+});
