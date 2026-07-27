@@ -4,118 +4,131 @@
 > Auto-hébergeable gratuitement, disponible en SaaS managé souverain, avec IA intégrée (Mistral).
 >
 > **Stack** : Bun · TypeScript · Nitro v3 · Nuxt 4 + Nuxt UI · tRPC 11 · Drizzle + SQLite (bun:sqlite) · Mistral (Voxtral)
-> **Architecture** : single-tenant — une instance = une collectivité (sa DB SQLite (bun:sqlite), son S3, son serveur).
-> **Base de travail** : boilerplate `flotte/opencorp` (monorepo Bun, apps/daemon Nitro v3, packages/core par domaines, apps/web Nuxt 4).
+> **Architecture** : single-tenant — une instance = une collectivité (sa DB SQLite, son S3, son conteneur).
 
-**Priorité assumée** : d'abord la preuve par le produit (scaffold → admin → thèmes → migration des 4 clients existants). Le positionnement marketing (recherche concurrentielle, dossier subventions, communication) est volontairement reporté au moment du lancement.
-
----
-
-## Phase 1 — Scaffold du monorepo *(~3 semaines)*
-
-**Objectif : la chaîne technique validée de bout en bout.**
-
-- [ ] Copier l'ossature d'opencorp → renommage `@commun/*`, purge de la logique métier (agents, channels, event-queue)
-- [ ] ADRs consignés dans le repo : single-tenant, SQLite (bun:sqlite) + Drizzle, Nitro v3, AGPL v3, Bun, une instance = une collectivité
-- [ ] `packages/core` — schéma de données v1, un domaine = schéma Drizzle + queries + router tRPC + validation Zod :
-  - commune (settings, identité, thème), utilisateurs/rôles
-  - actualités, agenda, élus, projets, délibérations/séances, formulaires citoyens, médias
-- [ ] `apps/api` (Nitro v3) : catch-all tRPC (plan admin) + routes REST `server/routes/api/**` (plan public : contenu pour le build des sites, formulaires citoyens)
-- [ ] Auth single-tenant simple : sessions, invitations, rôles admin/rédacteur (aucune machinerie multi-org)
-- [ ] Médias : S3-compatible (un bucket par commune) + fallback disque local pour l'auto-hébergement
-- [ ] `docker-compose.yml` d'auto-hébergement fonctionnel dès cette phase (c'est le produit open source)
-- [ ] CI : typecheck, tests (`bun test`), lint
-
-**Critère de sortie** : un domaine complet (actualités) en CRUD via tRPC + REST, testé, qui tourne sous Docker.
-
-**Risque suivi** : Nitro v3 est en beta — lockfile Bun figé, mises à jour uniquement aux jalons.
+**Priorité assumée (réorganisation du 24/07/2026)** : basculer les 4 clients existants sur la nouvelle mouture **le plus tôt possible**. Rien avant la phase 3 qui ne serve la bascule ; rien de réécrit deux fois. Marketing et institutionnel reportés au lancement.
 
 ---
 
-## Phase 2 — Refonte de l'admin *(~4-5 semaines)*
+## Phase 1 — Monolithe ISO *(~90 % — en cours)*
 
-**Objectif : une secrétaire de mairie peut tout gérer sans formation.**
+**Objectif : le monolithe reproduit le legacy à l'identique, prouvé.**
 
-- [ ] `apps/admin` : Nuxt 4 + Nuxt UI 4 + trpc-nuxt + TanStack Query
-- [ ] Cadrage refonte acté (24/07/2026, revue du front par Quentin) : **migration en place, écran par écran** (l'admin ISO sert de référence de non-régression). Cibles : @nuxt/icon (noms `iconoir:*` conservés) + @nuxt/fonts ; TanStack Query **remplace pinia-orm** (état serveur = cache de query, jamais un store) ; couche models → composables par domaine ; suppression des middlewares workspace/prefetch/headings (idiomes Nuxt : `useAsyncData`/`useQuery` + `useHead` dans les pages) ; axios → `$fetch` ; notifications maison + `use-timer` → `useToast` Nuxt UI ; @sidebase/nuxt-auth candidat à la simplification (composable de session Bearer). **Conservés** : CASL (permissions fines à réintroduire, vision multi-organisation intra-tenant : une org = un site — mairie, cinéma…) et luxon (calendrier, intervalles, relatif FR — VueUse ne couvre pas)
-- [ ] Écrans par module : actualités (publication programmée), agenda, élus, projets, **délibérations** (CRUD + publication), formulaires citoyens (réception), médias, réglages de la commune
-- [ ] **Modèle de contenu générique** (décision juillet 2026, D6 rév. 2) : écrans générés depuis les définitions de collections (moteur assaini : jeu fermé de types, Zod) ; collections par défaut seedées (news, events, officials, projects) ; seul écran métier dédié : les délibérations (typées, séances + votes)
-  - Positionnement acté (24/07/2026) : ce moteur est un **outillage interne**, pas un produit headless CMS — il sert à adapter le modèle de contenu par commune (champs d'actualités différents, etc.). Jeu de types fermé, Zod, typé TypeScript, exploitable par l'IA (schéma de collection → schéma d'extraction structurée). Ne pas dériver vers l'extensibilité à la Payload.
-- [ ] Éditeur riche : remplacer `@poulpus/prose` (dépendance TipTap Pro incompatible avec un projet AGPL) par TipTap open source ou ProseMirror direct
-- [ ] Déclenchement du rebuild du site depuis l'admin (avec état de progression)
+- [x] Monorepo Bun : `packages/core` (organization, users, médias, collections dynamiques), `apps/api` Nitro v3 (plan admin tRPC + plan public REST legacy-compat), auth Bearer, docker-compose, CI
+- [x] Migrateur dump Mongo → SQLite validé par **golden test : 0 différence vs prod sur les 4 organisations** (+ import users avec mots de passe fonctionnels, tokens API, purge des seeds sur migration)
+- [x] Admin legacy (`apps/admin`) branché tRPC single-tenant — validé smoke API + navigateur + revue E2E de Quentin (9.11)
+- [ ] Emails transactionnels Loops (9.9) : invitations, mot de passe oublié
+- [ ] Passe sécurité transverse (9.12) : rate limiting, headers, X-Request-Id
+- [ ] Revue E2E Quentin de tous les scénarios + couverture du minimum vital (base évolutive) ; correctif d'isolation de la suite (le seed ne doit plus lire le `.env` racine)
+- [ ] Clôture OpenSpec (`/opsx:verify`, 8.2)
 
-**Critère de sortie** : parcours complet actualité + délibération, de la saisie à l'exposition sur l'API publique.
-
----
-
-## Phase 3 — Layer thème & génération de sites *(~3-4 semaines, chevauche la phase 2)*
-
-**Objectif : un seul thème maintenu, N communes.**
-
-- [ ] `packages/theme-base` : **layer Nuxt** consolidant les ~81 % de composants byte-identiques entre grigny/lcss/pertuis + le module de fetch de contenu
-- [ ] Nuxt Content v3 **stable** (fin de l'alpha.8 en prod), contenu fetché au build — plus jamais committé dans les repos
-- [ ] Chaque site = app mince (`sites/<commune>`) qui `extends` la layer : pages spécifiques, routeRules, surcharges
-- [ ] Build statique **auto-hébergé sur l'instance** (fin de Vercel) : publication → rebuild → servi par l'instance (Caddy/nginx). Cohérent avec la promesse souveraineté
-- [ ] **RGAA AA dans la layer** (obligation légale des sites publics → argument produit du socle gratuit) : audit composants, focus, contrastes, ARIA
-- [ ] Ordonnancement corrigé : sync de données **puis** rebuild (le legacy déployait à 0h30 avant la sync APIDAE de 5h30)
-- [ ] **Pages par blocs contraints** (décision 24/07/2026 — GrapesJS écarté : markup libre incompatible RGAA/montée de version/IA) :
-  - **v1 (cette phase)** : theme-base + design tokens (couleurs, logo, typo) + rendu ISO des `_pages` legacy migrées (`deployment.definition` = le modèle de blocs primitif existant)
-  - **v2 (avec l'admin)** : éditeur de blocs dans l'admin — page = liste ordonnée de sections typées (hero, grille d'actus, agenda, élus, texte riche, formulaire…), chaque bloc = composant du thème + props + liaison de données (collection/requête), stocké en JSON à schéma Zod. Remplace l'édition actuelle en JSON brut dans un textarea (ingérable pour une secrétaire de mairie)
-  - **v3 (phase 5)** : génération/agencement de pages par le copilote IA — le LLM émet du JSON de blocs validé, branché sur les collections, rendu par le thème accessible. L'interface d'agencement devient conversationnelle (« décrire → générer → ajuster »)
-
-**Critère de sortie** : un site témoin complet généré depuis une instance Commun, score RGAA/Lighthouse documenté.
+**Critère de sortie** : suite E2E verte et revue, sécurité de base en place, change archivé.
 
 ---
 
-## Phase 4 — Migration des 4 clients existants *(~4 semaines)*
+## Phase 2 — Prêt à basculer *(~2-3 semaines)*
 
-**Objectif — la preuve de fonctionnement : Grigny, LCSS, Pertuis et CMAR-PAC en prod sur Commun, un serveur chacun.**
+**Objectif : tout ce qui manque pour qu'un client vive sur Commun au quotidien.**
 
-- [ ] **Script de migration Mongo → SQLite (bun:sqlite)** par organisation : mapping Collections/Records (le JSON legacy) → modules typés, migration des médias S3 vers le bucket par commune, utilisateurs réinvités (reset propre, pas de migration des mots de passe)
-- [ ] **Portage du connecteur APIDAE/Airtable** en module de `packages/core` (tâche planifiée Nitro) — indispensable pour Pertuis et LCSS. Le moteur de mapping de job-data-sync se porte bien ; il passera par l'API interne (fin de l'écriture directe en DB avec JWT auto-forgé)
-- [ ] Migration site par site, du plus simple au plus complexe (à confirmer : CMAR-PAC → Grigny → LCSS → Pertuis), double-run avec legacy en lecture seule avant chaque bascule DNS
-- [ ] Provisioning des 4 serveurs (docker-compose par instance — le control plane automatisé viendra bien plus tard)
-- [ ] **Décommission du legacy** après la 4ᵉ bascule : microservices, framework maison, ancien SSG, jobs, admin-fix
+### 2a — Admin stabilisé (pas de refonte)
+- [ ] Correctifs issus des retours de revue — uniquement ce qui touche la fiabilité (la modernisation attend la phase 4 : pas de réécriture intermédiaire de la couche models)
+- [ ] Bouton Publier branché sur la task de déploiement (cf. 2b)
 
-**Critère de sortie** : 4 sites en prod sur Commun, plateforme legacy éteinte.
+### 2b — Jobs → Nitro tasks (transplant direct, décision 24/07 : pas d'adaptation intermédiaire des jobs legacy — même effort payé une seule fois)
+- [ ] Deploy nightly + à la demande : appel du hook Vercel (les builds RESTENT sur Vercel pendant la transition, les sites consomment notre API golden-testée)
+- [ ] Injector OpenData (décisions grigny — alimente actes-administratifs quotidiennement)
+- [ ] Sync APIDAE (Pertuis) et Airtable (LCSS) : moteur de mapping porté tel quel, frontière I/O réécrite (services directs, fin du JWT auto-forgé et de l'écriture Mongo directe)
+- [ ] Ordonnancement corrigé : sync de données **puis** deploy (le legacy déployait à 0h30 avant la sync de 5h30)
 
-**Risque principal de toute la roadmap** : le mapping des Collections JSON legacy vers les modules typés — le moins prévisible. À dérisquer dès la phase 1 en écrivant le script de migration sur un dump réel.
-
----
-
-## Phase 5 — Module IA *(~4 semaines)*
-
-**Objectif : la killer feature démontrable pour le lancement.**
-
-- [ ] **Transcription des conseils municipaux** v1 : upload audio → Voxtral (Mistral) → structuration LLM (délibérations, votes, intervenants, quorum) → compte-rendu au format réglementaire, relu/édité dans l'admin avant publication. (Le live streaming WebSocket = v2, pas au lancement)
-- [ ] **Copilote rédaction** dans l'éditeur (actualités, agenda) — mode suggestion, validation humaine systématique
-- [ ] **Copilote d'agencement de pages** (v3 des blocs, cf. phase 3) : génération de pages en JSON de blocs validé Zod — la démo différenciante (aucun concurrent ne peut générer une page accessible branchée sur du contenu réel)
-- [ ] **Système de crédits** : comptage, packs, facturation simple (Chorus Pro complet viendra ensuite)
-- [ ] Test en conditions réelles sur un vrai conseil d'une commune pilote
-
-**Critère de sortie** : un enregistrement de conseil réel → un CR publié sur un site pilote.
+**Critère de sortie** : une instance Commun vit seule une semaine (contenus édités, jobs qui tournent, sites publiés) sans intervention.
 
 ---
 
-## Phase 6 — Pré-lancement : site vitrine & communauté *(~2-3 semaines, parallélisable)*
+## Phase 3 — Migration des 4 clients 🎯 *(~3-4 semaines)*
 
-- [ ] **Site vitrine commun.app** (`apps/website`, Nuxt) : vision, modules (délibérations + transcription IA en avant), démo, pricing, documentation (auto-hébergement en 10 min, guide contributeur)
-- [ ] **Espace communautaire — GitHub d'abord** : org `commun-app`, monorepo public, GitHub Discussions (Q&A, idées, annonces), issues avec templates FR, `CONTRIBUTING.md`, code de conduite, labels `good first issue`. Forum type Discourse pour les non-techniciens : en backlog, pertinent à partir de ~20-30 communes
-- [ ] Hygiène open source : en-têtes AGPL, `SECURITY.md`, DCO, semver + changelog automatisé
+**Objectif : Grigny, LCSS, Pertuis, CMAR-PACA en prod sur Commun, legacy éteint.**
+
+- [ ] Infra Scaleway tout-en-un (décision 24/07) : **un VPS mutualisé** (~100 Mo RAM/instance), un conteneur par client (le Nitro de l'API sert aussi l'admin en statique), Object Storage fr-par
+- [ ] Éclatement S3 : un bucket par client (copie server-side intra-région — les médias sont déjà chez Scaleway)
+- [ ] SQLite = un fichier sur le volume : **backup quotidien → S3** (snapshot ou Litestream), pas de service managé
+- [ ] Bascule site par site (pressenti : CMAR → Grigny → LCSS → Pertuis), double-run avec legacy en lecture seule, puis DNS
+- [ ] Notice de bascule aux clients (nouvelle URL d'admin, mêmes identifiants)
+- [ ] **Décommission du legacy** après la 4ᵉ bascule : microservices, framework maison, jobs, admin-fix
+
+**Critère de sortie** : 4 clients en prod sur Commun, plateforme legacy éteinte.
+
+---
+
+## Phase 4 — Refonte complète de l'admin *(~4 semaines)*
+
+**Objectif : une secrétaire de mairie peut tout gérer sans formation — et la dette front est soldée.**
+
+- [ ] Cadrage acté 24/07 : migration **en place, écran par écran** (l'admin ISO en prod = référence de non-régression). Nuxt 4 + Nuxt UI v4 + @nuxt/icon + @nuxt/fonts ; TanStack Query remplace pinia-orm (état serveur = cache de query, jamais un store) ; models → composables par domaine ; middlewares workspace/prefetch/headings supprimés (`useAsyncData`/`useQuery` + `useHead`) ; axios → `$fetch` ; notifications maison → `useToast`. **Conservés : CASL** (permissions fines et multi-organisation intra-tenant à venir — une org = un site : mairie, cinéma du village…) **et luxon**
+- [ ] **Fusion admin + API dans une seule app Nuxt** (décision 24/07) : Nuxt héberge son Nitro — un seul dev server, un seul build, un seul artefact, plus de CORS. Implique le port de la couche HTTP h3 v2 → v1 si Nuxt n'a pas encore rejoint Nitro v3 (couche mince, ~15 fichiers ; `packages/core` inchangé)
+- [ ] Éditeur riche : `@poulpus/prose` → TipTap open source (TipTap Pro incompatible AGPL)
+- [ ] Écrans générés depuis les définitions de collections (moteur = **outillage interne**, pas un produit headless — jeu de types fermé, Zod/TS, exploitable par l'IA) ; écran métier dédié : délibérations (séances + votes)
+- [ ] PWA (manifest, installable) — couvre le cas mobile sans app native
+- [ ] CLI d'instance **open source** : `admin:create` (bootstrap premier admin), `backup`, `restore`, `migrate`
+
+**Critère de sortie** : parcours complet actualité + délibération dans le nouvel admin, en prod chez les 4 clients.
+
+---
+
+## Phase 5 — Thème & génération de sites *(~3-4 semaines)*
+
+**Objectif : un seul thème maintenu, N communes — et le terrain préparé pour l'IA.**
+
+- [ ] `packages/theme-base` : layer Nuxt (~81 % de composants déjà byte-identiques entre les sites) + design tokens (couleurs, logo, typo)
+- [ ] Surcharges par commune via `extends` (app mince par site) — vendues comme prestation (AGPL : service, pas licence)
+- [ ] **Pages par blocs contraints** (GrapesJS écarté — markup libre incompatible RGAA/montée de version/IA) : v1 rendu ISO des `_pages` migrées → v2 éditeur de blocs dans l'admin (fin du JSON brut en textarea), chaque bloc = composant du thème + props + liaison de données, JSON à schéma Zod
+- [ ] Build statique **rapatrié sur l'instance** (fin de Vercel), Nuxt Content v3 stable, contenu fetché au build
+- [ ] **RGAA AA dans la layer** (obligation légale → argument du socle gratuit)
+
+**Critère de sortie** : un site témoin généré depuis une instance, score RGAA/Lighthouse documenté.
+
+---
+
+## Phase 6 — Site vitrine & communauté *(~2-3 semaines, ∥ phases 4-5)*
+
+- [ ] Site vitrine commun.app : vision, modules, démo, pricing, docs (auto-hébergement en 10 min)
+- [ ] GitHub public : org `commun-app`, Discussions, templates FR, `CONTRIBUTING.md`, hygiène AGPL (en-têtes, `SECURITY.md`, DCO, changelog)
+- [ ] Notice aux clients existants + newsletter
 
 **Critère de sortie** : site en ligne, repo prêt à passer public.
 
 ---
 
-## Phase 7 — Lancement, positionnement & subventions *(continu)*
+## Phase 7 — Produit payant *(~6-8 semaines)*
 
-*Tout le volet marketing/institutionnel volontairement reporté ici.*
+### 7.1 — IA (la killer feature)
+- [ ] Transcription conseils : upload audio → Voxtral → structuration LLM (délibérations, votes, quorum) → CR réglementaire relu dans l'admin (live streaming = v2)
+- [ ] Copilote rédaction (suggestion, validation humaine) + **copilote d'agencement de pages** (v3 des blocs : le LLM émet du JSON de blocs validé Zod — la démo différenciante)
+- [ ] Test sur un vrai conseil d'une commune pilote
 
-- [ ] **Recherche concurrentielle approfondie** : Sites Faciles (ANCT/beta.gouv), Publik (Entr'ouvert), Mairie.app, WeDelib, LaPageLocale, Campagnol… → matrice honnête intégrée au site et aux dossiers
-- [ ] **Solidification du dossier** : pitch, dossiers de subvention (ANCT, DINUM, NLnet, Banque des Territoires), contact partenariat Mistral (open source + intérêt public), démarche AMF/labellisation
-- [ ] Repo public + annonce (réseaux de secrétaires de mairie, communs numériques, Linuxfr/HN pour la traction dev)
-- [ ] **Programme pilote** : 5-10 communes gratuites 1 an contre feedback — les 4 organisations migrées servent de références démontrables
-- [ ] SaaS managé v1 : provisioning manuel des instances ; le control plane automatisé n'arrive que quand le manuel ne passe plus à l'échelle
+### 7.2 — Modèle économique outillé
+- [ ] Système de crédits IA : comptage, packs, facturation simple puis Chorus Pro
+
+### 7.3 — Control plane (SaaS)
+- [ ] **Codebase séparée, propriétaire, qui n'importe PAS `@commun/core`** (frontière AGPL : elle orchestre Dokploy, facturation, DNS) — provisioning `slug.commun.app`, cycle de vie piloté par la facturation. Manuel d'abord, automatisé quand le manuel ne passe plus à l'échelle
+
+**Critère de sortie** : un enregistrement de conseil réel → un CR publié ; une commune peut s'inscrire et payer.
+
+---
+
+## Phase 8 — Lancement *(continu)*
+
+- [ ] Recherche concurrentielle documentée (Sites Faciles, Publik, Mairie.app, WeDelib, LaPageLocale…)
+- [ ] Subventions (ANCT, DINUM, NLnet, Banque des Territoires), partenariat Mistral, démarche AMF, civic tech
+- [ ] Programme pilote : 5-10 communes gratuites 1 an contre feedback (les 4 clients migrés = références)
+- [ ] Annonce publique (réseaux secrétaires de mairie, communs numériques, Linuxfr/HN)
+
+---
+
+## Horizon lointain (non planifié)
+
+- Apps dédiées élus / citoyens (le site public en PWA couvre le cas citoyen d'abord)
+- Forum communautaire type Discourse (pertinent à ~20-30 communes)
+- Marketplace de thèmes labellisés « RGAA vérifié » (si une communauté existe)
 
 ---
 
@@ -148,11 +161,11 @@ Services pro (intégration, formation, migration, audit RGAA, thèmes dédiés) 
 
 ### Infra cible (SaaS)
 
-Une instance = un conteneur Nitro + Garage S3 (Deuxfleurs, AGPL) + SQLite ≈ 100 MB RAM → 60-80 instances par VPS ≈ 6 €/mois, soit **~0,08 €/instance/mois** pour ~20 €/mois facturés. Provisioning automatisé par le control plane via l'API Dokploy (project.create → compose.create → domain.create SSL → deploy → `slug.commun.app`), cycle de vie piloté par la facturation (activation/suspension/archivage+export). Le control plane automatisé n'arrive qu'après le pilote (provisioning manuel d'abord — cf. phase 7).
+Une instance = un conteneur Nitro + Garage S3 (Deuxfleurs, AGPL) + SQLite ≈ 100 MB RAM → 60-80 instances par VPS ≈ 6 €/mois, soit **~0,08 €/instance/mois** pour ~20 €/mois facturés. Provisioning automatisé par le control plane via l'API Dokploy (project.create → compose.create → domain.create SSL → deploy → `slug.commun.app`), cycle de vie piloté par la facturation. (Pour la migration des 4 clients — phase 3 — l'infra est plus simple : Scaleway VPS + Object Storage, pas encore de Dokploy/Garage.)
 
 ### Pourquoi l'open source ne cannibalise pas
 
-Les mairies ne s'auto-hébergent pas ; l'IA est cloud par nature (pas de clé Mistral hors commun.app) ; la moat est opérationnelle (confiance, souveraineté, services), pas dans le code. Créneau sans concurrent direct : open source + CMS moderne + délibérations + transcription IA au prix des petites communes (vs Mairie.app, WeDelib ~5 000 €/an, LaPageLocale).
+Les mairies ne s'auto-hébergent pas ; l'IA est cloud par nature (pas de clé Mistral hors commun.app) ; la moat est opérationnelle (confiance, souveraineté, services), pas dans le code. Créneau sans concurrent direct : open source + CMS moderne + délibérations + transcription IA au prix des petites communes.
 
 ---
 
@@ -160,23 +173,31 @@ Les mairies ne s'auto-hébergent pas ; l'IA est cloud par nature (pas de clé Mi
 
 | # | Phase | Durée | Fin estimée* |
 |---|---|---|---|
-| 1 | Scaffold monorepo (api + core + schéma) | 3 sem | mi-août 2026 |
-| 2 | Refonte admin (Nuxt 4 + Nuxt UI + tRPC) | 4-5 sem | fin sept. |
-| 3 | Layer thème + SSG auto-hébergé + RGAA | 3-4 sem (∥ ph. 2) | fin sept. |
-| 4 | Migration Grigny / LCSS / Pertuis / CMAR-PAC | 4 sem | fin oct. |
-| 5 | IA : transcription + copilote + crédits | 4 sem | fin nov. |
-| 6 | Site vitrine + communauté GitHub | 2-3 sem (∥ ph. 4-5) | nov. |
-| 7 | Lancement + recherche concurrentielle + subventions | continu | déc. 2026 → |
+| 1 | Monolithe ISO (reste : Loops, sécurité, E2E, clôture) | ~1 sem | début août 2026 |
+| 2 | Prêt à basculer (admin stabilisé + jobs → tasks) | 2-3 sem | fin août |
+| 3 | **Migration des 4 clients + décommission legacy** 🎯 | 3-4 sem | fin sept. |
+| 4 | Refonte admin (Nuxt 4 + UI + TanStack + fusion) | ~4 sem | fin oct. |
+| 5 | Thème + blocs + SSG sur instance + RGAA | 3-4 sem | fin nov. |
+| 6 | Site vitrine + communauté GitHub | 2-3 sem (∥ 4-5) | nov. |
+| 7 | IA + crédits + control plane | 6-8 sem | jan. 2027 |
+| 8 | Lancement + subventions + pilote | continu | fév. 2027 → |
 
-*\*Solo avec assistance IA, imprévus de migration inclus. Point de départ : fin juillet 2026.*
+*\*Solo avec assistance IA, imprévus inclus. Point de départ : fin juillet 2026.*
 
 ## Décisions actées
 
-- Single-tenant : une instance = une collectivité (DB SQLite (bun:sqlite), S3, serveur dédiés) — 4 serveurs assumés pour les clients existants
-- Le legacy (Poulpus) n'est plus touché, y compris ses problèmes de sécurité : tout part dans Commun
+- **Bascule d'abord** (24/07/2026) : les 4 clients migrent sur l'admin ISO stabilisé AVANT la refonte — rien de réécrit deux fois
+- Jobs : transplant direct en Nitro tasks (pas d'adaptation intermédiaire des jobs legacy) ; builds sur Vercel pendant la transition
+- Infra migration : Scaleway tout-en-un (VPS mutualisé + Object Storage fr-par), un conteneur/client, backup SQLite → S3 ; Dokploy/Garage = cible SaaS, pas migration
+- Fusion admin + API dans une seule app Nuxt en phase 4 (Nuxt héberge son Nitro ; port h3 v2→v1 si nécessaire)
+- Deux CLIs distincts : CLI d'instance **open source** (admin:create, backup, migrate) ; control plane **propriétaire et séparé** (n'importe jamais `@commun/core` — frontière AGPL)
+- Single-tenant : une instance = une collectivité (DB SQLite, S3, conteneur dédiés)
+- Le legacy (Poulpus) n'est plus touché : tout part dans Commun
 - RGAA dans le socle gratuit (obligation légale, pas une option payante)
-- Transcription via Mistral Voxtral (cohérence souveraineté, pas de Whisper OpenAI)
-- Marketing/subventions après la preuve de fonctionnement, pas avant
+- Transcription via Mistral Voxtral (souveraineté — pas de Whisper OpenAI)
 - Collections dynamiques = outillage interne (pas un produit headless CMS) : jeu de types fermé, Zod/TS, exploitable par l'IA
-- Theming : UN thème officiel RGAA AA personnalisé par design tokens ; surcouches dédiées via `extends` vendues comme prestation (AGPL oblige : service, pas licence) — mais d'abord le thème de base fonctionnel
-- Pages par blocs contraints (JSON à schéma Zod, composants du thème) — GrapesJS écarté ; l'agencement devient agentique en phase 5
+- Theming : UN thème officiel RGAA AA + design tokens ; surcouches `extends` vendues comme prestation (AGPL : service, pas licence)
+- Pages par blocs contraints (JSON à schéma Zod) — GrapesJS écarté ; agencement agentique en phase 7
+- CASL et luxon conservés dans l'admin (permissions fines / multi-org intra-tenant à venir ; utils dates FR)
+- Pas d'app native à horizon visible : PWA (admin puis site public) ; apps élus/citoyens = horizon lointain
+- Marketing/subventions après la preuve de fonctionnement, pas avant
