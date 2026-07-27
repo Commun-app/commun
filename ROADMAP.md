@@ -31,8 +31,8 @@ chemin legacy (sites Vercel + plan REST golden-testé) reste le filet jusqu'à p
   - deploy quotidien + à la demande (GET hook Vercel — trivial, branche le bouton Publier)
   - data-sync ot-pertuis (seul injector ACTIF : 2 pipelines APIDAE unlink + 1 Airtable) — moteur de mapping porté tel quel, I/O via services directs (fin du JWT forgé `@changeme` et des écritures Mongo directes)
   - ordonnancement corrigé : sync PUIS deploy (le legacy déployait avant la sync)
-- [ ] Emails transactionnels Loops (invitations ; « mot de passe oublié »)
-- [ ] Passe sécurité de base (rate limiting, headers) — le legacy exposé n'est plus touché
+- [x] Emails transactionnels Loops (invitations ; « mot de passe oublié »)
+- [x] Passe sécurité de base (rate limiting, headers) — le legacy exposé n'est plus touché
 - [ ] Revue E2E Quentin + couverture minimum vital ; clôture OpenSpec
 
 **Critère de sortie** : une instance vit une semaine sans intervention (contenus, jobs, sites publiés).
