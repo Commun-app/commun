@@ -31,11 +31,15 @@ export const legacyExtra = () =>
  * (record.constants) : le flux éditorial draft → waiting → ready → published
  * est piloté par l'admin ; seul `published` est servi sur le plan public.
  */
-export const PUBLICATION_STATUSES = ['draft', 'waiting', 'ready', 'scheduled', 'published'] as const;
+export const PUBLICATION_STATUSES = [
+  'draft',
+  'waiting',
+  'ready',
+  'scheduled',
+  'published',
+] as const;
 export const publicationStatus = () =>
-  text('status', { enum: PUBLICATION_STATUSES })
-    .notNull()
-    .default('draft');
+  text('status', { enum: PUBLICATION_STATUSES }).notNull().default('draft');
 
 /** ISO timestamp from which a published item is publicly visible (schedulable). */
 export const publishedAt = () => text('published_at');

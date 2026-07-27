@@ -43,9 +43,7 @@ export function createEmail(env: CoreEnv): EmailDriver {
     return {
       kind: 'disabled',
       async send(message) {
-        consola.info(
-          `[email] webhook non configuré — ${message.template} → ${message.to} ignoré`,
-        );
+        consola.info(`[email] webhook non configuré — ${message.template} → ${message.to} ignoré`);
       },
     };
   }
@@ -65,7 +63,9 @@ export function createEmail(env: CoreEnv): EmailDriver {
       }
       const response = await fetch(url, { method: 'POST', headers, body });
       if (!response.ok) {
-        throw new Error(`webhook email ${response.status}: ${(await response.text()).slice(0, 200)}`);
+        throw new Error(
+          `webhook email ${response.status}: ${(await response.text()).slice(0, 200)}`,
+        );
       }
     },
   };

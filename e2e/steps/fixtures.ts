@@ -8,12 +8,22 @@ import { test as base } from 'playwright-bdd';
 export interface World {
   status?: number;
   body?: unknown;
-  // auth.feature / roles.feature
+  // security.feature / users.feature
   inviteToken?: string;
   sessionToken?: string;
-  // content features
+  secondSessionToken?: string;
+  accountEmail?: string;
+  resetUrl?: string;
+  memberId?: string;
+  // media.feature
+  mediaId?: string;
+  // cms.feature / deployment.feature
   apiToken?: string;
+  createdApiTokenId?: string;
+  createdApiToken?: string;
+  collectionId?: string;
   entryId?: string;
+  entryIds?: string[];
 }
 
 export const test = base.extend<{ world: World }>({

@@ -6,7 +6,12 @@
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 // Relative import: e2e/ is not a workspace package, @commun/core is unresolvable here.
-import { createCore, parseEnv, UsersRepository } from '../../packages/core/src/index.ts';
+import {
+  createCore,
+  media as mediaTable,
+  parseEnv,
+  UsersRepository,
+} from '../../packages/core/src/index.ts';
 
 // Chemin EXPLICITE uniquement (E2E_DATA_DIR, posé par e2e/steps/instance.ts) :
 // Bun charge automatiquement le .env racine, donc COMMUN_DATA_DIR peut pointer
@@ -57,6 +62,24 @@ switch (command) {
     });
     const { token } = await core.services.users.createSession(user);
     console.log(JSON.stringify({ token }));
+    break;
+  }
+  case 'media': {
+    // Ligne média directement en base (finalize exige un HEAD S3 réel —
+    // couvert plus tard par le profil MinIO). Les lectures signent en local.
+    const filename = argument ?? 'e2e.jpg';
+    const row = core.db
+      .insert(mediaTable)
+      .values({
+        filename,
+        mime: 'image/jpeg',
+        size: 1234,
+        objects: { original: `e2e/${filename}`, variants: {} },
+        metaData: { source: 'e2e' },
+      })
+      .returning()
+      .get();
+    console.log(JSON.stringify({ id: row.id }));
     break;
   }
   case 'news-entry': {
