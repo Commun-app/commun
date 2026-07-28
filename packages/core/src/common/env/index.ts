@@ -19,10 +19,10 @@ const envSchema = z.object({
   COMMUN_S3_BUCKET: z.string().optional(),
   COMMUN_S3_ACCESS_KEY: z.string().optional(),
   COMMUN_S3_SECRET_KEY: z.string().optional(),
-  // Emails transactionnels par webhook (9.9, décision 27/07) — le core ne
-  // connaît aucun fournisseur ; absent → envois journalisés et ignorés.
+  // Emails transactionnels par ÉVÉNEMENTS webhook (revue 28/07) — payload
+  // calqué sur Loops events/send, REQUIS au boot (fail-fast, comme le S3).
   COMMUN_EMAIL_WEBHOOK_URL: z.string().optional(),
-  COMMUN_EMAIL_WEBHOOK_SECRET: z.string().optional(),
+  COMMUN_EMAIL_WEBHOOK_TOKEN: z.string().optional(),
   /** URL publique de l'admin — sert à construire les liens des emails. */
   COMMUN_ADMIN_URL: z.string().optional(),
 });
@@ -43,7 +43,7 @@ export function parseEnv(raw: Record<string, string | undefined> = process.env):
     COMMUN_S3_ACCESS_KEY: raw.COMMUN_S3_ACCESS_KEY,
     COMMUN_S3_SECRET_KEY: raw.COMMUN_S3_SECRET_KEY,
     COMMUN_EMAIL_WEBHOOK_URL: raw.COMMUN_EMAIL_WEBHOOK_URL,
-    COMMUN_EMAIL_WEBHOOK_SECRET: raw.COMMUN_EMAIL_WEBHOOK_SECRET,
+    COMMUN_EMAIL_WEBHOOK_TOKEN: raw.COMMUN_EMAIL_WEBHOOK_TOKEN,
     COMMUN_ADMIN_URL: raw.COMMUN_ADMIN_URL,
   });
 }

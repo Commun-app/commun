@@ -14,8 +14,26 @@ import { createCore, parseEnv, UsersRepository } from '../../packages/core/src/i
 // base jetable de l'API sous test.
 const dataDir = process.env.E2E_DATA_DIR ?? join(tmpdir(), 'commun-e2e-data');
 const migrationsDir = join(import.meta.dir, '..', '..', 'packages', 'core', 'drizzle');
+// S3 + webhook email REQUIS au boot (fail-fast) — mêmes valeurs que le
+// webServer Playwright.
 const core = createCore({
-  env: parseEnv({ COMMUN_DATA_DIR: dataDir, COMMUN_MIGRATIONS_DIR: migrationsDir }),
+  env: parseEnv({
+    COMMUN_DATA_DIR: dataDir,
+    COMMUN_MIGRATIONS_DIR: migrationsDir,
+    COMMUN_S3_ENDPOINT: 'http://127.0.0.1:9102',
+    COMMUN_S3_REGION: 'fr-par',
+    COMMUN_S3_BUCKET: 'commun-e2e',
+    COMMUN_S3_ACCESS_KEY: 'e2e-access',
+    COMMUN_S3_SECRET_KEY: 'e2e-secret-key',
+    // Port fermé VOLONTAIREMENT (échec immédiat, best-effort côté service) :
+    // le seed tourne en execFileSync dans le worker Playwright — s'il visait
+    // le récepteur 3199 hébergé par ce même worker (boucle bloquée), chaque
+    // émission deadlockerait. Seuls les événements émis par le SERVEUR sont
+    // capturés par les scénarios.
+    COMMUN_EMAIL_WEBHOOK_URL: 'http://127.0.0.1:9/discard',
+    COMMUN_EMAIL_WEBHOOK_TOKEN: 'e2e-webhook-token',
+    COMMUN_ADMIN_URL: 'https://admin.e2e.test',
+  }),
 });
 
 const [command, argument] = process.argv.slice(2);
@@ -99,6 +117,15 @@ switch (command) {
   case 'news-entry': {
     const slug = argument!;
     const collections = core.services.collections;
+    // Plus de collections seedées (revue 28/07) : la définition est créée ici.
+    const hasNews = (await collections.listDefinitions()).some((d) => d.slug === 'news');
+    if (!hasNews) {
+      await collections.createDefinition({
+        name: 'Actualités',
+        slug: 'news',
+        fields: [{ name: 'body', label: 'Corps', type: 'text', required: false, hidden: false }],
+      });
+    }
     const existing = (await collections.listEntries('news')).find((entry) => entry.slug === slug);
     if (!existing) {
       const published = await collections.createEntry('news', {

@@ -1,19 +1,38 @@
-// Domain error codes raised by services. Each is a sentinel string that the
-// tRPC layer converts to a typed error and the UI maps to a message.
+// Erreurs typées (revue PR #1, 28/07) : chaque domaine exporte son CATALOGUE
+// d'erreurs (domains/<domain>/errors.ts) construit avec `createTypedError`.
+// La couche tRPC ne fait que les transmettre : `error.trpcCode` porte le code
+// transport, `error.type` le discriminant lisible côté client.
 
-export const ERR = {
-  NOT_FOUND: 'NOT_FOUND',
-  INVALID_STATE: 'INVALID_STATE',
-} as const;
+/** Codes transport tRPC portés par les erreurs de domaine. */
+export type TrpcErrorCode =
+  | 'NOT_FOUND'
+  | 'BAD_REQUEST'
+  | 'FORBIDDEN'
+  | 'CONFLICT'
+  | 'UNAUTHORIZED'
+  | 'INTERNAL_SERVER_ERROR';
 
-export type ErrorCode = (typeof ERR)[keyof typeof ERR];
+/** Classe de base — permet `instanceof DomainError` dans le mapper tRPC. */
+export abstract class DomainError extends Error {
+  abstract readonly type: string;
+  abstract readonly trpcCode: TrpcErrorCode;
+}
 
-export class CommunError extends Error {
-  constructor(
-    public readonly code: ErrorCode,
-    message?: string,
-  ) {
-    super(message ?? code);
-    this.name = 'CommunError';
-  }
+/**
+ * Fabrique d'erreur typée : classe avec discriminant `type` constant, message
+ * par défaut et code transport. Usage :
+ *
+ *   export const EntryNotFoundError = createTypedError(
+ *     'entry-not-found-error', 'entrée introuvable', 'NOT_FOUND');
+ *   throw new EntryNotFoundError(`entrée introuvable: ${id}`);
+ */
+export function createTypedError(type: string, defaultMessage: string, trpcCode: TrpcErrorCode) {
+  return class extends DomainError {
+    readonly type = type;
+    readonly trpcCode = trpcCode;
+    constructor(message?: string) {
+      super(message ?? defaultMessage);
+      this.name = type;
+    }
+  };
 }

@@ -46,16 +46,10 @@ Le contenu SHALL être modélisé par le moteur de collections : définitions en
 - **WHEN** une entrée est créée avec un slug déjà utilisé dans la même collection
 - **THEN** l'écriture est refusée avec une erreur explicite (le même slug reste permis dans une autre collection)
 
-### Requirement: Collections par défaut seedées par migration
-Les collections standard (`news`, `events`, `officials`, `projects`) SHALL être créées par une migration Drizzle custom, exécutée exactement une fois par base via le journal de migrations. Une collection par défaut supprimée par la commune SHALL NOT être recréée.
-
-#### Scenario: Base neuve
-- **WHEN** une instance démarre sur une base vide
-- **THEN** les quatre collections par défaut existent avec leurs définitions de champs
-
-#### Scenario: Collection par défaut supprimée volontairement
-- **WHEN** un admin supprime la collection `projects` puis l'instance redémarre
-- **THEN** la collection n'est pas recréée
+### Requirement: Collections par défaut seedées par migration — RETIRÉ (décision Quentin, 2026-07-28)
+Le seed des quatre collections par défaut a été SUPPRIMÉ (revue PR #1) : une
+instance neuve démarre sans collection, l'admin les crée librement ; les
+instances migrées reçoivent celles du legacy.
 
 ### Requirement: Cycle de publication du contenu
 Les entrées de collections SHALL porter un statut (`draft`, `published`, avec date de publication programmable) et seuls les contenus publiés SHALL être exposés sur le plan public.

@@ -108,16 +108,17 @@ When('a password reset is requested for {string}', async ({ world }, email: stri
   world.status = response.status;
 });
 
-Then('a {string} email is emitted through the signed webhook', ({ world }, template: string) => {
-  expect(world.status).toBe(200);
-  const email = lastEmail()!;
-  expect(emailCount()).toBe(emailCountBefore + 1);
-  expect(email.template).toBe(template);
-  expect(email.signatureValid).toBe(true);
-  expect(email.subject.length).toBeGreaterThan(5);
-  expect(email.text).toContain(email.variables.url);
-  world.resetUrl = email.variables.url;
-});
+Then(
+  'a {string} event is emitted through the authenticated webhook',
+  ({ world }, eventName: string) => {
+    expect(world.status).toBe(200);
+    const event = lastEmail()!;
+    expect(emailCount()).toBe(emailCountBefore + 1);
+    expect(event.eventName).toBe(eventName);
+    expect(event.authValid).toBe(true); // Authorization: Bearer <token>
+    world.resetUrl = event.eventProperties.url;
+  },
+);
 
 When(
   'the reset link is consumed with the new password {string}',

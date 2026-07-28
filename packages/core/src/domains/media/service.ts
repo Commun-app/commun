@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 import { consola } from 'consola';
-import { CommunError, ERR } from '../../common/errors/index.ts';
+import { MediaNotFoundError, UnsupportedMimeError, UploadIncompleteError } from './errors.ts';
 import type { StorageDriver } from '../../infrastructure/storage/index.ts';
 import type { MediaRepository } from './repository.ts';
 import type { Media } from './schema.ts';
@@ -71,7 +71,7 @@ export class MediaService {
     metaData?: Record<string, string>,
   ): Promise<{ key: string; url: string }> {
     if (!ALLOWED_MIME.has(mime)) {
-      throw new CommunError(ERR.INVALID_STATE, `type de fichier non autorisé: ${mime}`);
+      throw new UnsupportedMimeError(`type de fichier non autorisé: ${mime}`);
     }
     const key = `${nanoid(10)}/${sanitizeFilename(filename)}`;
     return { key, url: await this.storage.presignedPutUrl(key, mime, metaData) };
@@ -81,7 +81,7 @@ export class MediaService {
   async finalize(input: MediaFinalizeDto, actorId?: string): Promise<Media> {
     const head = await this.storage.head(input.key);
     if (!head) {
-      throw new CommunError(ERR.INVALID_STATE, `objet non trouvé sur le stockage: ${input.key}`);
+      throw new UploadIncompleteError(`objet non trouvé sur le stockage: ${input.key}`);
     }
     const row = await this.repository.insert({
       filename: sanitizeFilename(input.filename),
@@ -114,20 +114,20 @@ export class MediaService {
   /** One media with signed `objects` (iso legacy `GET /media/:org/:id`). */
   async get(id: string): Promise<Media & { objects: Record<string, string> }> {
     const row = await this.repository.findById(id);
-    if (!row) throw new CommunError(ERR.NOT_FOUND, `média introuvable: ${id}`);
+    if (!row) throw new MediaNotFoundError(`média introuvable: ${id}`);
     return { ...row, objects: await this.signedObjects(row) };
   }
 
   async updateEditorial(id: string, input: MediaUpdateDto, actorId?: string): Promise<Media> {
     const updated = await this.repository.update(id, { ...input, updatedBy: actorId ?? null });
-    if (!updated) throw new CommunError(ERR.NOT_FOUND, `média introuvable: ${id}`);
+    if (!updated) throw new MediaNotFoundError(`média introuvable: ${id}`);
     return updated;
   }
 
   /** Delete the row AND every stored object (original + variants). */
   async remove(id: string): Promise<void> {
     const row = await this.repository.findById(id);
-    if (!row) throw new CommunError(ERR.NOT_FOUND, `média introuvable: ${id}`);
+    if (!row) throw new MediaNotFoundError(`média introuvable: ${id}`);
     const objects = row.objects as MediaObjects;
     await this.storage.remove([objects.original, ...Object.values(objects.variants ?? {})]);
     await this.repository.delete(id);

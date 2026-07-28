@@ -1,4 +1,4 @@
-import { CommunError, ERR } from '../../common/errors/index.ts';
+import { OrganizationAlreadyInitializedError, OrganizationNotInitializedError } from './errors.ts';
 import type { OrganizationRepository } from './repository.ts';
 import type { Organization } from './schema.ts';
 import type { OrganizationInitDto, OrganizationUpdateDto } from './dtos/index.ts';
@@ -14,14 +14,14 @@ export class OrganizationService {
   /** First-time initialisation — refused once the singleton exists. */
   async init(input: OrganizationInitDto): Promise<Organization> {
     if (await this.repository.get()) {
-      throw new CommunError(ERR.INVALID_STATE, 'la collectivité est déjà initialisée');
+      throw new OrganizationAlreadyInitializedError();
     }
     return this.repository.insert(input);
   }
 
   async update(input: OrganizationUpdateDto, actorId?: string): Promise<Organization> {
     const updated = await this.repository.update({ ...input, updatedBy: actorId ?? null });
-    if (!updated) throw new CommunError(ERR.NOT_FOUND, 'collectivité non initialisée');
+    if (!updated) throw new OrganizationNotInitializedError();
     return updated;
   }
 }

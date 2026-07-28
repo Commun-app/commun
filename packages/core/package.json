@@ -11,10 +11,7 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts"
     },
-    "./trpc": {
-      "types": "./src/router.ts",
-      "import": "./src/router.ts"
-    },
+    "./trpc": "./src/index.ts",
     "./types": {
       "types": "./src/index.ts",
       "import": "./src/index.ts"

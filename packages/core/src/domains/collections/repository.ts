@@ -1,6 +1,6 @@
 import { and, desc, eq } from 'drizzle-orm';
 import type { StoreDb } from '../../infrastructure/db/index.ts';
-import { publishedWhere } from '../../infrastructure/db/helpers.ts';
+import { publishedWhere } from '../../infrastructure/db/schema.ts';
 import {
   collectionDefinitions,
   entries,

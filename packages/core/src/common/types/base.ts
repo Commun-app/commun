@@ -3,7 +3,7 @@
 // the whole codebase. Promote to branded types in a dedicated change if id/
 // timestamp mix-ups ever become a real problem.
 
-/** An opaque entity identifier (nanoid). */
+/** An opaque entity identifier (UUID). */
 export type Id = string;
 
 /** An ISO-8601 timestamp string (e.g. `new Date().toISOString()`). */
