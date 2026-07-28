@@ -1,6 +1,7 @@
 import { defineHandler } from 'nitro';
 import { consola } from 'consola';
 import staticJson from '../../../data/politicus-mairie-marseille-15-16.json';
+import { useCore } from '../../../utils/core.ts';
 
 /**
  * Legacy-compat plane (iso `service-records`
@@ -16,7 +17,7 @@ export default defineHandler(async (event) => {
   };
 
   try {
-    const { organization, collections, media } = event.context.core.services;
+    const { organization, collections, media } = useCore().services;
     if ((await organization.get())?.slug !== 'marseille15-16' || !payload.data?.users) {
       return payload;
     }

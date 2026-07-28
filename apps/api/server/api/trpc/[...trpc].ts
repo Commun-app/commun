@@ -1,6 +1,7 @@
 import { defineHandler } from 'nitro';
 import { appRouter } from '@commun/core/trpc';
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
+import { useCore } from '../../utils/core.ts';
 
 // Mounts the core tRPC router under /api/trpc/* (server/api/ dir convention).
 // The context is assembled from what the plugin (core) and the session
@@ -11,7 +12,7 @@ export default defineHandler(async (event) => {
     req: event.req as unknown as Request,
     router: appRouter,
     createContext: () => ({
-      services: event.context.core.services,
+      services: useCore().services,
       session: event.context.session ?? null,
       requestMeta: {
         ua: event.req.headers.get('user-agent'),

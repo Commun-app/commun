@@ -25,3 +25,8 @@ ROADMAP.md
 # Outillage temporaire de migration des clients legacy (décision 28/07 :
 # hors repo — supprimé définitivement une fois les 4 clients basculés)
 packages/legacy-migrate/
+
+# Exception : le SYMLINK apps/api/.env → ../../.env est committé (nitro charge
+# son .env depuis apps/api, pas depuis la racine du monorepo) — la cible reste
+# ignorée, aucun secret dans le repo.
+!apps/api/.env

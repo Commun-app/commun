@@ -1,5 +1,6 @@
 import { defineHandler } from 'nitro';
 import { HTTPError } from 'h3';
+import { useCore } from '../../../utils/core.ts';
 
 /**
  * Legacy-compat plane (iso `service-records` `GET /api/v1/content/deployment`):
@@ -8,7 +9,7 @@ import { HTTPError } from 'h3';
  * `/collection/slug` paths). Token guard: server/middleware/api-token.ts.
  */
 export default defineHandler(async (event) => {
-  const { organization, collections, media } = event.context.core.services;
+  const { organization, collections, media } = useCore().services;
 
   const settings = await organization.get();
   if (!settings) throw new HTTPError({ status: 404, message: 'collectivité non initialisée' });

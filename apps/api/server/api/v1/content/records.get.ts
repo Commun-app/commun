@@ -1,4 +1,5 @@
 import { defineHandler } from 'nitro';
+import { useCore } from '../../../utils/core.ts';
 
 /**
  * Legacy-compat plane (iso `service-records` `GET /api/v1/content/records`):
@@ -8,6 +9,6 @@ import { defineHandler } from 'nitro';
  * legacy http component did: `{ name, description, data }`.
  */
 export default defineHandler(async (event) => {
-  const records = await event.context.core.services.collections.legacyRecordsPayload();
+  const records = await useCore().services.collections.legacyRecordsPayload();
   return { name: 'success', description: 'Action succeed.', data: { records } };
 });
