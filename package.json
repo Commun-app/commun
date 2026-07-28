@@ -4,11 +4,11 @@
   "private": true,
   "description": "commun.app — CMS open source pour les collectivités françaises (AGPL v3)",
   "workspaces": [
-    "packages/*",
+    "packages/core",
     "apps/*"
   ],
   "scripts": {
-    "dev": "./scripts/dev.sh",
+    "dev": "bun --filter @commun/api --filter @commun/admin --elide-lines=0 dev",
     "dev:api": "bun --filter @commun/api dev",
     "dev:admin": "bun --filter @commun/admin dev",
     "dev:docs": "cd docs && bun run dev",
@@ -18,7 +18,7 @@
     "typecheck": "bun --filter '@commun/*' typecheck",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "test": "bun --filter @commun/legacy-migrate test",
+    "test": "bun run test:e2e",
     "test:e2e": "bddgen && playwright test",
     "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist apps/*/node_modules apps/*/.nitro apps/*/.output docs/node_modules docs/.output docs/.docs"
   },

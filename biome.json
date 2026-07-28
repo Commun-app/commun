@@ -11,7 +11,10 @@
       "!**/drizzle/meta",
       "!apps/api/server/data",
       "!apps/admin",
-      "!bun.lock"
+      "!bun.lock",
+      "!.dump",
+      "!ROADMAP.md",
+      "!packages/legacy-migrate"
     ]
   },
   "formatter": {

@@ -7,7 +7,7 @@ Le repo SHALL fournir un `docker-compose.yml` de référence démarrant une inst
 
 #### Scenario: Démarrage en 10 minutes
 - **WHEN** un hébergeur copie `.env.example` en `.env`, renseigne les secrets et exécute `docker compose up`
-- **THEN** l'instance démarre, applique ses migrations, répond sur `/health` et permet la création du premier compte admin
+- **THEN** l'instance démarre, applique ses migrations, répond sur `/health` (les comptes proviennent de la migration ou d'invitations)
 
 #### Scenario: Persistance des données
 - **WHEN** l'instance est arrêtée puis redémarrée via docker compose
@@ -17,12 +17,8 @@ Le repo SHALL fournir un `docker-compose.yml` de référence démarrant une inst
 - **WHEN** l'hébergeur démarre le compose avec le profil S3 activé
 - **THEN** le service S3-compatible démarre avec l'instance et celle-ci l'utilise comme driver de stockage des médias
 
-### Requirement: Bootstrap du premier administrateur
-Une instance vierge SHALL offrir un mécanisme de création du premier compte admin (commande CLI ou token de bootstrap affiché au premier démarrage), impossible à rejouer une fois un admin existant.
-
-#### Scenario: Instance déjà initialisée
-- **WHEN** le mécanisme de bootstrap est invoqué alors qu'un admin existe déjà
-- **THEN** l'opération est refusée
+### Requirement: Bootstrap du premier administrateur — RETIRÉ (décision Quentin, 2026-07-28)
+Le mécanisme de bootstrap (scripts/bootstrap-admin.ts) a été SUPPRIMÉ : les comptes proviennent de la migration legacy ou d'une invitation. La création du premier admin d'une instance VIERGE reviendra avec le CLI d'instance (phase 4, `admin:create`).
 
 ### Requirement: Documentation undocs
 Le monorepo SHALL inclure un site de documentation (`docs/`, setup undocs repris d'opencorp) couvrant au minimum : guide d'auto-hébergement pas à pas, référence complète des variables d'environnement, guide de sauvegarde/restauration (fichier SQLite + médias), et guide contributeur.

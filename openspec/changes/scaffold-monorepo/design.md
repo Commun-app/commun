@@ -141,3 +141,13 @@ Résultat : 100 % des collections mappées sur les 5 orgs, 2 entrées corrompues
 - **Médias** : compose de référence avec profil S3-compatible embarqué (MinIO/Garage) + tâches de retraitement internes (D8 révisé).
 - **Dump Mongo** : Quentin le fournira en temps voulu — la CLI se développe sur échantillon, l'exécution réelle (task 7.6) attend la livraison.
 - **Vocabulaire** : domaine `collectivite` (et non `commune`) — le produit couvre communes, communautés de communes et d'autres collectivités partageant le même principe de transparence de gouvernance/délibérations.
+
+## Rectificatif de clôture (2026-07-28, /opsx:verify + revue PR #1)
+
+Trois décisions du corps du document ont été dépassées par des arbitrages ultérieurs (le code fait foi) :
+
+- **D6** : le jeu fermé compte **10 types** de champs, pas 8 — `steps` et `json` ajoutés par l'audit de parité (tâche 9.3). Les domaines `deliberations`/`forms` mentionnés n'appartiennent PAS à ce change (phases ultérieures). Les statuts de publication sont les 5 du legacy (draft/waiting/ready/scheduled/published, tâche « retours de test »).
+- **D7** : pas de cookie httpOnly — le token de session opaque voyage en `Authorization: Bearer` (annotation ISO legacy de Quentin) ; le rate limiting applicatif a été retiré (décision 27/07, niveau reverse proxy si besoin).
+- **D8** : pas de driver disque local — **S3-only** (annotation ISO legacy) ; le resize reste un stub (fin de phase). Les emails transactionnels (9.9) sortent par **webhook générique signé** (aucun fournisseur dans le core — décision 27/07).
+- Le bootstrap du premier admin (spec self-hosting) a été **retiré** (décision 28/07) — reviendra avec le CLI d'instance en phase 4.
+- `packages/legacy-migrate` est sorti du repo (décision 28/07) : outillage temporaire local, supprimé après la bascule des 4 clients.

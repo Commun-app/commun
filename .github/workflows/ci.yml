@@ -7,7 +7,7 @@ on:
 
 jobs:
   checks:
-    name: Typecheck, tests & naming
+    name: Lint, typecheck & E2E
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,6 +16,9 @@ jobs:
         with:
           bun-version: latest
 
+      # Sans tokens des registres privés : @poulpus/prose (optionnelle) est
+      # simplement sautée — l'API et le core s'installent complets ; l'admin
+      # ne builde pas en CI tant que prose n'est pas remplacée (phase 4).
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
@@ -25,23 +28,28 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
-      - name: Unit tests
-        run: bun run test
+      # La suite E2E est LA spécification exécutable du produit (décision
+      # 27/07) : elle boote l'API buildée + un MinIO (docker) et rejoue les
+      # scénarios Gherkin.
+      - name: E2E
+        run: bun run test:e2e
 
   docker:
-    name: Docker image
+    name: Docker image (API)
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     needs: checks
     steps:
       - uses: actions/checkout@v4
 
-      # The Dockerfile lands with the self-hosting tasks (group 6) — this job
-      # is skipped while it does not exist yet.
-      - name: Check Dockerfile presence
-        id: dockerfile
-        run: test -f Dockerfile && echo "present=true" >> "$GITHUB_OUTPUT" || echo "present=false" >> "$GITHUB_OUTPUT"
-
       - name: Build image
-        if: steps.dockerfile.outputs.present == 'true'
         run: docker build -t commun-api:ci .
+
+      - name: Smoke run
+        run: |
+          docker run -d --name smoke -p 3000:3000 commun-api:ci
+          for i in $(seq 1 20); do
+            curl -sf http://127.0.0.1:3000/health && exit 0 || sleep 1
+          done
+          docker logs smoke
+          exit 1
