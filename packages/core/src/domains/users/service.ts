@@ -1,7 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { consola } from 'consola';
-import { CommunError, ERR } from '../../common/errors/index.ts';
-import type { EmailDriver, EmailMessage } from '../../infrastructure/email/index.ts';
+import {
+  CannotRemoveSelfError,
+  InvitationInvalidError,
+  SessionNotFoundError,
+  UserNotFoundError,
+} from './errors.ts';
+import type { EmailEvent, EmailService } from '../../infrastructure/email/index.ts';
 import type { UsersRepository } from './repository.ts';
 import type { ApiToken, User } from './schema.ts';
 
@@ -35,15 +40,17 @@ export interface AuthSession {
 export class UsersService {
   constructor(
     private readonly repository: UsersRepository,
-    private readonly options: { email?: EmailDriver; adminUrl?: string } = {},
+    private readonly options: { email?: EmailService; adminUrl?: string } = {},
   ) {}
 
-  /** Envoi d'email best-effort : un échec du webhook ne casse jamais le flux. */
-  private async sendEmail(message: EmailMessage): Promise<void> {
+  /** Émission best-effort : un échec du webhook email ne casse jamais le flux. */
+  private async sendEmailEvent(event: EmailEvent): Promise<void> {
     try {
-      await this.options.email?.send(message);
+      await this.options.email?.sendEvent(event);
     } catch (error) {
-      consola.warn(`[email] échec d'envoi ${message.template} → ${message.to}: ${String(error)}`);
+      consola.warn(
+        `[email] échec d'émission ${event.eventName} → ${event.email}: ${String(error)}`,
+      );
     }
   }
 
@@ -114,7 +121,7 @@ export class UsersService {
   async revokeOwnSession(userId: string, sessionId: string): Promise<void> {
     const session = await this.repository.findSessionById(sessionId);
     if (!session || session.userId !== userId) {
-      throw new CommunError(ERR.NOT_FOUND, `session introuvable: ${sessionId}`);
+      throw new SessionNotFoundError(`session introuvable: ${sessionId}`);
     }
     await this.repository.revokeSession(sessionId, nowIso());
   }
@@ -138,12 +145,12 @@ export class UsersService {
       tokenHash: sha256(token),
       expiresAt,
     });
-    // 9.9 : email d'invitation (le legacy n'en envoyait jamais). Best-effort —
-    // le lien reste retourné à l'admin quoi qu'il arrive.
-    await this.sendEmail({
-      to: input.email.toLowerCase(),
-      template: 'invitation',
-      variables: { url: `${this.options.adminUrl ?? ''}/welcome/${token}` },
+    // 9.9 : événement d'invitation (le legacy n'envoyait jamais d'email).
+    // Best-effort — le lien reste retourné à l'admin quoi qu'il arrive.
+    await this.sendEmailEvent({
+      email: input.email.toLowerCase(),
+      eventName: 'userInvited',
+      eventProperties: { url: `${this.options.adminUrl ?? ''}/welcome/${token}` },
     });
     return { token, expiresAt };
   }
@@ -163,10 +170,10 @@ export class UsersService {
       tokenHash: sha256(token),
       expiresAt: new Date(Date.now() + INVITATION_TTL_MS).toISOString(),
     });
-    await this.sendEmail({
-      to: user.email,
-      template: 'password-reset',
-      variables: { url: `${this.options.adminUrl ?? ''}/password/define/${token}` },
+    await this.sendEmailEvent({
+      email: user.email,
+      eventName: 'passwordResetRequested',
+      eventProperties: { url: `${this.options.adminUrl ?? ''}/password/define/${token}` },
     });
   }
 
@@ -178,7 +185,7 @@ export class UsersService {
    */
   async acceptInvitation(token: string, input: { name?: string; password: string }): Promise<User> {
     const invitation = await this.repository.findValidInvitation(sha256(token), nowIso());
-    if (!invitation) throw new CommunError(ERR.INVALID_STATE, 'invitation invalide ou expirée');
+    if (!invitation) throw new InvitationInvalidError();
 
     const existing = await this.repository.findUserByEmail(invitation.email);
     const name = input.name?.trim() || existing?.name || invitation.email.split('@')[0] || 'Membre';
@@ -200,7 +207,7 @@ export class UsersService {
 
   async getUser(id: string): Promise<User> {
     const user = await this.repository.findUserById(id);
-    if (!user) throw new CommunError(ERR.NOT_FOUND, `utilisateur introuvable: ${id}`);
+    if (!user) throw new UserNotFoundError(`utilisateur introuvable: ${id}`);
     return user;
   }
 
@@ -210,7 +217,7 @@ export class UsersService {
 
   async removeUser(actorId: string, id: string): Promise<void> {
     if (id === actorId) {
-      throw new CommunError(ERR.INVALID_STATE, 'impossible de supprimer son propre compte');
+      throw new CannotRemoveSelfError();
     }
     await this.repository.deleteUser(id);
   }
@@ -220,7 +227,7 @@ export class UsersService {
     input: { name?: string; role?: 'admin' | 'redacteur'; email?: string },
   ): Promise<User> {
     const updated = await this.repository.updateUser(id, input);
-    if (!updated) throw new CommunError(ERR.NOT_FOUND, `utilisateur introuvable: ${id}`);
+    if (!updated) throw new UserNotFoundError(`utilisateur introuvable: ${id}`);
     return updated;
   }
 

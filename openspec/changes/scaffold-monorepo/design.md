@@ -151,3 +151,13 @@ Trois décisions du corps du document ont été dépassées par des arbitrages u
 - **D8** : pas de driver disque local — **S3-only** (annotation ISO legacy) ; le resize reste un stub (fin de phase). Les emails transactionnels (9.9) sortent par **webhook générique signé** (aucun fournisseur dans le core — décision 27/07).
 - Le bootstrap du premier admin (spec self-hosting) a été **retiré** (décision 28/07) — reviendra avec le CLI d'instance en phase 4.
 - `packages/legacy-migrate` est sorti du repo (décision 28/07) : outillage temporaire local, supprimé après la bascule des 4 clients.
+
+## Rectificatif n°2 (2026-07-28, revue PR #1 — lot core)
+
+- **Modèle organization** : `address` devient un champ JSON typé ({street, postalCode, city}) ; colonnes `phone`/`email`/`website`/`theme`/`social` retirées (le thème visuel vit dans `deployment.theme`).
+- **Ids** : UUID natif (`crypto.randomUUID`) au lieu de nanoid.
+- **Schéma Drizzle centralisé** dans `infrastructure/db/schema.ts` (source unique, migrations générées par `drizzle-kit generate`) ; les domaines re-exportent leur tranche. Le seed des collections par défaut est SUPPRIMÉ.
+- **Fail-fast au boot** : S3 ET webhook email requis — plus de drivers « unconfigured ».
+- **Emails par ÉVÉNEMENTS** : `EmailService.sendEvent({ email, eventName, eventProperties })`, payload calqué sur Loops events/send, Bearer token — plus de templates dans le core.
+- **Erreurs typées par domaine** (`domains/<domain>/errors.ts`, `createTypedError`) — la couche tRPC transmet `error.trpcCode` ; `CommunError`/`ERR` supprimés.
+- **tRPC** : middleware d'accès unique (session + rôle paramétré), `appRouter` fusionné dans `src/index.ts`, observabilité (correlation/instrument) retirée — le `X-Request-Id` HTTP suffit à ce stade.

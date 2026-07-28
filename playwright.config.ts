@@ -40,9 +40,9 @@ export default defineConfig({
         'COMMUN_S3_BUCKET=commun-e2e COMMUN_S3_ACCESS_KEY=e2e-access COMMUN_S3_SECRET_KEY=e2e-secret-key ' +
         'COMMUN_S3_ENDPOINT=http://127.0.0.1:9102 COMMUN_S3_REGION=fr-par ' +
         // Webhook email : récepteur local démarré par les steps (security.feature)
-        // — teste l'émission réelle, signature HMAC comprise.
+        // — teste l'émission d'ÉVÉNEMENTS réelle, Bearer token compris.
         'COMMUN_EMAIL_WEBHOOK_URL=http://127.0.0.1:3199/emails ' +
-        'COMMUN_EMAIL_WEBHOOK_SECRET=e2e-webhook-secret ' +
+        'COMMUN_EMAIL_WEBHOOK_TOKEN=e2e-webhook-token ' +
         'COMMUN_ADMIN_URL=https://admin.e2e.test ' +
         'PORT=3101 bun apps/api/.output/server/index.mjs',
       url: 'http://127.0.0.1:3101/health',

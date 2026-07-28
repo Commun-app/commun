@@ -19,7 +19,7 @@ Feature: Security
   Scenario: Password reset end to end through the email webhook
     Given an activated account "distrait@e2e.fr" named "Agent Distrait"
     When a password reset is requested for "distrait@e2e.fr"
-    Then a "password-reset" email is emitted through the signed webhook
+    Then a "passwordResetRequested" event is emitted through the authenticated webhook
     When the reset link is consumed with the new password "toute-nouvelle-phrase"
     Then logging in "distrait@e2e.fr" with password "toute-nouvelle-phrase" succeeds
     And logging in "distrait@e2e.fr" with password "mot-de-passe-e2e" is refused

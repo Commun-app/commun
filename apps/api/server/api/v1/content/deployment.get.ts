@@ -18,7 +18,10 @@ export default defineHandler(async (event) => {
     definition?: Array<{ path?: string }>;
     sort?: unknown;
   };
-  const theme = deployment.theme ?? settings.theme ?? undefined;
+  // Le thème vit dans deployment.theme (revue 28/07 : colonne organization
+  // .theme retirée) — fallback sur settings.theme si la migration l'y a mis.
+  const theme =
+    deployment.theme ?? (settings.settings as { theme?: unknown } | null)?.theme ?? undefined;
   const pageSlugs = (deployment.definition ?? [])
     .map((page) => page.path ?? '')
     .filter((path) => path && !path.includes(':'));

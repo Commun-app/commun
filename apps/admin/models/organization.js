@@ -31,11 +31,9 @@ const _organizationModel = class Organization extends Model {
   }
 }
 
-// Clés acceptées par organization.update côté Commun.
-const UPDATABLE = [
-  'name', 'type', 'slug', 'description', 'address', 'postalCode', 'city',
-  'phone', 'email', 'website', 'theme', 'deployment', 'social', 'settings'
-]
+
+// Clés du modèle Commun (revue 28/07 : address JSON, colonnes retirées).
+const UPDATABLE = ['name', 'type', 'slug', 'description', 'address', 'deployment', 'settings']
 
 const _organizationAPI = class OrganizationAPI extends ModelAPI {
   /** Organization Commun (singleton) → organisation legacy, _id = slug (routes). */

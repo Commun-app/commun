@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { CommunError, ERR } from '../../common/errors/index.ts';
+import {
+  CollectionNotFoundError,
+  DuplicateSlugError,
+  EntryNotFoundError,
+  InvalidEntryDataError,
+} from './errors.ts';
 import { slugify } from '../../common/utils/slug.ts';
 import type { CollectionsRepository } from './repository.ts';
 import type { MediaService } from '../media/service.ts';
@@ -86,7 +91,7 @@ export class CollectionsService {
     const found =
       (await this.repository.findDefinitionBySlug(idOrSlug)) ??
       (await this.repository.findDefinitionById(idOrSlug));
-    if (!found) throw new CommunError(ERR.NOT_FOUND, `collection introuvable: ${idOrSlug}`);
+    if (!found) throw new CollectionNotFoundError(`collection introuvable: ${idOrSlug}`);
     return found;
   }
 
@@ -111,13 +116,13 @@ export class CollectionsService {
       ...input,
       updatedBy: actorId ?? null,
     });
-    if (!updated) throw new CommunError(ERR.NOT_FOUND, `collection introuvable: ${id}`);
+    if (!updated) throw new CollectionNotFoundError(`collection introuvable: ${id}`);
     return updated;
   }
 
   async removeDefinition(id: string): Promise<void> {
     if (!(await this.repository.deleteDefinition(id))) {
-      throw new CommunError(ERR.NOT_FOUND, `collection introuvable: ${id}`);
+      throw new CollectionNotFoundError(`collection introuvable: ${id}`);
     }
   }
 
@@ -127,8 +132,7 @@ export class CollectionsService {
     const schema = buildDataSchema(definition.fields);
     const parsed = schema.safeParse(data);
     if (!parsed.success) {
-      throw new CommunError(
-        ERR.INVALID_STATE,
+      throw new InvalidEntryDataError(
         `données invalides pour la collection ${definition.slug}: ${parsed.error.message}`,
       );
     }
@@ -141,7 +145,7 @@ export class CollectionsService {
 
   async getEntry(id: string): Promise<Entry> {
     const found = await this.repository.findEntryById(id);
-    if (!found) throw new CommunError(ERR.NOT_FOUND, `entrée introuvable: ${id}`);
+    if (!found) throw new EntryNotFoundError(`entrée introuvable: ${id}`);
     return found;
   }
 
@@ -196,7 +200,7 @@ export class CollectionsService {
   /** Iso legacy: update PARTIEL — `data` est fusionné champ par champ avec l'existant. */
   async updateEntry(id: string, input: EntryUpdateDto, actorId?: string): Promise<Entry> {
     const existing = await this.repository.findEntryById(id);
-    if (!existing) throw new CommunError(ERR.NOT_FOUND, `entrée introuvable: ${id}`);
+    if (!existing) throw new EntryNotFoundError(`entrée introuvable: ${id}`);
     const definition = await this.getDefinition(existing.collectionId);
 
     // Évolution de schéma : une clé de l'ENTRÉE EXISTANTE qui ne correspond
@@ -243,7 +247,7 @@ export class CollectionsService {
 
   async removeEntry(id: string): Promise<void> {
     const existing = await this.repository.findEntryById(id);
-    if (!existing) throw new CommunError(ERR.NOT_FOUND, `entrée introuvable: ${id}`);
+    if (!existing) throw new EntryNotFoundError(`entrée introuvable: ${id}`);
     const definition = await this.getDefinition(existing.collectionId);
     // Iso legacy: $pull inverse à la suppression.
     await this.linkRelations(definition, id, relationIds(definition.fields, existing.data), []);
@@ -392,8 +396,7 @@ export class CollectionsService {
       error.message.includes('UNIQUE constraint failed') &&
       error.message.includes('entries.slug')
     ) {
-      return new CommunError(
-        ERR.INVALID_STATE,
+      return new DuplicateSlugError(
         `le slug "${entrySlug}" est déjà utilisé dans la collection ${collectionSlug}`,
       );
     }
