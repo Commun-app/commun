@@ -25,6 +25,8 @@ const envSchema = z.object({
   COMMUN_EMAIL_WEBHOOK_TOKEN: z.string().optional(),
   /** URL publique de l'admin — sert à construire les liens des emails. */
   COMMUN_ADMIN_URL: z.string().optional(),
+  /** Secret HMAC des JWT de session — REQUIS au boot (fail-fast). */
+  COMMUN_JWT_SECRET: z.string().optional(),
 });
 
 export type CoreEnv = z.infer<typeof envSchema>;
@@ -45,5 +47,6 @@ export function parseEnv(raw: Record<string, string | undefined> = process.env):
     COMMUN_EMAIL_WEBHOOK_URL: raw.COMMUN_EMAIL_WEBHOOK_URL,
     COMMUN_EMAIL_WEBHOOK_TOKEN: raw.COMMUN_EMAIL_WEBHOOK_TOKEN,
     COMMUN_ADMIN_URL: raw.COMMUN_ADMIN_URL,
+    COMMUN_JWT_SECRET: raw.COMMUN_JWT_SECRET,
   });
 }

@@ -44,6 +44,7 @@ export default defineConfig({
         'COMMUN_EMAIL_WEBHOOK_URL=http://127.0.0.1:3199/emails ' +
         'COMMUN_EMAIL_WEBHOOK_TOKEN=e2e-webhook-token ' +
         'COMMUN_ADMIN_URL=https://admin.e2e.test ' +
+        'COMMUN_JWT_SECRET=e2e-jwt-secret ' +
         'PORT=3101 bun apps/api/.output/server/index.mjs',
       url: 'http://127.0.0.1:3101/health',
       reuseExistingServer: !process.env.CI,

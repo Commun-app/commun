@@ -35,10 +35,16 @@ export function createCore({ env }: { env?: CoreEnv } = {}): Core {
   // mal configurée refuse de démarrer plutôt que d'échouer à l'usage.
   const storage = createStorage(e);
   const email = EmailService.fromEnv(e);
+  if (!e.COMMUN_JWT_SECRET) {
+    throw new Error(
+      'COMMUN_JWT_SECRET non configuré — requis pour signer les sessions (le serveur refuse de démarrer sans)',
+    );
+  }
 
   const users = new UsersService(new UsersRepository(db), {
     email,
     adminUrl: e.COMMUN_ADMIN_URL,
+    jwtSecret: e.COMMUN_JWT_SECRET,
   });
   const media = new MediaService(new MediaRepository(db), storage);
   const services = {

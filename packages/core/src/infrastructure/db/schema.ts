@@ -132,10 +132,13 @@ export const users = sqliteTable('users', {
   updatedAt: updatedAt(),
 });
 
-/** Opaque server-side sessions — the Bearer token is stored HASHED only. */
+/**
+ * Sessions serveur — le client porte un JWT signé contenant { session: <id> }
+ * (décision Quentin 28/07) ; la révocation reste EN BASE : un JWT valide dont
+ * la ligne est révoquée/expirée est refusé.
+ */
 export const sessions = sqliteTable('sessions', {
   id: id(),
-  tokenHash: text('token_hash').notNull().unique(),
   userId: text('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
