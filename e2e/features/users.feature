@@ -43,4 +43,4 @@ Feature: Users
     And an initialized organization
     When the admin updates the organization name to "Commune Renommée"
     Then the organization reads "Commune Renommée"
-    And initializing the organization again is refused
+    And calling procedure "organization.init" with payload "organization-doublon" fails with "BAD_REQUEST"

@@ -1,9 +1,9 @@
 import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 import { EVERY_FIELD_TYPE, FICHES_FIELDS, VALID_EVERY_TYPE } from '../data/index.ts';
-import { API_URL } from '../constants.ts';
+import { httpGet } from '../clients/client-http.ts';
 import { test } from './fixtures.ts';
-import { dataOf, trpcMutate, trpcQuery, type ApiResponse } from './trpc.ts';
+import { dataOf, trpcMutate, trpcQuery, type ApiResponse } from '../clients/client-trpc.ts';
 
 const { Given, When, Then } = createBdd(test);
 
@@ -106,41 +106,6 @@ Then('the entry stores every typed value', async ({ world }) => {
   expect(entry.data.cover).toBe('media-id-quelconque');
   expect((entry.data.extra as { clef: number }).clef).toBe(1);
   expect(Array.isArray(entry.data.etapes)).toBe(true);
-});
-
-async function expectEntryRejected(
-  world: { sessionToken?: string; collectionId?: string },
-  data: Record<string, unknown>,
-) {
-  const response = await mutate('collections.entries.create', world.sessionToken!, {
-    collectionId: world.collectionId,
-    data: { title: 'Invalide', data },
-  });
-  expect(response.status).toBe(400);
-}
-
-Then(
-  'a {string} field refuses the string {string}',
-  async ({ world }, _type: string, value: string) => {
-    await expectEntryRejected(world, { flag: value });
-  },
-);
-
-Then('a {string} field refuses a value outside its options', async ({ world }, _type: string) => {
-  await expectEntryRejected(world, { choice: 'z' });
-});
-
-Then('an unknown field name is rejected', async ({ world }) => {
-  await expectEntryRejected(world, { inconnu: 'x' });
-});
-
-Then('defining a collection with an optionless select is rejected', async ({ world }) => {
-  const response = await mutate('collections.create', world.sessionToken!, {
-    name: 'Sans options',
-    slug: `sans-options-${Date.now()}`,
-    fields: [{ name: 'choix', label: 'Choix', type: 'select' }],
-  });
-  expect(response.status).toBe(400);
 });
 
 // ── Slugs incrémentaux ──────────────────────────────────────────────────────
@@ -246,14 +211,12 @@ When(
 );
 
 async function recordAttributes(world: { apiToken?: string; entryId?: string }) {
-  const response = await fetch(`${API_URL}/api/v1/content/records`, {
-    headers: { authorization: `Bearer ${world.apiToken}` },
-  });
+  const response = await httpGet<{ data: { records: Record<string, Record<string, unknown>> } }>(
+    '/api/v1/content/records',
+    { bearer: world.apiToken },
+  );
   expect(response.status).toBe(200);
-  const body = (await response.json()) as {
-    data: { records: Record<string, Record<string, unknown>> };
-  };
-  return body.data.records[world.entryId!];
+  return response.body.data.records[world.entryId!];
 }
 
 Then(

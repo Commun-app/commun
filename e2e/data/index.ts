@@ -62,4 +62,23 @@ export const PAYLOADS: Record<string, unknown> = {
     slug: 'interdit',
     fields: [{ name: 'body', label: 'Corps', type: 'text' }],
   },
+  'collection-select-sans-options': {
+    name: 'Sans options',
+    slug: 'sans-options',
+    fields: [{ name: 'choix', label: 'Choix', type: 'select' }],
+  },
+  'organization-doublon': { name: 'Doublon', slug: 'doublon', type: 'commune' },
+  // Valeurs INVALIDES par type de champ ($collectionId interpolé du scénario).
+  'entree-booleen-invalide': {
+    collectionId: '$collectionId',
+    data: { title: 'Invalide', data: { flag: 'oui' } },
+  },
+  'entree-select-hors-options': {
+    collectionId: '$collectionId',
+    data: { title: 'Invalide', data: { choice: 'z' } },
+  },
+  'entree-champ-inconnu': {
+    collectionId: '$collectionId',
+    data: { title: 'Invalide', data: { inconnu: 'x' } },
+  },
 };

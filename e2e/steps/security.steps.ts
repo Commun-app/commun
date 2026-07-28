@@ -2,9 +2,10 @@ import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 import { DEFAULT_PASSWORD } from '../constants.ts';
 import { test } from './fixtures.ts';
-import { API_URL, seed } from './instance.ts';
+import { httpGet } from '../clients/client-http.ts';
+import { seed } from './instance.ts';
 import { emailCount, lastEmail, startEmailReceiver } from '../mocks/email-webhook.mock.ts';
-import { dataOf, trpcMutate, trpcQuery } from './trpc.ts';
+import { dataOf, trpcMutate, trpcQuery } from '../clients/client-trpc.ts';
 
 const { Given, When, Then } = createBdd(test);
 
@@ -158,9 +159,7 @@ When('the admin creates an API token named {string}', async ({ world }, name: st
 });
 
 Then('the content plane accepts the new token', async ({ world }) => {
-  const response = await fetch(`${API_URL}/api/v1/content/records`, {
-    headers: { authorization: `Bearer ${world.createdApiToken}` },
-  });
+  const response = await httpGet('/api/v1/content/records', { bearer: world.createdApiToken });
   expect(response.status).toBe(200);
 });
 
@@ -173,9 +172,7 @@ When('the admin revokes that token', async ({ world }) => {
 });
 
 Then('the content plane refuses the revoked token', async ({ world }) => {
-  const response = await fetch(`${API_URL}/api/v1/content/records`, {
-    headers: { authorization: `Bearer ${world.createdApiToken}` },
-  });
+  const response = await httpGet('/api/v1/content/records', { bearer: world.createdApiToken });
   expect(response.status).toBe(401);
 });
 
