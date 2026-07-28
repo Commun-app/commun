@@ -1,4 +1,5 @@
 import { defineMiddleware } from 'h3';
+import { useCore } from '../utils/core.ts';
 
 /**
  * Session resolution (middleware — numbered, order matters). Auth transport
@@ -18,7 +19,5 @@ function readSessionToken(req: Request): string | null {
 
 export default defineMiddleware(async (event) => {
   const token = readSessionToken(event.req as unknown as Request);
-  event.context.session = token
-    ? await event.context.core.services.users.verifySession(token)
-    : null;
+  event.context.session = token ? await useCore().services.users.verifySession(token) : null;
 });

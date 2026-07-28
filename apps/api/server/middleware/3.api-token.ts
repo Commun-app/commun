@@ -1,4 +1,5 @@
 import { defineMiddleware, HTTPError } from 'h3';
+import { useCore } from '../utils/core.ts';
 
 /**
  * API-token guard of the public content plane (numbered middleware — order matters,
@@ -15,7 +16,7 @@ export default defineMiddleware(async (event) => {
 
   const auth = event.req.headers.get('authorization') ?? '';
   const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length) : auth;
-  if (!token || !(await event.context.core.services.users.verifyApiToken(token))) {
+  if (!token || !(await useCore().services.users.verifyApiToken(token))) {
     throw new HTTPError({ status: 401, message: 'token API manquant ou invalide' });
   }
 });
