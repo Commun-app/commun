@@ -8,8 +8,11 @@
 # Les comptes utilisateurs proviennent de la migration legacy ou d'une
 # invitation ; le bootstrap d'instance vierge a été retiré (décision 28/07).
 #
-# Les médias vivent sur un stockage S3-compatible (iso legacy) : soit un
-# service externe (Scaleway, Garage…), soit le profil `s3` ci-dessous (MinIO) :
+# Les médias vivent sur un stockage S3-compatible (iso legacy). En production
+# managée (nos clients), c'est Scaleway Object Storage : renseignez les
+# COMMUN_S3_* et n'activez AUCUN profil. Le profil `s3` ci-dessous (MinIO)
+# sert au self-host tout-en-un — il migrera vers Garage (Deuxfleurs, AGPL,
+# cohérence souveraineté) lors du polish open source (phase 6) :
 #   docker compose --profile s3 up -d
 # (renseignez alors les variables COMMUN_S3_* dans .env — voir .env.example)
 
