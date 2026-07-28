@@ -3,12 +3,8 @@ import { createBdd } from 'playwright-bdd';
 import { test } from './fixtures.ts';
 import { httpGet } from '../clients/client-http.ts';
 import { seed } from './instance.ts';
-import { trpcMutate, type ApiResponse } from '../clients/client-trpc.ts';
 
 const { Given, When, Then } = createBdd(test);
-
-const trpc = (procedure: string, token: string, input?: unknown) =>
-  trpcMutate(procedure, { input, token });
 
 // ── /api/content plane ───────────────────────────────────────────────────────
 
@@ -56,27 +52,6 @@ Then('the content plane answers {int}', ({ world }, status: number) => {
 
 // ── Content lifecycle ────────────────────────────────────────────────────────
 
-When('the admin creates a collection {string}', async ({ world }, slug: string) => {
-  const response = await trpc('collections.create', world.sessionToken!, {
-    name: 'Communiqués',
-    slug,
-    fields: [{ name: 'body', label: 'Corps', type: 'text' }],
-  });
-  expect(response.status).toBe(200);
-});
-
-When(
-  'creates a draft entry {string} in {string}',
-  async ({ world }, slug: string, collection: string) => {
-    const response = await trpc('collections.entries.create', world.sessionToken!, {
-      collectionId: collection,
-      data: { title: 'Premier communiqué', slug, data: { body: 'Bonjour' } },
-    });
-    expect(response.status).toBe(200);
-    world.entryId = (response.body as { result: { data: { id: string } } }).result.data.id;
-  },
-);
-
 Then(
   'the records payload has no entry for collection {string}',
   async ({ world }, collection: string) => {
@@ -88,14 +63,6 @@ Then(
     expect(collections).not.toContain(collection);
   },
 );
-
-When('the entry is published', async ({ world }) => {
-  const response = await trpc('collections.entries.update', world.sessionToken!, {
-    id: world.entryId,
-    data: { status: 'published' },
-  });
-  expect(response.status).toBe(200);
-});
 
 // ── Legacy-compat plane (/api/v1) ────────────────────────────────────────────
 

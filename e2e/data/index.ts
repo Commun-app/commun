@@ -81,4 +81,88 @@ export const PAYLOADS: Record<string, unknown> = {
     collectionId: '$collectionId',
     data: { title: 'Invalide', data: { inconnu: 'x' } },
   },
+
+  // ── Cycle de vie complet (collection « dossiers ») ─────────────────────────
+  'collection-dossiers': {
+    name: 'Dossiers',
+    slug: 'dossiers',
+    fields: [{ name: 'body', label: 'Corps', type: 'text' }],
+  },
+  'entree-premier-dossier': {
+    collectionId: 'dossiers',
+    data: { title: 'Premier dossier', slug: 'premier-dossier', data: { body: 'Bonjour' } },
+  },
+  'entree-maj-body': { id: '$entryId', data: { data: { body: 'Texte corrigé' } } },
+  'entree-suppression': { id: '$entryId' },
+  'collection-suppression': { id: '$collectionId' },
+
+  // ── Tous les types de champs (slugs distincts par scénario) ────────────────
+  'collection-types-valides': {
+    name: 'Types démo',
+    slug: 'types-valides',
+    fields: EVERY_FIELD_TYPE,
+  },
+  'collection-types-invalides': {
+    name: 'Types démo',
+    slug: 'types-invalides',
+    fields: EVERY_FIELD_TYPE,
+  },
+  'entree-tous-types': {
+    collectionId: '$collectionId',
+    data: { title: 'Entrée typée', data: VALID_EVERY_TYPE },
+  },
+
+  // ── Slugs incrémentaux ─────────────────────────────────────────────────────
+  'collection-notes': {
+    name: 'Notes',
+    slug: 'notes',
+    fields: [{ name: 'body', label: 'Corps', type: 'text' }],
+  },
+  'entree-reunion': { collectionId: 'notes', data: { title: 'Réunion publique', data: {} } },
+
+  // ── Évolution de schéma (collection « fiches ») ────────────────────────────
+  'collection-fiches': { name: 'Fiches', slug: 'fiches', fields: FICHES_FIELDS.both },
+  'entree-fiche-complete': {
+    collectionId: 'fiches',
+    data: {
+      title: 'Fiche complète',
+      status: 'published',
+      data: { corps: 'le corps', note: 'la note' },
+    },
+  },
+  'collection-fiches-sans-note': { id: '$collectionId', data: { fields: FICHES_FIELDS.corpsOnly } },
+  'collection-fiches-avec-note': { id: '$collectionId', data: { fields: FICHES_FIELDS.both } },
+  'entree-fiche-corps-corrige': { id: '$entryId', data: { data: { corps: 'corps corrigé' } } },
+
+  // ── Pagination ─────────────────────────────────────────────────────────────
+  'collection-annonces': {
+    name: 'Annonces',
+    slug: 'annonces',
+    fields: [{ name: 'body', label: 'Corps', type: 'text' }],
+  },
+
+  // ── Cycle de vie éditorial (collection « arretes ») ────────────────────────
+  'collection-arretes': {
+    name: 'Arrêtés',
+    slug: 'arretes',
+    fields: [{ name: 'body', label: 'Corps', type: 'text' }],
+  },
+  'entree-premier-arrete': {
+    collectionId: 'arretes',
+    data: { title: 'Premier arrêté', slug: 'premier-arrete', data: { body: 'Bonjour' } },
+  },
+  'entree-statut-waiting': { id: '$entryId', data: { status: 'waiting' } },
+  'entree-statut-ready': { id: '$entryId', data: { status: 'ready' } },
+  'entree-publication': { id: '$entryId', data: { status: 'published' } },
+
+  // ── Plan de déploiement (collection « communiques ») ───────────────────────
+  'collection-communiques': {
+    name: 'Communiqués',
+    slug: 'communiques',
+    fields: [{ name: 'body', label: 'Corps', type: 'text' }],
+  },
+  'entree-premier-communique': {
+    collectionId: 'communiques',
+    data: { title: 'Premier communiqué', slug: 'premier-communique', data: { body: 'Bonjour' } },
+  },
 };
