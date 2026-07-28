@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import type { StoreDb } from '../../infrastructure/db/index.ts';
 import {
   collectionDefinitions,
@@ -35,6 +35,15 @@ export class CollectionsRepository {
       .select()
       .from(collectionDefinitions)
       .where(eq(collectionDefinitions.id, id))
+      .get();
+  }
+
+  /** Résolution de l'injector APIDAE : la config référence l'ObjectId legacy. */
+  async findDefinitionByLegacyId(legacyId: string): Promise<CollectionDefinition | undefined> {
+    return this.db
+      .select()
+      .from(collectionDefinitions)
+      .where(sql`json_extract(${collectionDefinitions.legacyExtra}, '$.legacyId') = ${legacyId}`)
       .get();
   }
 
@@ -110,6 +119,24 @@ export class CollectionsRepository {
 
   async findEntryById(id: string): Promise<Entry | undefined> {
     return this.db.select().from(entries).where(eq(entries.id, id)).get();
+  }
+
+  /** Idempotence de la sync APIDAE : retrouve une entrée par une clé de son data. */
+  async findEntryByDataField(
+    collectionId: string,
+    name: string,
+    value: string | number,
+  ): Promise<Entry | undefined> {
+    return this.db
+      .select()
+      .from(entries)
+      .where(
+        and(
+          eq(entries.collectionId, collectionId),
+          sql`json_extract(${entries.data}, ${`$.${name}`}) = ${value}`,
+        ),
+      )
+      .get();
   }
 
   async insertEntry(input: NewEntry): Promise<Entry> {

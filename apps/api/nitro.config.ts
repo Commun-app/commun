@@ -10,6 +10,13 @@ process.env.COMMUN_MIGRATIONS_DIR ??= resolve(import.meta.dirname, '../../packag
 export default defineConfig({
   serverDir: 'server',
   compatibilityDate: '2026-05-19',
+  // Tâches portées du legacy (change port-legacy-jobs) : sync APIDAE puis
+  // deploy, une fois par jour. Le cron suit l'heure LOCALE du serveur —
+  // 05:00, heure creuse (le legacy synchronisait à 05:30 UTC).
+  experimental: { tasks: true },
+  scheduledTasks: {
+    '0 5 * * *': ['jobs:daily'],
+  },
   runtimeConfig: {
     // Instance data directory (overridable via COMMUN_DATA_DIR).
     communDataDir: process.env.COMMUN_DATA_DIR ?? '',

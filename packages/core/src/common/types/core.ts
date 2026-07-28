@@ -6,6 +6,7 @@ import type { AuthSession, SessionMeta, UsersService } from '../../domains/users
 import type { OrganizationService } from '../../domains/organization/service.ts';
 import type { MediaService } from '../../domains/media/service.ts';
 import type { CollectionsService } from '../../domains/collections/service.ts';
+import type { SyncService } from '../../sync/service.ts';
 
 export type { CoreEnv };
 
@@ -16,6 +17,7 @@ export interface CoreServices {
   organization: OrganizationService;
   media: MediaService;
   collections: CollectionsService;
+  sync: SyncService;
 }
 
 /**

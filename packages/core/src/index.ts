@@ -23,6 +23,7 @@ import { OrganizationRepository, OrganizationService } from './domains/organizat
 import { MediaRepository, MediaService } from './domains/media/index.ts';
 import { CollectionsRepository, CollectionsService } from './domains/collections/index.ts';
 import { organizationRouter } from './domains/organization/index.ts';
+import { SyncService } from './sync/service.ts';
 import { authRouter, usersRouter, apiTokensRouter } from './domains/users/index.ts';
 import { mediaRouter } from './domains/media/index.ts';
 import { collectionsRouter } from './domains/collections/index.ts';
@@ -46,13 +47,27 @@ export function createCore({ env }: { env?: CoreEnv } = {}): Core {
     adminUrl: e.COMMUN_ADMIN_URL,
     jwtSecret: e.COMMUN_JWT_SECRET,
   });
-  const media = new MediaService(new MediaRepository(db), storage);
+  const mediaRepository = new MediaRepository(db);
+  const media = new MediaService(mediaRepository, storage);
+  const collectionsRepository = new CollectionsRepository(db);
+  const collections = new CollectionsService(collectionsRepository, media);
+  const organization = new OrganizationService(new OrganizationRepository(db));
   const services = {
     health: new HealthService(db),
     users,
-    organization: new OrganizationService(new OrganizationRepository(db)),
+    organization,
     media,
-    collections: new CollectionsService(new CollectionsRepository(db), media),
+    collections,
+    // Sync APIDAE (port-legacy-jobs) : la façade reçoit aussi les repositories
+    // — l'idempotence (json_extract) et le legacyExtra n'ont pas de surface
+    // service publique.
+    sync: new SyncService({
+      organization,
+      collections,
+      collectionsRepository,
+      media,
+      mediaRepository,
+    }),
   };
 
   // No side effects here (review): boot housekeeping (purgeExpired) is the
@@ -105,3 +120,7 @@ export * from './domains/organization/index.ts';
 export * from './domains/users/index.ts';
 export * from './domains/media/index.ts';
 export * from './domains/collections/index.ts';
+
+// Sync APIDAE + déclenchement de déploiement (change port-legacy-jobs).
+export * from './sync/index.ts';
+export { SyncService } from './sync/service.ts';
