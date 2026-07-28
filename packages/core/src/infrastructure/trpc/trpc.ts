@@ -2,7 +2,23 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import type { CoreContext } from '../../common/types/core.ts';
 import { DomainError } from '../../common/errors/index.ts';
 
-export const t = initTRPC.context<CoreContext>().create();
+export const t = initTRPC.context<CoreContext>().create({
+  /**
+   * Expose le discriminant des erreurs typées au CLIENT : le front lit
+   * `error.data.type` (ex : 'entry-not-found-error') et parse sans regex sur
+   * les messages — c'est le contrat du dictionnaire d'erreurs côté UI.
+   */
+  errorFormatter({ shape, error }) {
+    const cause = error.cause;
+    return {
+      ...shape,
+      data: {
+        ...shape.data,
+        ...(cause instanceof DomainError ? { type: cause.type } : {}),
+      },
+    };
+  },
+});
 
 export const router = t.router;
 export const publicProcedure = t.procedure;

@@ -73,6 +73,10 @@ When('the collection {string} is removed', async ({ world }, slug: string) => {
 Then('the collection {string} no longer exists', async ({ world }, slug: string) => {
   const response = await query('collections.get', world.sessionToken!, { idOrSlug: slug });
   expect(response.status).toBe(404);
+  // Contrat du dictionnaire d'erreurs côté client : le discriminant typé
+  // voyage dans error.data.type (errorFormatter tRPC).
+  const body = (await response.json()) as { error: { data: { type?: string } } };
+  expect(body.error.data.type).toBe('collection-not-found-error');
 });
 
 // ── Tous les types de champs ────────────────────────────────────────────────
