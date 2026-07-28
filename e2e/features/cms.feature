@@ -24,13 +24,13 @@ Feature: CMS
   Scenario: Invalid values are rejected per field type
     Given a logged-in "admin" session
     And a collection "types-demo" defining every field type
-    Then a "boolean" field refuses the string "oui"
-    And a "select" field refuses a value outside its options
-    And an unknown field name is rejected
+    Then calling procedure "collections.entries.create" with payload "entree-booleen-invalide" fails with "BAD_REQUEST"
+    And calling procedure "collections.entries.create" with payload "entree-select-hors-options" fails with "BAD_REQUEST"
+    And calling procedure "collections.entries.create" with payload "entree-champ-inconnu" fails with "BAD_REQUEST"
 
   Scenario: A select field without options is refused at definition time
     Given a logged-in "admin" session
-    Then defining a collection with an optionless select is rejected
+    Then calling procedure "collections.create" with payload "collection-select-sans-options" fails with "BAD_REQUEST"
 
   Scenario: Slugs are unique per collection with incremental suffixes
     Given a logged-in "admin" session

@@ -1,8 +1,9 @@
 import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 import { test } from './fixtures.ts';
-import { API_URL, seed } from './instance.ts';
-import { trpcMutate, type ApiResponse } from './trpc.ts';
+import { httpGet } from '../clients/client-http.ts';
+import { seed } from './instance.ts';
+import { trpcMutate, type ApiResponse } from '../clients/client-trpc.ts';
 
 const { Given, When, Then } = createBdd(test);
 
@@ -12,7 +13,7 @@ const trpc = (procedure: string, token: string, input?: unknown) =>
 // ── /api/content plane ───────────────────────────────────────────────────────
 
 When('I request the legacy records payload without a token', async ({ world }) => {
-  const response = await fetch(`${API_URL}/api/v1/content/records`);
+  const response = await httpGet('/api/v1/content/records');
   world.status = response.status;
 });
 
@@ -33,11 +34,9 @@ Given('an initialized organization', () => {
 });
 
 When('I request the legacy records payload with the token', async ({ world }) => {
-  const response = await fetch(`${API_URL}/api/v1/content/records`, {
-    headers: { authorization: `Bearer ${world.apiToken}` },
-  });
+  const response = await httpGet('/api/v1/content/records', { bearer: world.apiToken });
   world.status = response.status;
-  world.body = await response.json();
+  world.body = response.body;
 });
 
 Then(
@@ -81,10 +80,8 @@ When(
 Then(
   'the records payload has no entry for collection {string}',
   async ({ world }, collection: string) => {
-    const response = await fetch(`${API_URL}/api/v1/content/records`, {
-      headers: { authorization: `Bearer ${world.apiToken}` },
-    });
-    const body = (await response.json()) as {
+    const response = await httpGet('/api/v1/content/records', { bearer: world.apiToken });
+    const body = response.body as {
       data: { records: Record<string, { relatedCollection: string }> };
     };
     const collections = Object.values(body.data.records).map((record) => record.relatedCollection);
@@ -105,11 +102,9 @@ When('the entry is published', async ({ world }) => {
 Then(
   'the legacy records payload contains the entry with collection {string}',
   async ({ world }, collection: string) => {
-    const response = await fetch(`${API_URL}/api/v1/content/records`, {
-      headers: { authorization: `Bearer ${world.apiToken}` },
-    });
+    const response = await httpGet('/api/v1/content/records', { bearer: world.apiToken });
     expect(response.status).toBe(200);
-    const body = (await response.json()) as {
+    const body = response.body as {
       data: { records: Record<string, { relatedCollection: string }> };
     };
     expect(body.data.records[world.entryId!]?.relatedCollection).toBe(collection);
@@ -117,27 +112,23 @@ Then(
 );
 
 Then('the legacy deployment payload lists the slug {string}', async ({ world }, slug: string) => {
-  const response = await fetch(`${API_URL}/api/v1/content/deployment`, {
-    headers: { authorization: `Bearer ${world.apiToken}` },
-  });
+  const response = await httpGet('/api/v1/content/deployment', { bearer: world.apiToken });
   expect(response.status).toBe(200);
-  const body = (await response.json()) as { data: { slugs: string[] } };
+  const body = response.body as { data: { slugs: string[] } };
   expect(body.data.slugs).toContain(slug);
 });
 
 Then('the legacy records payload is served with a raw Authorization header', async ({ world }) => {
   // Iso legacy device clients: `Authorization: <token>` without the Bearer prefix.
-  const response = await fetch(`${API_URL}/api/v1/content/records`, {
-    headers: { authorization: world.apiToken! },
-  });
+  const response = await httpGet('/api/v1/content/records', { rawAuth: world.apiToken });
   expect(response.status).toBe(200);
 });
 
 Then('the wordpress marseille route serves the static payload', async ({ world }) => {
-  const response = await fetch(`${API_URL}/api/v1/content/wordpress-marseille-15-16`);
+  const response = await httpGet('/api/v1/content/wordpress-marseille-15-16');
   world.status = response.status;
   expect(response.status).toBe(200);
-  const body = (await response.json()) as { name: string; data: { users?: unknown[] } };
+  const body = response.body as { name: string; data: { users?: unknown[] } };
   expect(body.name).toBe('success');
   expect(Array.isArray(body.data.users)).toBe(true);
 });

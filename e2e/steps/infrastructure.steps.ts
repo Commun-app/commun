@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 import { test } from './fixtures.ts';
-import { makeTrpc } from './trpc.ts';
+import { makeTrpc } from '../clients/client-trpc.ts';
 
 const { When, Then } = createBdd(test);
 

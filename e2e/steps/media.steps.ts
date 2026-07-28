@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 import { test } from './fixtures.ts';
 import { seed } from './instance.ts';
-import { trpcMutate, trpcQuery } from './trpc.ts';
+import { trpcMutate, trpcQuery } from '../clients/client-trpc.ts';
 
 const { Given, When, Then } = createBdd(test);
 

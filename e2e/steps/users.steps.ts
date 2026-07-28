@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 import { test } from './fixtures.ts';
 import { seed } from './instance.ts';
-import { dataOf, trpcMutate, trpcQuery } from './trpc.ts';
+import { dataOf, trpcMutate, trpcQuery } from '../clients/client-trpc.ts';
 
 const { Given, When, Then } = createBdd(test);
 
@@ -117,12 +117,4 @@ Then('the organization reads {string}', async ({ world }, name: string) => {
   });
   expect(response.status).toBe(200);
   expect(dataOf(response).name).toBe(name);
-});
-
-Then('initializing the organization again is refused', async ({ world }) => {
-  const response = await trpcMutate('organization.init', {
-    input: { name: 'Doublon', slug: 'doublon', type: 'commune' },
-    token: world.sessionToken,
-  });
-  expect(response.status).toBe(400);
 });
