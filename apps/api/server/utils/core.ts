@@ -1,10 +1,11 @@
 import { createCore, type Core } from '@commun/core';
 
 /**
- * Le Core câblé, en singleton PARESSEUX (revue PR #1, 28/07 — remplace
- * l'ancien plugin + hook `request` qui attachait le core à chaque event) :
- * les handlers appellent simplement `useCore()`. Premier appel = boot
- * (migrations fail-fast + ménage), suivants = même instance.
+ * Le Core câblé, en singleton (revue PR #1, 28/07 — remplace l'ancien hook
+ * `request` qui attachait le core à chaque event) : les handlers appellent
+ * simplement `useCore()`. Le plugin `plugins/core.ts` fait le premier appel
+ * au démarrage du serveur — migrations fail-fast + ménage jouent au boot,
+ * pas au premier appel HTTP/tRPC.
  */
 let core: Core | undefined;
 
