@@ -1,0 +1,31 @@
+# Mises à jour automatiques des dépendances (revue PR #1, 28/07).
+# Une PR hebdomadaire groupée par écosystème ; la CI (lint + typecheck +
+# E2E complète) fait office de filet de sécurité.
+version: 2
+updates:
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      dependencies:
+        patterns: ['*']
+    ignore:
+      # Nitro v3 beta / h3 v2 rc : figés par décision (montée aux jalons).
+      - dependency-name: nitro
+      - dependency-name: h3
+      # Registre privé — disparaît avec la phase 4 (TipTap OSS).
+      - dependency-name: '@poulpus/prose'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday

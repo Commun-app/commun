@@ -8,13 +8,10 @@
 # Les comptes utilisateurs proviennent de la migration legacy ou d'une
 # invitation ; le bootstrap d'instance vierge a été retiré (décision 28/07).
 #
-# Les médias vivent sur un stockage S3-compatible (iso legacy). En production
-# managée (nos clients), c'est Scaleway Object Storage : renseignez les
-# COMMUN_S3_* et n'activez AUCUN profil. Le profil `s3` ci-dessous (MinIO)
-# sert au self-host tout-en-un — il migrera vers Garage (Deuxfleurs, AGPL,
-# cohérence souveraineté) lors du polish open source (phase 6) :
-#   docker compose --profile s3 up -d
-# (renseignez alors les variables COMMUN_S3_* dans .env — voir .env.example)
+# Les médias vivent sur un stockage S3-compatible EXTERNE (iso legacy) :
+# Scaleway Object Storage en production managée, ou tout équivalent —
+# renseignez les COMMUN_S3_* dans .env. L'option « S3 auto-hébergé sur la
+# même machine » (Garage) arrivera avec le polish open source (phase 6).
 
 services:
   api:
@@ -33,21 +30,5 @@ services:
       timeout: 5s
       retries: 3
 
-  minio:
-    image: minio/minio:latest
-    profiles: ['s3']
-    restart: unless-stopped
-    command: server /data --console-address ':9001'
-    environment:
-      MINIO_ROOT_USER: '${MINIO_ROOT_USER:-commun}'
-      # Requis uniquement avec le profil s3 — MinIO refuse de démarrer sans.
-      MINIO_ROOT_PASSWORD: '${MINIO_ROOT_PASSWORD:-}'
-    ports:
-      - '9000:9000'
-      - '9001:9001'
-    volumes:
-      - minio-data:/data
-
 volumes:
   commun-data:
-  minio-data:
