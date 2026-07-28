@@ -3,11 +3,11 @@
 ## ADDED Requirements
 
 ### Requirement: Stockage S3-compatible uniquement
-Les médias SHALL être stockés sur un stockage objet S3-compatible (Scaleway, MinIO, Garage…), l'UNIQUE backend — iso legacy (review du 2026-07-23 : pas de driver disque local). Sans configuration `COMMUN_S3_*`, les opérations médias SHALL échouer avec une erreur explicite, sans empêcher le reste de l'instance de fonctionner.
+Les médias SHALL être stockés sur un stockage objet S3-compatible (Scaleway, MinIO, Garage…), l'UNIQUE backend — iso legacy (review du 2026-07-23 : pas de driver disque local). RECTIFICATIF (revue PR #1, 2026-07-28) : sans configuration `COMMUN_S3_*`, l'instance REFUSE DE DÉMARRER (fail-fast au boot, message explicite listant les variables) — plus de driver « non configuré » ni de dégradation partielle.
 
 #### Scenario: Instance sans configuration S3
-- **WHEN** une opération média est tentée sur une instance sans variables S3
-- **THEN** elle échoue avec un message explicite indiquant les variables à renseigner, et le reste de l'API reste fonctionnel
+- **WHEN** une instance démarre sans variables S3
+- **THEN** le boot échoue immédiatement avec un message explicite indiquant les variables à renseigner
 
 ### Requirement: Flux d'upload iso legacy (URL pré-signée)
 L'upload SHALL suivre le flux legacy en deux temps : `requestUpload` (mime validé contre une allowlist fermée — jamais d'exécutable) retourne une URL S3 pré-signée pour un PUT direct du client ; `finalize` confirme l'existence de l'objet (head) et enregistre le média en base. Un `finalize` sur un objet jamais uploadé SHALL être refusé.

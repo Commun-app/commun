@@ -16,8 +16,12 @@ Le repo SHALL fournir un `docker-compose.yml` de référence démarrant une inst
 #### Scenario: Profil S3 embarqué — RETIRÉ (décision 2026-07-28)
 - Le compose de production ne porte plus de service S3 : stockage externe uniquement (Scaleway…). L'option tout-en-un reviendra en phase 6 avec Garage.
 
-### Requirement: Bootstrap du premier administrateur — RETIRÉ (décision Quentin, 2026-07-28)
-Le mécanisme de bootstrap (scripts/bootstrap-admin.ts) a été SUPPRIMÉ : les comptes proviennent de la migration legacy ou d'une invitation. La création du premier admin d'une instance VIERGE reviendra avec le CLI d'instance (phase 4, `admin:create`).
+### Requirement: Aucun bootstrap du premier administrateur
+L'instance SHALL NOT embarquer de mécanisme de bootstrap du premier admin (scripts/bootstrap-admin.ts SUPPRIMÉ — décision Quentin, 2026-07-28) : les comptes proviennent de la migration legacy ou d'une invitation. La création du premier admin d'une instance VIERGE reviendra avec le CLI d'instance (phase 4, `admin:create`).
+
+#### Scenario: Instance vierge sans compte
+- **WHEN** une instance démarre sur une base vide
+- **THEN** aucun compte n'existe et aucun script de création n'est exposé — l'accès s'obtient par migration ou invitation
 
 ### Requirement: Documentation undocs
 Le monorepo SHALL inclure un site de documentation (`docs/`, setup undocs repris d'opencorp) couvrant au minimum : guide d'auto-hébergement pas à pas, référence complète des variables d'environnement, guide de sauvegarde/restauration (fichier SQLite + médias), et guide contributeur.
@@ -31,4 +35,4 @@ L'API SHALL être buildable en image Docker (multi-stage, Bun, utilisateur non-r
 
 #### Scenario: Build de l'image
 - **WHEN** la CI construit l'image Docker de l'API
-- **THEN** le build réussit et l'image démarre avec le binding natif sharp fonctionnel (`bun:sqlite` étant intégré au runtime)
+- **THEN** le build réussit et l'image démarre (`bun:sqlite` intégré au runtime ; sharp absent — il arrivera avec l'implémentation réelle des variantes d'images, reportée)

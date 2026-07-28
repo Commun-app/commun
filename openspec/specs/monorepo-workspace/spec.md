@@ -1,9 +1,10 @@
-# monorepo-workspace
+# monorepo-workspace Specification
 
-## ADDED Requirements
-
+## Purpose
+TBD - created by archiving change scaffold-monorepo. Update Purpose after archive.
+## Requirements
 ### Requirement: Structure du monorepo Bun
-Le projet SHALL être un monorepo Bun workspaces avec la structure `apps/*` (api) et `packages/*` (core, legacy-migrate), un `tsconfig.base.json` partagé en TypeScript strict, et des packages nommés `@commun/<nom>`.
+Le projet SHALL être un monorepo Bun workspaces avec la structure `apps/*` (api, admin) et `packages/*` (core) — RECTIFICATIF (2026-07-28) : `legacy-migrate` est un projet bun LOCAL hors workspace et hors repo (gitignoré : il manipule des dumps de production), consommant `@commun/core` via `file:` —, un `tsconfig.base.json` partagé en TypeScript strict, et des packages nommés `@commun/<nom>`.
 
 #### Scenario: Installation propre
 - **WHEN** un contributeur clone le repo et exécute `bun install`
@@ -25,7 +26,7 @@ Le repo SHALL fournir un workflow CI exécutant typecheck, lint et tests sur cha
 
 #### Scenario: Push sur une branche
 - **WHEN** un commit est poussé
-- **THEN** la CI exécute typecheck, lint et `bun test` et échoue si l'un d'eux échoue
+- **THEN** la CI exécute typecheck, lint et la suite E2E (spécification exécutable — les tests unitaires du core ont été supprimés, décision revue 2026-07-28) et échoue si l'un d'eux échoue
 
 ### Requirement: Licence AGPL v3
 Le repo SHALL être placé sous licence AGPL v3 (fichier `LICENSE`) et les dépendances du socle SHALL être compatibles avec une distribution AGPL (aucune dépendance propriétaire).
@@ -33,3 +34,4 @@ Le repo SHALL être placé sous licence AGPL v3 (fichier `LICENSE`) et les dépe
 #### Scenario: Audit des dépendances
 - **WHEN** l'audit de licences des dépendances de production est exécuté
 - **THEN** aucune dépendance incompatible AGPL ou propriétaire (ex. TipTap Pro) n'est présente dans le socle
+

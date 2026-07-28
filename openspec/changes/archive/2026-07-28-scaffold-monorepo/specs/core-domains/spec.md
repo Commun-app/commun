@@ -14,7 +14,7 @@ Les données SHALL être persistées dans une base SQLite unique par instance vi
 
 #### Scenario: Première initialisation
 - **WHEN** l'instance démarre avec une base vide
-- **THEN** les migrations s'appliquent et créent l'ensemble des tables du socle ainsi que les collections par défaut
+- **THEN** les migrations s'appliquent et créent l'ensemble des tables du socle (sans collection seedée — retrait du 2026-07-28)
 
 #### Scenario: Montée de version
 - **WHEN** l'instance redémarre avec une base existante et de nouvelles migrations
@@ -28,7 +28,7 @@ Le schéma SHALL être single-tenant : la configuration de la collectivité est 
 - **THEN** un unique enregistrement de settings est retourné, sans notion de tenant multiple
 
 ### Requirement: Collections génériques comme modèle de contenu principal
-Le contenu SHALL être modélisé par le moteur de collections : définitions en base (nom, slug, champs choisis dans un jeu fermé de 8 types — text, rich-text, number, boolean, date, media, relation, select), validation Zod générée depuis la définition, entrées (table `entries`) avec titre/slug/données typées et cycle de publication. Les entrées invalides SHALL être rejetées, et le slug d'une entrée SHALL être unique au sein de sa collection (les slugs sont des segments de route du site publié).
+Le contenu SHALL être modélisé par le moteur de collections : définitions en base (nom, slug, champs choisis dans un jeu fermé de 10 types — text, rich-text, number, boolean, date, media, relation, select, plus steps et json ajoutés en revue PR #1 pour l'iso legacy `array-of-steps` et les attributs JSON bruts), validation Zod générée depuis la définition, entrées (table `entries`) avec titre/slug/données typées et cycle de publication. Les entrées invalides SHALL être rejetées, et le slug d'une entrée SHALL être unique au sein de sa collection (les slugs sont des segments de route du site publié).
 
 #### Scenario: Création d'une collection et d'une entrée valide
 - **WHEN** un admin définit une collection « marchés publics » avec des champs typés et qu'une entrée conforme est créée
@@ -46,13 +46,15 @@ Le contenu SHALL être modélisé par le moteur de collections : définitions en
 - **WHEN** une entrée est créée avec un slug déjà utilisé dans la même collection
 - **THEN** l'écriture est refusée avec une erreur explicite (le même slug reste permis dans une autre collection)
 
-### Requirement: Collections par défaut seedées par migration — RETIRÉ (décision Quentin, 2026-07-28)
-Le seed des quatre collections par défaut a été SUPPRIMÉ (revue PR #1) : une
-instance neuve démarre sans collection, l'admin les crée librement ; les
-instances migrées reçoivent celles du legacy.
+### Requirement: Démarrage sans collection seedée
+Une instance neuve SHALL démarrer sans aucune collection (le seed des quatre collections par défaut a été RETIRÉ — décision Quentin, revue PR #1, 2026-07-28) : l'admin les crée librement ; les instances migrées reçoivent celles du legacy.
+
+#### Scenario: Instance vierge
+- **WHEN** une instance démarre sur une base vide et qu'un admin liste les collections
+- **THEN** la liste est vide — aucune collection n'a été seedée par les migrations
 
 ### Requirement: Cycle de publication du contenu
-Les entrées de collections SHALL porter un statut (`draft`, `published`, avec date de publication programmable) et seuls les contenus publiés SHALL être exposés sur le plan public.
+Les entrées de collections SHALL porter un statut du jeu legacy complet (`draft`, `waiting`, `ready`, `scheduled`, `published`) et seuls les contenus `published` SHALL être exposés sur le plan public ; `publishedAt` est un simple horodatage réécrit à chaque publication (vérifié dans le legacy, revue 2026-07-28).
 
 #### Scenario: Publication programmée — RETIRÉ (revue 2026-07-28, vérifié dans service-records)
 - Le legacy filtre le plan public sur le STATUT seul ; `publishedAt` n'est qu'un horodatage réécrit à chaque publication. La planification n'existait pas — elle reviendra éventuellement comme vraie feature post-bascule.

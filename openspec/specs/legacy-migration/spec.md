@@ -1,9 +1,10 @@
-# legacy-migration
+# legacy-migration Specification
 
-## ADDED Requirements
-
+## Purpose
+TBD - created by archiving change scaffold-monorepo. Update Purpose after archive.
+## Requirements
 ### Requirement: CLI de migration hors ligne
-`packages/legacy-migrate` SHALL fournir une CLI qui lit un dump MongoDB Poulpus (mongodump bson ou export jsonl) **hors ligne** — sans connexion à la production — et produit une base SQLite Commun pour UNE organisation donnée (sélection par slug).
+`packages/legacy-migrate` (projet bun LOCAL hors repo — gitignoré, données de production) SHALL fournir une CLI qui lit un dump MongoDB Poulpus (mongodump bson ou export jsonl) **hors ligne** — sans connexion à la production — et produit une base SQLite Commun pour UNE organisation donnée (sélection par slug).
 
 #### Scenario: Migration d'une organisation
 - **WHEN** la CLI est exécutée avec le chemin du dump et le slug d'une organisation (ex. `grigny`)
@@ -40,3 +41,4 @@ La migration SHALL être rejouable : relancer la CLI sur le même dump SHALL pro
 #### Scenario: Double exécution
 - **WHEN** la CLI est exécutée deux fois de suite avec les mêmes entrées
 - **THEN** la base produite au second passage est équivalente à celle du premier
+

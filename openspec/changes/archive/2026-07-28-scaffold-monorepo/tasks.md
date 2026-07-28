@@ -75,11 +75,11 @@
 - [x] 9.7 Audit trail `createdBy`/`updatedBy` (organization, definitions, entries, media) + métadonnées d'appareil des sessions (`ua`/`ip`, listées) ; `users.get` unitaire + `users.update` élargi (email)
 - [x] 9.8 Collections : `editor`/`display`/`headings` en colonnes éditables + capturés par la CLI ; `organization.settings` en colonne dédiée (fix mapping settings→theme)
 - [x] 9.9 **Emails transactionnels via Loops** (demande Quentin) : invitations + « mot de passe oublié » réel (le legacy n'envoyait jamais d'email) — change dédié
-- [ ] 9.10 **Jobs legacy → Nitro tasks** (décision Quentin) : job-ssg-deploy et job-data-sync (APIDAE/Airtable) rapatriés en tasks appelant les services directement ; config `injector` migrée si simple — change dédié (avance la phase 4)
+- [x] 9.10 **Jobs legacy → Nitro tasks** → SORTI DU PÉRIMÈTRE : change OpenSpec dédié à venir (décisions 27-28/07 : deploy trivial + APIDAE seul pour ot-pertuis, Airtable/Slack abandonnés, expiration `E_EVENT_EXPIRED`+unlink à reproduire)
 - [x] 9.11 **Admin legacy → client tRPC** (décision Quentin) : remplacer le client REST `_factory` de admin-fix par un client tRPC — aucune modification côté serveur ; prérequis du test admin
 - [x] 9.12 Transverse sécurité (rate limiting, X-Request-Id, helmet/HSTS) → phase sécurité ultérieure (arbitré)
 
 ## 8. Clôture
 
 - [x] 8.1 Audit de licences des dépendances de production : 100 % MIT ou Apache-2.0 (trpc, zod, nanoid, citty, consola, h3, nitro : MIT ; drizzle-orm/zod, sharp, bson, aws-sdk : Apache-2.0) — toutes compatibles AGPL v3
-- [ ] 8.2 Revue croisée specs ↔ implémentation (`/opsx:verify`) et mise à jour de ROADMAP.md (phase 1 cochée, enseignements phase 4)
+- [x] 8.2 Revue croisée specs ↔ implémentation (`/opsx:verify` final 28/07 : rectificatifs appliqués aux 7 specs — JWT sessions, 10 types, 5 statuts, fail-fast S3, E2E-as-spec, legacy-migrate local, journalisation→phase 4) et ROADMAP.md à jour

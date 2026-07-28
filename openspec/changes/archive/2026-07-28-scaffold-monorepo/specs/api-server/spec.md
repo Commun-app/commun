@@ -39,7 +39,7 @@ L'API SHALL exposer, sous les chemins legacy exacts, les routes que les builds d
 - **THEN** le JSON statique est servi (enrichi des avatars si l'instance est l'organisation marseille15-16)
 
 ### Requirement: Gestion d'erreurs et journalisation
-L'API SHALL retourner des erreurs structurées (code, message, sans fuite de détails internes) et journaliser les requêtes et erreurs via consola avec un niveau configurable.
+L'API SHALL retourner des erreurs structurées (catalogues typés par domaine, `error.data.type` exposé aux clients, sans fuite de détails internes). RECTIFICATIF (revue 2026-07-28) : la journalisation des requêtes est REPORTÉE en phase 4 (observabilité structurée : entrée/chaîne de services/sortie/durée, correlation id `X-Request-Id` via AsyncLocalStorage) — seul le header `X-Request-Id` est posé dès la phase 1.
 
 #### Scenario: Erreur interne
 - **WHEN** une opération échoue de manière inattendue
