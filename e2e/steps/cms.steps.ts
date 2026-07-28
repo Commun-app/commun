@@ -1,11 +1,10 @@
 import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
-import { EVERY_FIELD_TYPE, FICHES_FIELDS, VALID_EVERY_TYPE } from '../data/index.ts';
 import { httpGet } from '../clients/client-http.ts';
 import { test } from './fixtures.ts';
 import { dataOf, trpcMutate, trpcQuery, type ApiResponse } from '../clients/client-trpc.ts';
 
-const { Given, When, Then } = createBdd(test);
+const { When, Then } = createBdd(test);
 
 // Adaptateurs locaux vers les helpers partagés (signature historique des steps).
 const mutate = (procedure: string, token: string, input: unknown) =>
@@ -27,41 +26,31 @@ Then(
   },
 );
 
-When(
-  'the entry data field {string} is updated to {string}',
-  async ({ world }, field: string, value: string) => {
-    const response = await mutate('collections.entries.update', world.sessionToken!, {
+Then(
+  'the entry keeps its title {string} and stores {string}',
+  async ({ world }, title: string, value: string) => {
+    const response = await query('collections.entries.get', world.sessionToken!, {
       id: world.entryId,
-      data: { data: { [field]: value } },
     });
-    expect(response.status).toBe(200);
+    const entry = await json<{ title: string; data: Record<string, unknown> }>(response);
+    // Update PARTIEL iso legacy : le titre n'a pas été envoyé, il est conservé.
+    expect(entry.title).toBe(title);
+    expect(Object.values(entry.data)).toContain(value);
   },
 );
 
-Then('the entry keeps its title and stores {string}', async ({ world }, value: string) => {
-  const response = await query('collections.entries.get', world.sessionToken!, {
-    id: world.entryId,
-  });
-  const entry = await json<{ title: string; data: Record<string, unknown> }>(response);
-  // Update PARTIEL iso legacy : le titre n'a pas été envoyé, il est conservé.
-  expect(entry.title).toBe('Premier communiqué');
-  expect(Object.values(entry.data)).toContain(value);
-});
-
-When('the entry is removed', async ({ world }) => {
-  const response = await mutate('collections.entries.remove', world.sessionToken!, {
-    id: world.entryId,
-  });
-  expect(response.status).toBe(200);
-});
-
-When('the collection {string} is removed', async ({ world }, slug: string) => {
-  const definition = await json<{ id: string }>(
-    await query('collections.get', world.sessionToken!, { idOrSlug: slug }),
-  );
-  const response = await mutate('collections.remove', world.sessionToken!, { id: definition.id });
-  expect(response.status).toBe(200);
-});
+Then(
+  'the entries captured as {string} and {string} have slugs {string} and {string}',
+  async ({ world }, firstKey: string, secondKey: string, firstSlug: string, secondSlug: string) => {
+    const w = world as unknown as Record<string, string>;
+    const slugs: string[] = [];
+    for (const id of [w[firstKey], w[secondKey]]) {
+      const response = await query('collections.entries.get', world.sessionToken!, { id });
+      slugs.push((await json<{ slug: string }>(response)).slug);
+    }
+    expect(slugs).toEqual([firstSlug, secondSlug]);
+  },
+);
 
 Then('the collection {string} no longer exists', async ({ world }, slug: string) => {
   const response = await query('collections.get', world.sessionToken!, { idOrSlug: slug });
@@ -72,26 +61,6 @@ Then('the collection {string} no longer exists', async ({ world }, slug: string)
 });
 
 // ── Tous les types de champs ────────────────────────────────────────────────
-
-Given('a collection {string} defining every field type', async ({ world }, name: string) => {
-  // Slug unique par scénario (le slug est contraint unique en base).
-  const response = await mutate('collections.create', world.sessionToken!, {
-    name,
-    slug: `${name}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-    fields: EVERY_FIELD_TYPE,
-  });
-  expect(response.status).toBe(200);
-  world.collectionId = (await json<{ id: string }>(response)).id;
-});
-
-When('an entry is created with valid values for every field type', async ({ world }) => {
-  const response = await mutate('collections.entries.create', world.sessionToken!, {
-    collectionId: world.collectionId,
-    data: { title: 'Entrée typée', data: VALID_EVERY_TYPE },
-  });
-  expect(response.status).toBe(200);
-  world.entryId = (await json<{ id: string }>(response)).id;
-});
 
 Then('the entry stores every typed value', async ({ world }) => {
   const response = await query('collections.entries.get', world.sessionToken!, {
@@ -110,44 +79,7 @@ Then('the entry stores every typed value', async ({ world }) => {
 
 // ── Slugs incrémentaux ──────────────────────────────────────────────────────
 
-When(
-  'creates two entries titled {string} in {string}',
-  async ({ world }, title: string, slug: string) => {
-    world.entryIds = [];
-    for (let i = 0; i < 2; i++) {
-      const response = await mutate('collections.entries.create', world.sessionToken!, {
-        collectionId: slug,
-        data: { title, data: {} },
-      });
-      expect(response.status).toBe(200);
-      world.entryIds.push((await json<{ id: string }>(response)).id);
-    }
-  },
-);
-
-Then('their slugs are {string} and {string}', async ({ world }, first: string, second: string) => {
-  const slugs: string[] = [];
-  for (const id of world.entryIds!) {
-    const response = await query('collections.entries.get', world.sessionToken!, { id });
-    slugs.push((await json<{ slug: string }>(response)).slug);
-  }
-  expect(slugs).toEqual([first, second]);
-});
-
 // ── Cycle de vie éditorial ──────────────────────────────────────────────────
-
-When(
-  'the entry moves through the statuses {string} and {string}',
-  async ({ world }, first: string, second: string) => {
-    for (const status of [first, second]) {
-      const response = await mutate('collections.entries.update', world.sessionToken!, {
-        id: world.entryId,
-        data: { status },
-      });
-      expect(response.status).toBe(200);
-    }
-  },
-);
 
 Then('the entry carries an automatic publishedAt', async ({ world }) => {
   const response = await query('collections.entries.get', world.sessionToken!, {
@@ -158,57 +90,6 @@ Then('the entry carries an automatic publishedAt', async ({ world }) => {
 });
 
 // ── Évolution de schéma (retrait / retour d'un champ) ───────────────────────
-
-When(
-  'the admin creates a collection {string} with fields {string} and {string}',
-  async ({ world }, slug: string, _a: string, _b: string) => {
-    const response = await mutate('collections.create', world.sessionToken!, {
-      name: 'Fiches',
-      slug,
-      fields: FICHES_FIELDS.both,
-    });
-    expect(response.status).toBe(200);
-    world.collectionId = (await json<{ id: string }>(response)).id;
-  },
-);
-
-When(
-  'creates a published entry in {string} with {string} and {string} filled',
-  async ({ world }, slug: string, _a: string, _b: string) => {
-    const response = await mutate('collections.entries.create', world.sessionToken!, {
-      collectionId: slug,
-      data: {
-        title: 'Fiche complète',
-        status: 'published',
-        data: { corps: 'le corps', note: 'la note' },
-      },
-    });
-    expect(response.status).toBe(200);
-    world.entryId = (await json<{ id: string }>(response)).id;
-  },
-);
-
-When(
-  'the field {string} is removed from the collection {string}',
-  async ({ world }, _field: string, _slug: string) => {
-    const response = await mutate('collections.update', world.sessionToken!, {
-      id: world.collectionId,
-      data: { fields: FICHES_FIELDS.corpsOnly },
-    });
-    expect(response.status).toBe(200);
-  },
-);
-
-When(
-  'the field {string} is added back to the collection {string}',
-  async ({ world }, _field: string, _slug: string) => {
-    const response = await mutate('collections.update', world.sessionToken!, {
-      id: world.collectionId,
-      data: { fields: FICHES_FIELDS.both },
-    });
-    expect(response.status).toBe(200);
-  },
-);
 
 async function recordAttributes(world: { apiToken?: string; entryId?: string }) {
   const response = await httpGet<{ data: { records: Record<string, Record<string, unknown>> } }>(

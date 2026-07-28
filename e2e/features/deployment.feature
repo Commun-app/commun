@@ -17,10 +17,10 @@ Feature: Deployment plane
     Given a logged-in "admin" session
     And an initialized organization
     And an API token
-    When the admin creates a collection "communiques"
-    And creates a draft entry "premier-communique" in "communiques"
+    When calling procedure "collections.create" with payload "collection-communiques" capturing the id as "collectionId"
+    And calling procedure "collections.entries.create" with payload "entree-premier-communique" capturing the id as "entryId"
     Then the records payload has no entry for collection "communiques"
-    When the entry is published
+    When calling procedure "collections.entries.update" with payload "entree-publication" succeeds
     Then the legacy records payload contains the entry with collection "communiques"
     And the legacy deployment payload lists the slug "/communiques/premier-communique"
 
