@@ -82,6 +82,9 @@ Given('the APIDAE mock is up', async () => {
 });
 
 Given('the instance is configured with the ot-pertuis injector', () => {
+  // Le sink média écrit sur le MinIO E2E : provisionner le bucket ici — en CI
+  // jobs.feature peut passer AVANT media.feature (qui le crée aussi).
+  seed('bucket');
   seed('apidae');
 });
 
