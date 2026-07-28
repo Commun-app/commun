@@ -20,7 +20,10 @@
     "lint:fix": "biome check --write .",
     "test": "bun run test:e2e",
     "test:e2e": "bddgen && playwright test",
-    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist apps/*/node_modules apps/*/.nitro apps/*/.output docs/node_modules docs/.output docs/.docs"
+    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist apps/*/node_modules apps/*/.nitro apps/*/.output docs/node_modules docs/.output docs/.docs",
+    "db:generate": "bun --filter @commun/core db:generate",
+    "db:check": "bun --filter @commun/core db:check",
+    "db:studio": "bun --filter @commun/core db:studio"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.6",
