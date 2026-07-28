@@ -30,7 +30,7 @@ Seul ot-pertuis a un injector actif : 2 pipelines APIDAE (`unlink: true`, sélec
 
 **D2 — Ordonnancement par composition.** L'entrée cron unique exécute une tâche orchestratrice qui `runTask('apidae:sync')` PUIS `runTask('deploy')` ; le deploy s'exécute même si la sync échoue (les modifications éditoriales de la veille doivent partir). La procédure tRPC `organization.deploy` appelle `runTask('deploy')` seule. *Alternative écartée : deux entrées cron décalées (le travers legacy : l'ordre n'est pas garanti et dépend de la durée de la sync).*
 
-**D3 — Découpage du code.** Le moteur pur (client APIDAE, mapper, transforms schedules/media) va dans `packages/core/src/sync/` — testable sur fixtures sans serveur. Le sink s'appuie sur les services core existants (collections, media, storage driver) **in-process** : plus de HTTP interne, plus de JWT, plus d'accès base hors services. Les tasks Nitro dans `apps/api` ne sont que des wrappers fins. *Alternative écartée : tout dans apps/api — le moteur serait couplé au serveur et intestable isolément.*
+**D3 — Découpage du code (amendé, review PR #4).** Le moteur pur (client APIDAE, mapper, transforms schedules/media) va dans un package workspace dédié **`packages/apidae-sync`** — frontière volontaire hors du cœur open source, candidat à l'extraction dans un dépôt privé au moment de la publication (phase 6). Un connecteur APIDAE « produit » éventuel sera une réécriture typée, pas ce portage. Le sink s'appuie sur les services core existants (collections, media, storage driver) **in-process** : plus de HTTP interne, plus de JWT, plus d'accès base hors services. Les tasks Nitro dans `apps/api` ne sont que des wrappers fins. *Alternative écartée : tout dans apps/api — le moteur serait couplé au serveur et intestable isolément.*
 
 **D4 — Iso-legacy strict sauf bugs documentés.** Les sémantiques discutables mais inoffensives du mapper sont conservées à l'identique (valeurs falsy omises via `if (value)`, `replace('\n', '\\n')` première occurrence seulement, comparateurs stricts) : les mappings d'ot-pertuis sont validés en production et le portage ne doit pas faire diverger les données. Seuls les 3 bugs avérés sont corrigés (specs). *Alternative écartée : « nettoyer » le mapper — risque de régression silencieuse sur des données réelles sans bénéfice.*
 
@@ -40,7 +40,7 @@ Seul ot-pertuis a un injector actif : 2 pipelines APIDAE (`unlink: true`, sélec
 
 **D7 — Secrets APIDAE en base.** `credentials.apiKey`/`projectId` restent dans `legacyExtra.injector` (état migré). Acceptable en single-tenant (la base EST l'instance du client) ; à revoir si une UI d'édition des mappings apparaît.
 
-**D8 — Fixtures réelles.** Les fixtures de tests sont dérivées de vraies réponses APIDAE d'ot-pertuis (anonymisées si besoin), pas de payloads inventés — c'est la seule façon d'attraper les pièges du format (traductions manquantes, périodes `tousLesAns`, types d'ouverture).
+**D8 — E2E sur mock APIDAE, pas de tests unitaires (amendé, review PR #4).** La suite E2E est la spécification exécutable : jobs.feature boote l'API réelle, un mock APIDAE sert un jeu de données réel d'ot-pertuis (URLs de médias réécrites vers le mock — zéro réseau sortant), la task est déclenchée par la route interne `/_tasks/:name` (COMMUN_TASKS_HTTP, posé par le seul harness E2E) et les assertions passent par la surface tRPC de l'admin. Le dataset placeholder sera remplacé par une capture réelle fournie par Quentin.
 
 ## Risks / Trade-offs
 

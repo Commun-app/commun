@@ -32,12 +32,6 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
-      # Tests unitaires sur fixtures (migration + sync APIDAE) — hors ligne.
-      - name: Unit tests (core, legacy-migrate)
-        run: |
-          bun --filter @commun/core test
-          bun --filter @commun/legacy-migrate test
-
       # La suite E2E est LA spécification exécutable du produit (décision
       # 27/07) : elle boote l'API buildée + un MinIO (docker) et rejoue les
       # scénarios Gherkin.

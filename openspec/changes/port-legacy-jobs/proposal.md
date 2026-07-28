@@ -13,7 +13,7 @@ La phase 1 (scaffold) est close, mais deux automatismes du legacy n'ont pas ét�
 - **Ordonnancement** : sync PUIS deploy.
 - Config lue depuis `organization.legacyExtra.injector` (mappings préservés tels quels par la CLI de migration — pas de nouveau format).
 - **Correction des bugs legacy documentés** au passage : tri des périodes (PERIODRANKS/FIRST1), unlink exécuté dans la boucle, clé pointée `metaData` (le session leak est sans objet en SQLite).
-- Tests sur fixtures de réponses APIDAE (pas d'appel réseau réel en CI).
+- Tests **E2E** sur un mock APIDAE servant un jeu de données réel (review PR #4 : pas de tests unitaires, la suite E2E est la spécification exécutable) — aucun appel réseau réel en CI.
 
 ## Capabilities
 
@@ -29,7 +29,7 @@ _Aucune : la procédure `organization.deploy` s'inscrit dans le plan admin tRPC 
 ## Impact
 
 - `apps/api` : nouvelles tasks Nitro (`tasks/deploy.ts`, `tasks/apidae-sync.ts`), activation des tasks + `scheduledTasks` dans `nitro.config`, nouvelle procédure tRPC `organization.deploy`.
-- `packages/core` : nouveau domaine (ou module) `sync` — client APIDAE, moteur de mapping, sink s'appuyant sur les services collections/media existants ; aucun changement de schéma DB (lecture de `organization.deployment` et `organization.legacyExtra.injector` existants).
+- `packages/apidae-sync` (package workspace dédié, review PR #4) : client APIDAE, moteur de mapping, sink s'appuyant sur les services collections/media du core (dépendances injectées) — frontière volontaire, candidat à l'extraction hors monorepo en phase 6. Aucun changement de schéma DB (lecture de `organization.deployment` et `organization.legacyExtra.injector` existants).
 - `apps/admin` : le bouton « Publier » appelle `organization.deploy` (écran existant, adaptation minimale — la refonte admin viendra après).
 - Dépendances : `luxon` (déjà décidé de le conserver), aucune nouvelle dépendance réseau — fetch natif.
-- E2E/CI : fixtures APIDAE en local, pas d'appel sortant ; le smoke Docker n'est pas impacté (tasks inactives sans config).
+- E2E/CI : mock APIDAE + hook Vercel dans le harness (jobs.feature), route interne `/_tasks/:name` activée par COMMUN_TASKS_HTTP (E2E seul) ; le smoke Docker n'est pas impacté (tasks inactives sans config).

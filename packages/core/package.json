@@ -33,12 +33,10 @@
     "drizzle-orm": "^0.44.2",
     "drizzle-zod": "^0.8.2",
     "jose": "^6.2.4",
-    "luxon": "^3",
     "nanoid": "^5.1.11",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/luxon": "^3.7.2",
     "@types/node": "^26.1.0",
     "drizzle-kit": "^0.31.1",
     "typescript": "^7.0.2"

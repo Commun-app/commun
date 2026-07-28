@@ -23,7 +23,6 @@ import { OrganizationRepository, OrganizationService } from './domains/organizat
 import { MediaRepository, MediaService } from './domains/media/index.ts';
 import { CollectionsRepository, CollectionsService } from './domains/collections/index.ts';
 import { organizationRouter } from './domains/organization/index.ts';
-import { SyncService } from './sync/service.ts';
 import { authRouter, usersRouter, apiTokensRouter } from './domains/users/index.ts';
 import { mediaRouter } from './domains/media/index.ts';
 import { collectionsRouter } from './domains/collections/index.ts';
@@ -58,16 +57,6 @@ export function createCore({ env }: { env?: CoreEnv } = {}): Core {
     organization,
     media,
     collections,
-    // Sync APIDAE (port-legacy-jobs) : la façade reçoit aussi les repositories
-    // — l'idempotence (json_extract) et le legacyExtra n'ont pas de surface
-    // service publique.
-    sync: new SyncService({
-      organization,
-      collections,
-      collectionsRepository,
-      media,
-      mediaRepository,
-    }),
   };
 
   // No side effects here (review): boot housekeeping (purgeExpired) is the
@@ -116,11 +105,8 @@ export type {
 } from './common/types/index.ts';
 
 // Domains — schemas, validation, repositories, services, routers, errors.
+// (La sync APIDAE vit dans @commun/apidae-sync — frontière volontaire, review PR #4.)
 export * from './domains/organization/index.ts';
 export * from './domains/users/index.ts';
 export * from './domains/media/index.ts';
 export * from './domains/collections/index.ts';
-
-// Sync APIDAE + déclenchement de déploiement (change port-legacy-jobs).
-export * from './sync/index.ts';
-export { SyncService } from './sync/service.ts';

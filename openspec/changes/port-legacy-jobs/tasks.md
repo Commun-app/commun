@@ -10,7 +10,7 @@
 - [x] 2.3 Brancher le bouton « Publier » de l'admin sur `organization.deploy` (adaptation minimale de l'écran existant)
 - [x] 2.4 Tests : hook présent (fixture HTTP locale), hook absent, hook en erreur
 
-## 3. Moteur de sync (packages/core/src/sync)
+## 3. Moteur de sync (packages/apidae-sync — package dédié, review PR #4)
 
 - [x] 3.1 Client APIDAE : pagination `list-objets-touristiques` (lots de 20, arrêt sur page vide, HTTPS par défaut, timeout, erreur réseau → collecte interrompue et rapportée)
 - [x] 3.2 `transformSchedules` : périodicités UNIQUE/DAILY/WEEKLY/MONTHLY, `tousLesAns` rebasé, horaires, zone Europe/Paris, garde `E_EVENT_EXPIRED`, sortie ISO 8601 — correctifs `periodRank` (FIRST…LAST) et « maintenant » évalué à l'exécution
@@ -30,8 +30,8 @@
 
 ## 5. Tests et validation
 
-- [x] 5.1 Fixtures issues de vraies réponses APIDAE ot-pertuis (pagination multi-pages, périodes variées dont `OUVERTURE_MOIS` et `tousLesAns`, illustrations avec/sans traduction fr)
-- [x] 5.2 Test « mapping ot-pertuis reproduit » : record produit identique champ à champ au legacy sur fixture
-- [x] 5.3 Tests unlink : disparition → draft, créations préservées, collecte en échec → unlink annulé
-- [x] 5.4 Vérifier zéro appel réseau sortant dans la suite CI (fixtures uniquement)
+- [x] 5.1 Mock APIDAE dans le harness E2E (pagination réelle, binaires de médias, hook Vercel compté, panne simulable) servant un dataset ot-pertuis — placeholder à remplacer par la capture réelle fournie par Quentin
+- [x] 5.2 Scénarios E2E jobs.feature : deploy (sans/avec hook), import initial publié (schedules, enums, média), upsert sans doublon, expiration `E_EVENT_EXPIRED`
+- [x] 5.3 Scénarios E2E unlink : disparition → draft, créations préservées, panne APIDAE → unlink annulé ; passe quotidienne : deploy maintenu malgré la sync en échec
+- [x] 5.4 Zéro appel réseau sortant en CI (URLs de médias réécrites vers le mock) ; suppression des tests unitaires bun (review PR #4)
 - [ ] 5.5 Passe manuelle sur copie de la base ot-pertuis migrée : diff du contenu avec le legacy (plan de migration, étape 2)

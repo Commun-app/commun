@@ -4,7 +4,7 @@ import { ApidaeClient } from './apidae-client.ts';
 import { ObjectMapper, type MappingDictionary } from './mapper.ts';
 import { ApidaeSink, type SinkDeps } from './sink.ts';
 import { transformWysiwyg } from './wysiwyg.ts';
-import type { OrganizationService } from '../domains/organization/service.ts';
+import type { OrganizationService } from '@commun/core';
 
 // Orchestration du portage job-data-sync, RÉDUITE À APIDAE (décision du
 // 27/07 : Airtable et Slack abandonnés). La config est lue telle quelle

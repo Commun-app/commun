@@ -1,13 +1,13 @@
 import { consola } from 'consola';
-import type { CollectionsRepository } from '../domains/collections/repository.ts';
-import type { CollectionsService } from '../domains/collections/service.ts';
 import type {
   CollectionDefinition,
+  CollectionsRepository,
+  CollectionsService,
   Entry,
   FieldDefinition,
-} from '../domains/collections/schema.ts';
-import type { MediaRepository } from '../domains/media/repository.ts';
-import type { MediaService } from '../domains/media/service.ts';
+  MediaRepository,
+  MediaService,
+} from '@commun/core';
 import type { MappingDictionary } from './mapper.ts';
 import type { ApidaeMediaRef } from './apidae-client.ts';
 

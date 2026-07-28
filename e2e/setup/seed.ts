@@ -5,9 +5,20 @@
 // Prints a JSON result on stdout.
 import { join } from 'node:path';
 // Relative import: e2e/ is not a workspace package, @commun/core is unresolvable here.
-import { createCore, parseEnv, UsersRepository } from '../../packages/core/src/index.ts';
+import {
+  CollectionsRepository,
+  createCore,
+  OrganizationRepository,
+  parseEnv,
+  UsersRepository,
+} from '../../packages/core/src/index.ts';
 import { ADMIN_URL, E2E_DATA_DIR, EMAIL_WEBHOOK, JWT_SECRET, S3 } from '../constants.ts';
 import { NEWS_DEFINITION, ORGANIZATION_INIT } from '../data/index.ts';
+import {
+  APIDAE_DEFINITION,
+  APIDAE_INJECTOR,
+  APIDAE_LEGACY_COLLECTION_ID,
+} from '../data/apidae/index.ts';
 
 // Chemin EXPLICITE uniquement (E2E_DATA_DIR, posé par e2e/steps/instance.ts) :
 // Bun charge automatiquement le .env racine, donc COMMUN_DATA_DIR peut pointer
@@ -130,6 +141,33 @@ switch (command) {
       });
     }
     console.log(JSON.stringify({ slug }));
+    break;
+  }
+  case 'apidae': {
+    // Instance ot-pertuis de jobs.feature : injector dans legacyExtra (iso
+    // migration — aucune surface service ne l'écrit), définition migrée avec
+    // son legacyId, et une entrée publiée absente de la source (cible unlink).
+    if (!(await core.services.organization.get())) {
+      await core.services.organization.init({ ...ORGANIZATION_INIT });
+    }
+    await new OrganizationRepository(core.db).update({
+      legacyExtra: { injector: structuredClone(APIDAE_INJECTOR) },
+    });
+
+    const collections = core.services.collections;
+    const slug = APIDAE_DEFINITION.slug;
+    if (!(await collections.listDefinitions()).some((definition) => definition.slug === slug)) {
+      const definition = await new CollectionsRepository(core.db).insertDefinition({
+        ...(structuredClone(APIDAE_DEFINITION) as never),
+        legacyExtra: { legacyId: APIDAE_LEGACY_COLLECTION_ID },
+      });
+      const stale = await collections.createEntry(definition.id, {
+        title: 'Événement disparu de la source',
+        data: { apidaeId: '424242' },
+      });
+      await collections.updateEntry(stale.id, { status: 'published' });
+    }
+    console.log(JSON.stringify({ configured: true }));
     break;
   }
   default:

@@ -5,6 +5,7 @@
   "description": "commun.app — CMS open source pour les collectivités françaises (AGPL v3)",
   "workspaces": [
     "packages/core",
+    "packages/apidae-sync",
     "apps/*"
   ],
   "scripts": {
