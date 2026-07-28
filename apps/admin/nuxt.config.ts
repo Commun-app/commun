@@ -1,5 +1,18 @@
 import { globSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+
+// @poulpus/prose est une dépendance OPTIONNELLE (registre privé, remplacée
+// par TipTap OSS en phase 4) : sans tokens (CI, Docker) son install est
+// sautée — on ne charge le module Nuxt que s'il est résolu.
+const hasProse = (() => {
+  try {
+    createRequire(import.meta.url).resolve('@poulpus/prose')
+    return true
+  } catch {
+    return false
+  }
+})()
 
 // L'ESM de @vue/devtools-api vit uniquement dans le store isolé de Bun
 // (node_modules/.bun/@vue+devtools-api@<version>) — introuvable par une
@@ -37,7 +50,7 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     '@pinia-orm/nuxt',
     '@vueuse/nuxt',
-    '@poulpus/prose'
+    ...(hasProse ? ['@poulpus/prose'] : [])
   ],
   // https://sidebase.io/nuxt-auth/v0.6/getting-started/quick-start
   // Auth branchée sur le plan tRPC du monolithe Commun : les procédures

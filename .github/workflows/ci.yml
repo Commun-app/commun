@@ -16,11 +16,15 @@ jobs:
         with:
           bun-version: latest
 
-      # Sans tokens des registres privés : @poulpus/prose (optionnelle) est
-      # simplement sautée — l'API et le core s'installent complets ; l'admin
-      # ne builde pas en CI tant que prose n'est pas remplacée (phase 4).
+      # Sans tokens des registres privés, @poulpus/prose (optionnelle) n'est
+      # sautée par bun qu'en install NON-frozen : en frozen, une optionnelle
+      # irrésoluble (401 registre) est traitée comme une dérive de lockfile
+      # et l'install échoue ; en non-frozen bun élague son arbre du lock.
+      # --no-save installe sans jamais écrire le lock — au prix de la
+      # vérification manifestes/lock, impossible sans résoudre prose.
+      # Tout ceci disparaît avec prose (phase 4, TipTap OSS).
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install --no-save
 
       - name: Lint (Biome)
         run: bun run lint
@@ -45,9 +49,18 @@ jobs:
       - name: Build image
         run: docker build -t commun-api:ci .
 
+      # Le core est instancié AU BOOT (plugin nitro) et refuse de démarrer
+      # sans config — le smoke fournit le minimum vital (valeurs factices :
+      # le fail-fast vérifie la présence, pas la connectivité).
       - name: Smoke run
         run: |
-          docker run -d --name smoke -p 3000:3000 commun-api:ci
+          docker run -d --name smoke -p 3000:3000 \
+            -e COMMUN_JWT_SECRET=ci-smoke-secret \
+            -e COMMUN_S3_BUCKET=ci-smoke \
+            -e COMMUN_S3_ACCESS_KEY=ci-smoke \
+            -e COMMUN_S3_SECRET_KEY=ci-smoke \
+            -e COMMUN_EMAIL_WEBHOOK_URL=http://127.0.0.1:9/discard \
+            commun-api:ci
           for i in $(seq 1 20); do
             curl -sf http://127.0.0.1:3000/health && exit 0 || sleep 1
           done
