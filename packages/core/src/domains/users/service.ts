@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
+import { jwtVerify, SignJWT } from 'jose';
 import { consola } from 'consola';
 import {
   CannotRemoveSelfError,
@@ -40,8 +41,18 @@ export interface AuthSession {
 export class UsersService {
   constructor(
     private readonly repository: UsersRepository,
-    private readonly options: { email?: EmailService; adminUrl?: string } = {},
+    private readonly options: { email?: EmailService; adminUrl?: string; jwtSecret?: string } = {},
   ) {}
+
+  /** Clé HMAC du JWT de session (décision 28/07 : JWT { session: <uuid> }). */
+  private jwtKey(): Uint8Array {
+    if (!this.options.jwtSecret) {
+      throw new Error(
+        'COMMUN_JWT_SECRET manquant — requis pour signer les sessions (fail-fast au boot)',
+      );
+    }
+    return new TextEncoder().encode(this.options.jwtSecret);
+  }
 
   /** Émission best-effort : un échec du webhook email ne casse jamais le flux. */
   private async sendEmailEvent(event: EmailEvent): Promise<void> {
@@ -82,21 +93,34 @@ export class UsersService {
     user: User,
     meta?: SessionMeta,
   ): Promise<{ token: string; session: AuthSession }> {
-    const token = randomBytes(32).toString('base64url');
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
     const row = await this.repository.insertSession({
-      tokenHash: sha256(token),
       userId: user.id,
       expiresAt,
       ua: meta?.ua ?? null,
       ip: meta?.ip ?? null,
     });
+    // JWT { session: <uuid> } signé HS256 (décision Quentin 28/07) — la
+    // révocation reste en base : le JWT n'est qu'un pointeur authentifié.
+    const token = await new SignJWT({ session: row.id })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime(new Date(expiresAt))
+      .sign(this.jwtKey());
     return { token, session: { sessionId: row.id, user, expiresAt } };
   }
 
   async verifySession(token: string): Promise<AuthSession | null> {
-    const row = await this.repository.findActiveSessionWithUser(sha256(token), nowIso());
-    if (!row) return null;
+    let sessionId: string;
+    try {
+      const { payload } = await jwtVerify(token, this.jwtKey());
+      if (typeof payload.session !== 'string') return null;
+      sessionId = payload.session;
+    } catch {
+      return null; // signature invalide, JWT expiré ou malformé
+    }
+    const row = await this.repository.findActiveSessionWithUser(sessionId, nowIso());
+    if (!row) return null; // session révoquée ou expirée en base
     return { sessionId: row.session.id, user: row.user, expiresAt: row.session.expiresAt };
   }
 

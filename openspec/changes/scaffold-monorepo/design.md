@@ -161,3 +161,4 @@ Trois décisions du corps du document ont été dépassées par des arbitrages u
 - **Emails par ÉVÉNEMENTS** : `EmailService.sendEvent({ email, eventName, eventProperties })`, payload calqué sur Loops events/send, Bearer token — plus de templates dans le core.
 - **Erreurs typées par domaine** (`domains/<domain>/errors.ts`, `createTypedError`) — la couche tRPC transmet `error.trpcCode` ; `CommunError`/`ERR` supprimés.
 - **tRPC** : middleware d'accès unique (session + rôle paramétré), `appRouter` fusionné dans `src/index.ts`, observabilité (correlation/instrument) retirée — le `X-Request-Id` HTTP suffit à ce stade.
+- **D7 amendé (28/07, revue PR #1)** : retour au **JWT** à la demande de Quentin — le token de session est un JWT HS256 `{ session: <uuid> }` (secret `COMMUN_JWT_SECRET`, requis au boot) ; la révocation reste EN BASE (session révoquée/expirée ⇒ JWT refusé), contrairement au legacy (`@changeme`, sans lookup… si — avec lookup, mais secret en dur).

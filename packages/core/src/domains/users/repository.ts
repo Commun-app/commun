@@ -62,7 +62,6 @@ export class UsersRepository {
   // ── Sessions ───────────────────────────────────────────────────────────────
 
   async insertSession(input: {
-    tokenHash: string;
     userId: string;
     expiresAt: string;
     ua?: string | null;
@@ -72,7 +71,7 @@ export class UsersRepository {
   }
 
   async findActiveSessionWithUser(
-    tokenHash: string,
+    sessionId: string,
     now: string,
   ): Promise<{ session: Session; user: User } | undefined> {
     return this.db
@@ -80,11 +79,7 @@ export class UsersRepository {
       .from(sessions)
       .innerJoin(users, eq(users.id, sessions.userId))
       .where(
-        and(
-          eq(sessions.tokenHash, tokenHash),
-          isNull(sessions.revokedAt),
-          gt(sessions.expiresAt, now),
-        ),
+        and(eq(sessions.id, sessionId), isNull(sessions.revokedAt), gt(sessions.expiresAt, now)),
       )
       .get();
   }

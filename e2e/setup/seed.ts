@@ -33,6 +33,7 @@ const core = createCore({
     COMMUN_EMAIL_WEBHOOK_URL: 'http://127.0.0.1:9/discard',
     COMMUN_EMAIL_WEBHOOK_TOKEN: 'e2e-webhook-token',
     COMMUN_ADMIN_URL: 'https://admin.e2e.test',
+    COMMUN_JWT_SECRET: 'e2e-jwt-secret',
   }),
 });
 
