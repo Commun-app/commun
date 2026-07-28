@@ -1,25 +1,18 @@
 import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
+import { EVERY_FIELD_TYPE, FICHES_FIELDS, VALID_EVERY_TYPE } from '../data/index.ts';
+import { API_URL } from '../constants.ts';
 import { test } from './fixtures.ts';
-import { API_URL } from './instance.ts';
+import { dataOf, trpcMutate, trpcQuery, type ApiResponse } from './trpc.ts';
 
 const { Given, When, Then } = createBdd(test);
 
+// Adaptateurs locaux vers les helpers partagés (signature historique des steps).
 const mutate = (procedure: string, token: string, input: unknown) =>
-  fetch(`${API_URL}/api/trpc/${procedure}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify(input),
-  });
-
+  trpcMutate(procedure, { input, token });
 const query = (procedure: string, token: string, input?: unknown) =>
-  fetch(
-    `${API_URL}/api/trpc/${procedure}${input ? `?input=${encodeURIComponent(JSON.stringify(input))}` : ''}`,
-    { headers: { authorization: `Bearer ${token}` } },
-  );
-
-const json = async <T>(response: Response) =>
-  ((await response.json()) as { result: { data: T } }).result.data;
+  trpcQuery(procedure, { input, token });
+const json = async <T>(response: ApiResponse) => dataOf(response) as T;
 
 // ── Cycle de vie complet collection + entrées ───────────────────────────────
 
@@ -75,37 +68,10 @@ Then('the collection {string} no longer exists', async ({ world }, slug: string)
   expect(response.status).toBe(404);
   // Contrat du dictionnaire d'erreurs côté client : le discriminant typé
   // voyage dans error.data.type (errorFormatter tRPC).
-  const body = (await response.json()) as { error: { data: { type?: string } } };
-  expect(body.error.data.type).toBe('collection-not-found-error');
+  expect(response.body.error?.data?.type).toBe('collection-not-found-error');
 });
 
 // ── Tous les types de champs ────────────────────────────────────────────────
-
-const EVERY_FIELD_TYPE = [
-  { name: 'txt', label: 'Texte', type: 'text' },
-  { name: 'rich', label: 'Riche', type: 'rich-text' },
-  { name: 'num', label: 'Nombre', type: 'number' },
-  { name: 'flag', label: 'Booléen', type: 'boolean' },
-  { name: 'day', label: 'Date', type: 'date' },
-  { name: 'cover', label: 'Média', type: 'media' },
-  { name: 'linked', label: 'Relation', type: 'relation', target: 'news' },
-  { name: 'choice', label: 'Choix', type: 'select', options: ['a', 'b'] },
-  { name: 'etapes', label: 'Étapes', type: 'steps' },
-  { name: 'extra', label: 'JSON', type: 'json' },
-];
-
-const VALID_EVERY_TYPE = {
-  txt: 'bonjour',
-  rich: { type: 'doc', content: [] },
-  num: 42,
-  flag: true,
-  day: '2026-08-01',
-  cover: 'media-id-quelconque',
-  linked: [],
-  choice: 'a',
-  etapes: [{ titre: 'Étape 1', content: { type: 'doc' } }],
-  extra: { clef: 1 },
-};
 
 Given('a collection {string} defining every field type', async ({ world }, name: string) => {
   // Slug unique par scénario (le slug est contraint unique en base).
@@ -227,14 +193,6 @@ Then('the entry carries an automatic publishedAt', async ({ world }) => {
 });
 
 // ── Évolution de schéma (retrait / retour d'un champ) ───────────────────────
-
-const FICHES_FIELDS = {
-  both: [
-    { name: 'corps', label: 'Corps', type: 'text' },
-    { name: 'note', label: 'Note', type: 'text' },
-  ],
-  corpsOnly: [{ name: 'corps', label: 'Corps', type: 'text' }],
-};
 
 When(
   'the admin creates a collection {string} with fields {string} and {string}',
@@ -360,13 +318,3 @@ Then(
     expect(await json<unknown[]>(response)).toHaveLength(expected);
   },
 );
-
-// ── Publication programmée ───────────────────────────────────────────────────
-
-When('the entry is published with a publishedAt one hour in the future', async ({ world }) => {
-  const response = await mutate('collections.entries.update', world.sessionToken!, {
-    id: world.entryId,
-    data: { status: 'published', publishedAt: new Date(Date.now() + 3600_000).toISOString() },
-  });
-  expect(response.status).toBe(200);
-});

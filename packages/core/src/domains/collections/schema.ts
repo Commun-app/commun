@@ -5,7 +5,6 @@ export {
   collectionDefinitions,
   entries,
   fieldDefinitionSchema,
-  publishedWhere,
   type CollectionDefinition,
   type Entry,
   type FieldDefinition,

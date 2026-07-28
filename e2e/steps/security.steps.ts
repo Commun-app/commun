@@ -1,18 +1,14 @@
 import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
+import { DEFAULT_PASSWORD } from '../constants.ts';
 import { test } from './fixtures.ts';
 import { API_URL, seed } from './instance.ts';
+import { emailCount, lastEmail, startEmailReceiver } from '../mocks/email-webhook.mock.ts';
+import { dataOf, trpcMutate, trpcQuery } from './trpc.ts';
 
 const { Given, When, Then } = createBdd(test);
 
-const trpcUrl = (procedure: string) => `${API_URL}/api/trpc/${procedure}`;
-
-async function callMe(token?: string) {
-  const response = await fetch(trpcUrl('auth.me'), {
-    headers: token ? { authorization: `Bearer ${token}` } : {},
-  });
-  return { status: response.status, body: await response.json() };
-}
+const callMe = (token?: string) => trpcQuery('auth.me', { token });
 
 When('I call the protected me procedure without a session', async ({ world }) => {
   const result = await callMe();
@@ -28,29 +24,24 @@ Given('a virgin instance with an admin invitation for {string}', ({ world }, ema
 });
 
 When('the invitee accepts the invitation and sets a password', async ({ world }) => {
-  const response = await fetch(trpcUrl('auth.acceptInvitation'), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
+  const response = await trpcMutate('auth.acceptInvitation', {
+    input: {
       token: world.inviteToken,
       name: 'E2E Admin',
-      password: 'mot-de-passe-e2e',
-    }),
+      password: DEFAULT_PASSWORD,
+    },
   });
   expect(response.status).toBe(200);
-  world.body = await response.json();
+  world.body = response.body;
 });
 
 When('logs in with those credentials', async ({ world }) => {
   const body = world.body as { result: { data: { user: { email: string } } } };
-  const response = await fetch(trpcUrl('auth.login'), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email: body.result.data.user.email, password: 'mot-de-passe-e2e' }),
+  const response = await trpcMutate('auth.login', {
+    input: { email: body.result.data.user.email, password: DEFAULT_PASSWORD },
   });
   expect(response.status).toBe(200);
-  const login = (await response.json()) as { result: { data: { token: string } } };
-  world.sessionToken = login.result.data.token;
+  world.sessionToken = (response.body as { result: { data: { token: string } } }).result.data.token;
 });
 
 Then('a session token is returned', ({ world }) => {
@@ -64,11 +55,7 @@ Then('the me procedure returns the {string} account', async ({ world }, email: s
 });
 
 When('the user logs out', async ({ world }) => {
-  const response = await fetch(trpcUrl('auth.logout'), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${world.sessionToken}` },
-    body: JSON.stringify({}),
-  });
+  const response = await trpcMutate('auth.logout', { input: {}, token: world.sessionToken });
   expect(response.status).toBe(200);
 });
 
@@ -79,18 +66,14 @@ Then('the me procedure refuses the revoked token', async ({ world }) => {
 
 // ── Mot de passe oublié (webhook email) ──────────────────────────────────────
 
-import { emailCount, lastEmail, startEmailReceiver } from './email-receiver.ts';
-
 let emailCountBefore = 0;
 
 Given(
   'an activated account {string} named {string}',
   async ({ world }, email: string, name: string) => {
     const { token } = seed<{ token: string }>('invitation', email);
-    const response = await fetch(trpcUrl('auth.acceptInvitation'), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ token, name, password: 'mot-de-passe-e2e' }),
+    const response = await trpcMutate('auth.acceptInvitation', {
+      input: { token, name, password: DEFAULT_PASSWORD },
     });
     expect(response.status).toBe(200);
     world.accountEmail = email;
@@ -100,11 +83,7 @@ Given(
 When('a password reset is requested for {string}', async ({ world }, email: string) => {
   await startEmailReceiver();
   emailCountBefore = emailCount();
-  const response = await fetch(trpcUrl('auth.requestPasswordReset'), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email }),
-  });
+  const response = await trpcMutate('auth.requestPasswordReset', { input: { email } });
   world.status = response.status;
 });
 
@@ -124,23 +103,14 @@ When(
   'the reset link is consumed with the new password {string}',
   async ({ world }, password: string) => {
     const token = world.resetUrl!.split('/password/define/')[1]!;
-    const response = await fetch(trpcUrl('auth.acceptInvitation'), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ token, password }), // sans nom : conservé côté serveur
-    });
+    // Sans nom : conservé côté serveur (flux reset).
+    const response = await trpcMutate('auth.acceptInvitation', { input: { token, password } });
     expect(response.status).toBe(200);
   },
 );
 
-async function tryLogin(email: string, password: string) {
-  const response = await fetch(trpcUrl('auth.login'), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  return { status: response.status, body: (await response.json()) as never };
-}
+const tryLogin = (email: string, password: string) =>
+  trpcMutate<{ token: string }>('auth.login', { input: { email, password } });
 
 Then(
   'logging in {string} with password {string} succeeds',
@@ -177,15 +147,14 @@ Then('the API answers ok without emitting any email', ({ world }) => {
 // ── Tokens API ───────────────────────────────────────────────────────────────
 
 When('the admin creates an API token named {string}', async ({ world }, name: string) => {
-  const response = await fetch(trpcUrl('apiTokens.create'), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${world.sessionToken}` },
-    body: JSON.stringify({ name }),
+  const response = await trpcMutate('apiTokens.create', {
+    input: { name },
+    token: world.sessionToken,
   });
   expect(response.status).toBe(200);
-  const body = (await response.json()) as { result: { data: { id: string; token: string } } };
-  world.createdApiToken = body.result.data.token;
-  world.createdApiTokenId = body.result.data.id;
+  const created = dataOf(response as never) as { id: string; token: string };
+  world.createdApiToken = created.token;
+  world.createdApiTokenId = created.id;
 });
 
 Then('the content plane accepts the new token', async ({ world }) => {
@@ -196,10 +165,9 @@ Then('the content plane accepts the new token', async ({ world }) => {
 });
 
 When('the admin revokes that token', async ({ world }) => {
-  const response = await fetch(trpcUrl('apiTokens.revoke'), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${world.sessionToken}` },
-    body: JSON.stringify({ id: world.createdApiTokenId }),
+  const response = await trpcMutate('apiTokens.revoke', {
+    input: { id: world.createdApiTokenId },
+    token: world.sessionToken,
   });
   expect(response.status).toBe(200);
 });
@@ -214,8 +182,8 @@ Then('the content plane refuses the revoked token', async ({ world }) => {
 // ── Sessions (liste d'appareils, révocation ciblée) ─────────────────────────
 
 When('the account logs in from two devices', async ({ world }) => {
-  const first = await tryLogin(world.accountEmail!, 'mot-de-passe-e2e');
-  const second = await tryLogin(world.accountEmail!, 'mot-de-passe-e2e');
+  const first = await tryLogin(world.accountEmail!, DEFAULT_PASSWORD);
+  const second = await tryLogin(world.accountEmail!, DEFAULT_PASSWORD);
   expect(first.status).toBe(200);
   expect(second.status).toBe(200);
   world.secondSessionToken = (
@@ -225,14 +193,11 @@ When('the account logs in from two devices', async ({ world }) => {
 });
 
 async function listSessions(token: string) {
-  const response = await fetch(trpcUrl('auth.sessions.list'), {
-    headers: { authorization: `Bearer ${token}` },
+  const response = await trpcQuery<Array<{ id: string; current: boolean }>>('auth.sessions.list', {
+    token,
   });
   expect(response.status).toBe(200);
-  const body = (await response.json()) as {
-    result: { data: Array<{ id: string; current: boolean }> };
-  };
-  return body.result.data;
+  return dataOf(response);
 }
 
 Then(
@@ -247,10 +212,9 @@ Then(
 When('the other device session is revoked', async ({ world }) => {
   const sessions = await listSessions(world.sessionToken!);
   const other = sessions.find((session) => !session.current)!;
-  const response = await fetch(trpcUrl('auth.sessions.revoke'), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${world.sessionToken}` },
-    body: JSON.stringify({ id: other.id }),
+  const response = await trpcMutate('auth.sessions.revoke', {
+    input: { id: other.id },
+    token: world.sessionToken,
   });
   expect(response.status).toBe(200);
 });
@@ -266,14 +230,12 @@ Given('the invitations of {string} are expired', ({ world: _world }, email: stri
 });
 
 Then('accepting that invitation is refused as invalid or expired', async ({ world }) => {
-  const response = await fetch(trpcUrl('auth.acceptInvitation'), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
+  const response = await trpcMutate('auth.acceptInvitation', {
+    input: {
       token: world.inviteToken,
       name: 'Tardif',
       password: 'assez-long-pourtant',
-    }),
+    },
   });
   expect(response.status).toBe(400);
 });
@@ -281,14 +243,12 @@ Then('accepting that invitation is refused as invalid or expired', async ({ worl
 // ── Listing des tokens API ───────────────────────────────────────────────────
 
 async function findTokenInList(world: { sessionToken?: string }, name: string) {
-  const response = await fetch(trpcUrl('apiTokens.list'), {
-    headers: { authorization: `Bearer ${world.sessionToken}` },
-  });
+  const response = await trpcQuery<Array<{ name: string; revokedAt: string | null }>>(
+    'apiTokens.list',
+    { token: world.sessionToken },
+  );
   expect(response.status).toBe(200);
-  const body = (await response.json()) as {
-    result: { data: Array<{ name: string; revokedAt: string | null }> };
-  };
-  return body.result.data.find((token) => token.name === name);
+  return dataOf(response).find((token) => token.name === name);
 }
 
 Then('the token list shows {string} as active', async ({ world }, name: string) => {

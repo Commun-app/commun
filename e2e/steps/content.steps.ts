@@ -2,15 +2,12 @@ import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 import { test } from './fixtures.ts';
 import { API_URL, seed } from './instance.ts';
+import { trpcMutate, type ApiResponse } from './trpc.ts';
 
 const { Given, When, Then } = createBdd(test);
 
 const trpc = (procedure: string, token: string, input?: unknown) =>
-  fetch(`${API_URL}/api/trpc/${procedure}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify(input ?? {}),
-  });
+  trpcMutate(procedure, { input, token });
 
 // ── /api/content plane ───────────────────────────────────────────────────────
 
@@ -77,8 +74,7 @@ When(
       data: { title: 'Premier communiqué', slug, data: { body: 'Bonjour' } },
     });
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { result: { data: { id: string } } };
-    world.entryId = body.result.data.id;
+    world.entryId = (response.body as { result: { data: { id: string } } }).result.data.id;
   },
 );
 

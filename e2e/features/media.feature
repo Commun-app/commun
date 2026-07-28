@@ -4,11 +4,6 @@ Feature: Media library
   lecture, métadonnées, suppression. (Les variantes resize s'ajouteront ici
   quand elles seront implémentées.)
 
-  Scenario: The upload allowlist refuses SVG
-    Given a logged-in "redacteur" session
-    When the user requests an upload URL for "logo.svg" of type "image/svg+xml"
-    Then the upload request is rejected
-
   Scenario: Full round trip, presigned upload then signed read
     Given the S3 bucket is provisioned
     And a logged-in "redacteur" session

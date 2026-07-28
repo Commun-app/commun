@@ -4,15 +4,16 @@
 // state in the SAME database as the API under test, then talk HTTP only.
 // Prints a JSON result on stdout.
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 // Relative import: e2e/ is not a workspace package, @commun/core is unresolvable here.
 import { createCore, parseEnv, UsersRepository } from '../../packages/core/src/index.ts';
+import { ADMIN_URL, E2E_DATA_DIR, EMAIL_WEBHOOK, JWT_SECRET, S3 } from '../constants.ts';
+import { NEWS_DEFINITION, ORGANIZATION_INIT } from '../data/index.ts';
 
 // Chemin EXPLICITE uniquement (E2E_DATA_DIR, posé par e2e/steps/instance.ts) :
 // Bun charge automatiquement le .env racine, donc COMMUN_DATA_DIR peut pointer
 // vers une base de dev — le seed ne doit jamais écrire ailleurs que dans la
 // base jetable de l'API sous test.
-const dataDir = process.env.E2E_DATA_DIR ?? join(tmpdir(), 'commun-e2e-data');
+const dataDir = process.env.E2E_DATA_DIR ?? E2E_DATA_DIR;
 const migrationsDir = join(import.meta.dir, '..', '..', 'packages', 'core', 'drizzle');
 // S3 + webhook email REQUIS au boot (fail-fast) — mêmes valeurs que le
 // webServer Playwright.
@@ -20,20 +21,15 @@ const core = createCore({
   env: parseEnv({
     COMMUN_DATA_DIR: dataDir,
     COMMUN_MIGRATIONS_DIR: migrationsDir,
-    COMMUN_S3_ENDPOINT: 'http://127.0.0.1:9102',
-    COMMUN_S3_REGION: 'fr-par',
-    COMMUN_S3_BUCKET: 'commun-e2e',
-    COMMUN_S3_ACCESS_KEY: 'e2e-access',
-    COMMUN_S3_SECRET_KEY: 'e2e-secret-key',
-    // Port fermé VOLONTAIREMENT (échec immédiat, best-effort côté service) :
-    // le seed tourne en execFileSync dans le worker Playwright — s'il visait
-    // le récepteur 3199 hébergé par ce même worker (boucle bloquée), chaque
-    // émission deadlockerait. Seuls les événements émis par le SERVEUR sont
-    // capturés par les scénarios.
-    COMMUN_EMAIL_WEBHOOK_URL: 'http://127.0.0.1:9/discard',
-    COMMUN_EMAIL_WEBHOOK_TOKEN: 'e2e-webhook-token',
-    COMMUN_ADMIN_URL: 'https://admin.e2e.test',
-    COMMUN_JWT_SECRET: 'e2e-jwt-secret',
+    COMMUN_S3_ENDPOINT: S3.endpoint,
+    COMMUN_S3_REGION: S3.region,
+    COMMUN_S3_BUCKET: S3.bucket,
+    COMMUN_S3_ACCESS_KEY: S3.accessKey,
+    COMMUN_S3_SECRET_KEY: S3.secretKey,
+    COMMUN_EMAIL_WEBHOOK_URL: EMAIL_WEBHOOK.seedDiscardUrl,
+    COMMUN_EMAIL_WEBHOOK_TOKEN: EMAIL_WEBHOOK.token,
+    COMMUN_ADMIN_URL: ADMIN_URL,
+    COMMUN_JWT_SECRET: JWT_SECRET,
   }),
 });
 
@@ -55,11 +51,7 @@ switch (command) {
   }
   case 'organization': {
     if (!(await core.services.organization.get())) {
-      await core.services.organization.init({
-        name: 'Commune E2E',
-        slug: 'commune-e2e',
-        type: 'commune',
-      });
+      await core.services.organization.init({ ...ORGANIZATION_INIT });
     }
     console.log(JSON.stringify({ initialized: true }));
     break;
@@ -101,13 +93,13 @@ switch (command) {
     );
     const { S3Client, CreateBucketCommand } = requireFromCore('@aws-sdk/client-s3');
     const client = new S3Client({
-      region: 'fr-par',
-      endpoint: 'http://127.0.0.1:9102',
+      region: S3.region,
+      endpoint: S3.endpoint,
       forcePathStyle: true,
-      credentials: { accessKeyId: 'e2e-access', secretAccessKey: 'e2e-secret-key' },
+      credentials: { accessKeyId: S3.accessKey, secretAccessKey: S3.secretKey },
     });
     try {
-      await client.send(new CreateBucketCommand({ Bucket: 'commun-e2e' }));
+      await client.send(new CreateBucketCommand({ Bucket: S3.bucket }));
     } catch (error) {
       const name = (error as { name?: string }).name ?? '';
       if (!name.includes('BucketAlready')) throw error;
@@ -121,11 +113,7 @@ switch (command) {
     // Plus de collections seedées (revue 28/07) : la définition est créée ici.
     const hasNews = (await collections.listDefinitions()).some((d) => d.slug === 'news');
     if (!hasNews) {
-      await collections.createDefinition({
-        name: 'Actualités',
-        slug: 'news',
-        fields: [{ name: 'body', label: 'Corps', type: 'text', required: false, hidden: false }],
-      });
+      await collections.createDefinition(structuredClone(NEWS_DEFINITION) as never);
     }
     const existing = (await collections.listEntries('news')).find((entry) => entry.slug === slug);
     if (!existing) {
