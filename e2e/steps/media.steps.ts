@@ -1,22 +1,15 @@
 import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 import { test } from './fixtures.ts';
-import { API_URL, seed } from './instance.ts';
+import { seed } from './instance.ts';
+import { trpcMutate, trpcQuery } from './trpc.ts';
 
 const { Given, When, Then } = createBdd(test);
 
 const mutate = (procedure: string, token: string, input: unknown) =>
-  fetch(`${API_URL}/api/trpc/${procedure}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify(input),
-  });
-
+  trpcMutate(procedure, { input, token });
 const query = (procedure: string, token: string, input?: unknown) =>
-  fetch(
-    `${API_URL}/api/trpc/${procedure}${input ? `?input=${encodeURIComponent(JSON.stringify(input))}` : ''}`,
-    { headers: { authorization: `Bearer ${token}` } },
-  );
+  trpcQuery(procedure, { input, token });
 
 // Octets envoyés au bucket puis relus via l'URL signée (comparaison exacte).
 const FILE_BYTES = new TextEncoder().encode('e2e-jpeg-bytes-ÿØÿ');
@@ -36,7 +29,7 @@ When(
   async ({ world }, filename: string, mime: string) => {
     const response = await mutate('media.requestUpload', world.sessionToken!, { filename, mime });
     world.status = response.status;
-    world.body = await response.json();
+    world.body = response.body;
   },
 );
 
@@ -47,10 +40,6 @@ Then('a signed S3 upload URL is delivered', ({ world }) => {
   expect(body.result.data.url).toContain('X-Amz-Signature');
   presignedUrl = body.result.data.url;
   uploadKey = body.result.data.key;
-});
-
-Then('the upload request is rejected', ({ world }) => {
-  expect(world.status).toBe(400);
 });
 
 // ── Aller-retour S3 réel ─────────────────────────────────────────────────────
@@ -71,14 +60,13 @@ When('the upload is finalized', async ({ world }) => {
     mime: 'image/jpeg',
   });
   expect(response.status).toBe(200);
-  const body = (await response.json()) as { result: { data: { id: string } } };
-  world.mediaId = body.result.data.id;
+  world.mediaId = (response.body as { result: { data: { id: string } } }).result.data.id;
 });
 
 Then('the media library lists it with signed object URLs', async ({ world }) => {
   const response = await query('media.list', world.sessionToken!);
   expect(response.status).toBe(200);
-  const body = (await response.json()) as {
+  const body = response.body as {
     result: { data: Array<{ id: string; objects: Record<string, string> }> };
   };
   const media = body.result.data.find((row) => row.id === world.mediaId)!;
@@ -90,8 +78,7 @@ Then('downloading the signed original URL returns the uploaded bytes', async ({ 
   const media = await (async () => {
     const response = await query('media.get', world.sessionToken!, { id: world.mediaId });
     expect(response.status).toBe(200);
-    return ((await response.json()) as { result: { data: { objects: { original: string } } } })
-      .result.data;
+    return (response.body as { result: { data: { objects: { original: string } } } }).result.data;
   })();
   const download = await fetch(media.objects.original);
   expect(download.status).toBe(200);
@@ -111,8 +98,7 @@ When('the media alt text is updated to {string}', async ({ world }, alt: string)
 Then('the media alt text reads {string}', async ({ world }, alt: string) => {
   const response = await query('media.get', world.sessionToken!, { id: world.mediaId });
   expect(response.status).toBe(200);
-  const body = (await response.json()) as { result: { data: { alt: string } } };
-  expect(body.result.data.alt).toBe(alt);
+  expect((response.body as { result: { data: { alt: string } } }).result.data.alt).toBe(alt);
 });
 
 When('the media is removed', async ({ world }) => {
@@ -122,6 +108,6 @@ When('the media is removed', async ({ world }) => {
 
 Then('the media library no longer lists it', async ({ world }) => {
   const response = await query('media.list', world.sessionToken!);
-  const body = (await response.json()) as { result: { data: Array<{ id: string }> } };
+  const body = response.body as { result: { data: Array<{ id: string }> } };
   expect(body.result.data.some((row) => row.id === world.mediaId)).toBe(false);
 });

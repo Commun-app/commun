@@ -2,14 +2,19 @@ Feature: Users
   Comptes et rôles de l'instance : deux rôles fixes — admin gère tout,
   rédacteur gère le contenu. Le « /me » décrit le compte appelant.
 
-  Scenario: Me returns the calling account and its role
-    Given a logged-in "redacteur" session
-    Then the me procedure reports the "redacteur" role
+  Scenario Outline: Me returns the calling account and its role
+    Given a logged-in "<role>" session
+    Then the me procedure reports the "<role>" role
+
+    Examples:
+      | role      |
+      | admin     |
+      | redacteur |
 
   Scenario: A redacteur cannot manage users or collections
     Given a logged-in "redacteur" session
-    Then listing users is FORBIDDEN
-    And creating a collection is FORBIDDEN
+    Then calling procedure "users.list" fails with "FORBIDDEN"
+    And calling procedure "collections.create" with payload "collection-interdite" fails with "FORBIDDEN"
 
   Scenario: A redacteur can read the member directory
     Given a logged-in "redacteur" session
@@ -17,7 +22,7 @@ Feature: Users
 
   Scenario: An admin manages users and invites members
     Given a logged-in "admin" session
-    Then listing users succeeds
+    Then calling procedure "users.list" succeeds
     And inviting "nouveau@e2e.fr" as redacteur returns a single-use link
 
   Scenario: An admin renames a member and changes their role

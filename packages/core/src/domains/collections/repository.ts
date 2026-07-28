@@ -1,6 +1,5 @@
 import { and, desc, eq } from 'drizzle-orm';
 import type { StoreDb } from '../../infrastructure/db/index.ts';
-import { publishedWhere } from '../../infrastructure/db/schema.ts';
 import {
   collectionDefinitions,
   entries,
@@ -97,13 +96,16 @@ export class CollectionsRepository {
       .get();
   }
 
-  async listPublishedEntries(collectionId: string, now: string): Promise<Entry[]> {
-    return this.db
-      .select()
-      .from(entries)
-      .where(and(eq(entries.collectionId, collectionId), publishedWhere(entries, now)))
-      .orderBy(desc(entries.createdAt))
-      .all();
+  async listPublishedEntries(collectionId: string): Promise<Entry[]> {
+    return (
+      this.db
+        .select()
+        .from(entries)
+        // Iso legacy : le plan public filtre sur le STATUT seul (publishedAt = horodatage).
+        .where(and(eq(entries.collectionId, collectionId), eq(entries.status, 'published')))
+        .orderBy(desc(entries.createdAt))
+        .all()
+    );
   }
 
   async findEntryById(id: string): Promise<Entry | undefined> {

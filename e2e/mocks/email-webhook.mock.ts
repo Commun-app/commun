@@ -1,4 +1,5 @@
 import { createServer, type Server } from 'node:http';
+import { EMAIL_WEBHOOK } from '../constants.ts';
 
 /**
  * Récepteur du webhook email de l'API sous test (COMMUN_EMAIL_WEBHOOK_URL
@@ -13,9 +14,6 @@ export interface CapturedEvent {
   eventProperties: Record<string, string>;
   authValid: boolean;
 }
-
-const TOKEN = 'e2e-webhook-token'; // = COMMUN_EMAIL_WEBHOOK_TOKEN du webServer
-const PORT = 3199;
 
 let server: Server | null = null;
 const inbox: CapturedEvent[] = [];
@@ -32,14 +30,14 @@ export async function startEmailReceiver(): Promise<void> {
       >;
       inbox.push({
         ...payload,
-        authValid: request.headers.authorization === `Bearer ${TOKEN}`,
+        authValid: request.headers.authorization === `Bearer ${EMAIL_WEBHOOK.token}`,
       });
       response.writeHead(200).end('ok');
     });
   });
   await new Promise<void>((resolve, reject) => {
     server!.once('error', reject);
-    server!.listen(PORT, '127.0.0.1', resolve);
+    server!.listen(EMAIL_WEBHOOK.port, '127.0.0.1', resolve);
   });
 }
 

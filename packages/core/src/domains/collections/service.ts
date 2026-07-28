@@ -161,14 +161,8 @@ export class CollectionsService {
     });
   }
 
-  async listPublishedEntries(
-    collectionIdOrSlug: string,
-    now = new Date().toISOString(),
-  ): Promise<Entry[]> {
-    return this.repository.listPublishedEntries(
-      (await this.getDefinition(collectionIdOrSlug)).id,
-      now,
-    );
+  async listPublishedEntries(collectionIdOrSlug: string): Promise<Entry[]> {
+    return this.repository.listPublishedEntries((await this.getDefinition(collectionIdOrSlug)).id);
   }
 
   async createEntry(
@@ -224,8 +218,9 @@ export class CollectionsService {
 
     const patch: Partial<Entry> = { ...input, updatedBy: actorId ?? null };
     if (data) patch.data = data;
-    // Iso legacy: publishedAt posé au passage à published (si pas déjà tracé).
-    if (input.status === 'published' && !existing.publishedAt && !input.publishedAt) {
+    // Iso legacy (service-records update.action) : publishedAt est RÉÉCRIT à
+    // chaque passage en published — simple horodatage, aucune planification.
+    if (input.status === 'published' && !input.publishedAt) {
       patch.publishedAt = new Date().toISOString();
     }
 
@@ -351,10 +346,7 @@ export class CollectionsService {
   async legacyRecordsPayload(): Promise<Record<string, Record<string, unknown>>> {
     const records: Record<string, Record<string, unknown>> = {};
     for (const definition of await this.repository.listDefinitions()) {
-      const published = await this.repository.listPublishedEntries(
-        definition.id,
-        new Date().toISOString(),
-      );
+      const published = await this.repository.listPublishedEntries(definition.id);
       for (const entry of published) {
         if (definition.slug === 'events' && this.hasEmptySchedules(entry)) continue;
         // Iso legacy `select('-status -path')` : status exclu du payload public.
@@ -377,10 +369,10 @@ export class CollectionsService {
   }
 
   /** Public slugs of every published entry (`/collection/entry`), for the deployment payload. */
-  async publishedSlugs(now = new Date().toISOString()): Promise<string[]> {
+  async publishedSlugs(): Promise<string[]> {
     const slugs: string[] = [];
     for (const definition of await this.repository.listDefinitions()) {
-      const published = await this.repository.listPublishedEntries(definition.id, now);
+      const published = await this.repository.listPublishedEntries(definition.id);
       // Iso legacy : le filtre des events sans période ne s'applique QU'À
       // content/records — les slugs du deployment listent tout le publié.
       slugs.push(...published.map((entry) => `/${definition.slug}/${entry.slug}`));

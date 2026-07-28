@@ -1,13 +1,8 @@
 import { execFileSync } from 'node:child_process';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { E2E_DATA_DIR } from '../constants.ts';
 
-// The API under test (Playwright's webServer boots it on the dedicated port).
-export const API_URL = process.env.E2E_API_URL ?? 'http://127.0.0.1:3101';
-
-// MUST mirror the COMMUN_DATA_DIR of playwright.config.ts's webServer command
-// ("${TMPDIR:-/tmp}/commun-e2e-data" — Node's tmpdir() resolves to $TMPDIR).
-const E2E_DATA_DIR = join(tmpdir(), 'commun-e2e-data');
+export { API_URL } from '../constants.ts';
 
 /**
  * Seed state in the database of the API under test. The Playwright workers

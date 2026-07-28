@@ -57,15 +57,6 @@ Feature: CMS
     Then listing "annonces" with limit 2 returns 2 entries
     And listing "annonces" with skip 4 returns 1 entry
 
-  Scenario: A future publishedAt keeps a published entry off the public plane
-    Given a logged-in "admin" session
-    And an initialized organization
-    And an API token
-    When the admin creates a collection "convocations"
-    And creates a draft entry "seance-prochaine" in "convocations"
-    And the entry is published with a publishedAt one hour in the future
-    Then the records payload has no entry for collection "convocations"
-
   Scenario: Editorial lifecycle gates public visibility
     Given a logged-in "admin" session
     And an initialized organization

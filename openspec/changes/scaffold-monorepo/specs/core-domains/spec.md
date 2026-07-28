@@ -54,9 +54,8 @@ instances migrées reçoivent celles du legacy.
 ### Requirement: Cycle de publication du contenu
 Les entrées de collections SHALL porter un statut (`draft`, `published`, avec date de publication programmable) et seuls les contenus publiés SHALL être exposés sur le plan public.
 
-#### Scenario: Publication programmée
-- **WHEN** une entrée a le statut publié avec une date de publication future
-- **THEN** elle n'apparaît pas sur le plan public avant cette date, et y apparaît après
+#### Scenario: Publication programmée — RETIRÉ (revue 2026-07-28, vérifié dans service-records)
+- Le legacy filtre le plan public sur le STATUT seul ; `publishedAt` n'est qu'un horodatage réécrit à chaque publication. La planification n'existait pas — elle reviendra éventuellement comme vraie feature post-bascule.
 
 ### Requirement: Champ d'extension legacy
 Chaque table de contenu SHALL comporter une colonne JSON `legacy_extra` destinée aux champs du legacy sans équivalent, afin qu'aucune donnée ne soit perdue à la migration.

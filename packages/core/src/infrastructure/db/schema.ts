@@ -6,14 +6,7 @@
 // Phase 1 reproduces the legacy platform iso-functionally: every content
 // table carries a `legacy_extra` JSON column so nothing is lost when
 // migrating from the legacy Mongo platform.
-import { and, eq, isNull, lte, or, type SQL } from 'drizzle-orm';
-import {
-  integer,
-  sqliteTable,
-  text,
-  uniqueIndex,
-  type SQLiteColumn,
-} from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { z } from 'zod';
 
 // ── Column helpers ───────────────────────────────────────────────────────────
@@ -62,18 +55,13 @@ export const PUBLICATION_STATUSES = [
 const publicationStatus = () =>
   text('status', { enum: PUBLICATION_STATUSES }).notNull().default('draft');
 
-/** ISO timestamp de bascule en `published` — futur = publication programmée. */
-const publishedAt = () => text('published_at');
-
 /**
- * WHERE clause of the public plane: status=published AND (publishedAt unset OR
- * past). Shared by every publishable domain — scheduled items stay hidden.
+ * ISO timestamp de la (re)publication — simple horodatage iso legacy
+ * (réécrit à chaque passage en published), AUCUN rôle de planification :
+ * le plan public filtre sur le statut seul (vérifié dans service-records,
+ * revue 28/07).
  */
-export const publishedWhere = (
-  table: { status: SQLiteColumn; publishedAt: SQLiteColumn },
-  now: string = new Date().toISOString(),
-): SQL =>
-  and(eq(table.status, 'published'), or(isNull(table.publishedAt), lte(table.publishedAt, now)))!;
+const publishedAt = () => text('published_at');
 
 // ── Organization (singleton single-tenant) ───────────────────────────────────
 
