@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: Déploiement docker-compose
-Le repo SHALL fournir un `docker-compose.yml` de référence démarrant une instance complète (API + volume de données SQLite) configurée uniquement par variables d'environnement, documentée dans un fichier `.env.example` exhaustif, ainsi qu'un profil embarquant un service S3-compatible auto-hébergé (MinIO) — les médias exigeant un stockage S3 (iso legacy, review du 2026-07-23).
+Le repo SHALL fournir un `docker-compose.yml` de référence démarrant une instance complète (API + volume de données SQLite) configurée uniquement par variables d'environnement, documentée dans un fichier `.env.example` exhaustif — les médias exigeant un stockage S3-compatible EXTERNE (iso legacy ; Scaleway en production managée). Le profil « S3 auto-hébergé sur la même machine » a été retiré du compose de production (décision 2026-07-28) et reviendra en phase 6 avec Garage.
 
 #### Scenario: Démarrage en 10 minutes
 - **WHEN** un hébergeur copie `.env.example` en `.env`, renseigne les secrets et exécute `docker compose up`
@@ -13,9 +13,8 @@ Le repo SHALL fournir un `docker-compose.yml` de référence démarrant une inst
 - **WHEN** l'instance est arrêtée puis redémarrée via docker compose
 - **THEN** la base SQLite est intacte (volume persistant) ; les médias vivent sur le stockage S3
 
-#### Scenario: Profil S3 embarqué
-- **WHEN** l'hébergeur démarre le compose avec le profil S3 activé
-- **THEN** le service S3-compatible démarre avec l'instance et celle-ci l'utilise comme driver de stockage des médias
+#### Scenario: Profil S3 embarqué — RETIRÉ (décision 2026-07-28)
+- Le compose de production ne porte plus de service S3 : stockage externe uniquement (Scaleway…). L'option tout-en-un reviendra en phase 6 avec Garage.
 
 ### Requirement: Bootstrap du premier administrateur — RETIRÉ (décision Quentin, 2026-07-28)
 Le mécanisme de bootstrap (scripts/bootstrap-admin.ts) a été SUPPRIMÉ : les comptes proviennent de la migration legacy ou d'une invitation. La création du premier admin d'une instance VIERGE reviendra avec le CLI d'instance (phase 4, `admin:create`).
