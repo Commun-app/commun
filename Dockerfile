@@ -3,14 +3,15 @@ FROM oven/bun:1 AS build
 WORKDIR /app
 
 # Workspace manifests first for layer-cached installs.
-# .npmrc requis : sans lui la résolution de @poulpus/prose (optionnelle,
-# registre privé) diverge du lockfile. Aucun token nécessaire — les paquets
-# optionnels non téléchargeables sont sautés (l'image ne construit que l'API).
+# --no-save : sans token, bun ne sait sauter @poulpus/prose (optionnelle,
+# registre privé) qu'en install non-frozen, et celle-ci élaguerait le
+# lockfile — --no-save installe sans jamais l'écrire. L'image ne construit
+# que l'API ; disparaît avec prose (phase 4, TipTap OSS).
 COPY package.json bun.lock .npmrc ./
 COPY apps/api/package.json apps/api/
 COPY apps/admin/package.json apps/admin/
 COPY packages/core/package.json packages/core/
-RUN bun install --frozen-lockfile
+RUN bun install --no-save
 
 COPY . .
 RUN bun --filter @commun/api build
