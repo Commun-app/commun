@@ -1,0 +1,30 @@
+# Commun — services d'appoint pour le DÉVELOPPEMENT uniquement.
+# L'API et l'admin tournent en local (`bun run dev`) ; seul le stockage S3
+# est conteneurisé ici.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# puis dans .env :
+#   COMMUN_S3_ENDPOINT=http://127.0.0.1:9000
+#   COMMUN_S3_BUCKET=commun-dev
+#   COMMUN_S3_ACCESS_KEY=commun
+#   COMMUN_S3_SECRET_KEY=commun-dev-secret
+#
+# (Le docker-compose.yml de référence, lui, est le déploiement de PRODUCTION
+# auto-hébergé : api + profil s3.)
+
+services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ':9001'
+    ports:
+      - '127.0.0.1:9000:9000'
+      - '127.0.0.1:9001:9001' # console web
+    environment:
+      MINIO_ROOT_USER: commun
+      MINIO_ROOT_PASSWORD: commun-dev-secret
+    volumes:
+      - commun-dev-minio:/data
+
+volumes:
+  commun-dev-minio:

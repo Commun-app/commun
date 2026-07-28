@@ -7,7 +7,6 @@ export function slugify(value: string): string {
   return (
     value
       .normalize('NFD')
-      // biome-ignore lint/suspicious/noMisleadingCharacterClass: combining marks removal
       .replace(/[̀-ͯ]/g, '')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')

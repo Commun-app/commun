@@ -3,17 +3,17 @@ FROM oven/bun:1 AS build
 WORKDIR /app
 
 # Workspace manifests first for layer-cached installs.
-COPY package.json bun.lock ./
+# .npmrc requis : sans lui la résolution de @poulpus/prose (optionnelle,
+# registre privé) diverge du lockfile. Aucun token nécessaire — les paquets
+# optionnels non téléchargeables sont sautés (l'image ne construit que l'API).
+COPY package.json bun.lock .npmrc ./
 COPY apps/api/package.json apps/api/
+COPY apps/admin/package.json apps/admin/
 COPY packages/core/package.json packages/core/
-COPY packages/legacy-migrate/package.json packages/legacy-migrate/
 RUN bun install --frozen-lockfile
 
 COPY . .
 RUN bun --filter @commun/api build
-# Standalone first-admin bootstrap CLI (spec self-hosting) — bundled so the
-# runtime image needs no workspace sources.
-RUN bun build scripts/bootstrap-admin.ts --target=bun --outfile=bootstrap-admin.mjs
 
 FROM oven/bun:1 AS runtime
 WORKDIR /app
@@ -25,7 +25,6 @@ ENV COMMUN_MIGRATIONS_DIR=/app/drizzle
 
 COPY --from=build /app/apps/api/.output ./.output
 COPY --from=build /app/packages/core/drizzle ./drizzle
-COPY --from=build /app/bootstrap-admin.mjs ./bootstrap-admin.mjs
 
 RUN mkdir -p /data && chown bun:bun /data
 USER bun

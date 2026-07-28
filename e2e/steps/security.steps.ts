@@ -260,7 +260,7 @@ Then('the session list shows {int} active device', async ({ world }, count: numb
 
 // ── Invitation expirée ───────────────────────────────────────────────────────
 
-Given('the invitations of {string} are expired', ({}, email: string) => {
+Given('the invitations of {string} are expired', ({ world: _world }, email: string) => {
   seed('expire-invitation', email);
 });
 

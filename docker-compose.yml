@@ -1,8 +1,12 @@
-# Commun — auto-hébergement de référence (spec self-hosting).
+# Commun — auto-hébergement de référence, PRODUCTION (spec self-hosting).
+# (Pour le développement : docker-compose.dev.yml — MinIO seul, l'app tourne
+# en local via `bun run dev`.)
 #
 #   cp .env.example .env   # ajustez si besoin (port, S3…)
 #   docker compose up -d
-#   docker compose exec api bun bootstrap-admin.mjs <email>   # premier admin
+#
+# Les comptes utilisateurs proviennent de la migration legacy ou d'une
+# invitation ; le bootstrap d'instance vierge a été retiré (décision 28/07).
 #
 # Les médias vivent sur un stockage S3-compatible (iso legacy) : soit un
 # service externe (Scaleway, Garage…), soit le profil `s3` ci-dessous (MinIO) :
