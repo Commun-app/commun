@@ -1,61 +1,62 @@
+import { AGENDA_MAPPING, LIEUX_MAPPING } from './mappings.ts';
+
 /**
- * Configuration ot-pertuis de jobs.feature — extrait FIDÈLE du mapping du
- * pipeline APIDAE 0 de production (dump `.dump`). Le jeu de données servi par
- * le mock vit dans `objets.json` : PLACEHOLDER réaliste à remplacer par une
- * capture réelle de `list-objets-touristiques` (curl ot-pertuis, à fournir).
+ * Configuration ot-pertuis de jobs.feature — ISO PRODUCTION : les deux
+ * pipelines APIDAE réels avec leurs mappings extraits du dump (mappings.ts,
+ * généré) et leurs ObjectId legacy. Seuls les credentials sont factices.
+ *
+ * Le jeu de données servi par le mock (`objets.json`, clé = selectionId) est
+ * une CAPTURE RÉELLE de `list-objets-touristiques` (curl ot-pertuis 29/07),
+ * curée pour rester stable dans le temps : objets `tousLesAns` (rebasés
+ * chaque année, jamais expirés) + un événement 2018 expiré à jamais — aucun
+ * objet à dates fixes récentes dont l'expiration ferait dériver les compteurs.
  */
 
-/** ObjectId Mongo de la collection legacy — la config injector référence ça. */
-export const APIDAE_LEGACY_COLLECTION_ID = '6477737e1548ddf04ff95042';
+export const LIEUX_LEGACY_ID = '6477737e1548ddf04ff95042';
+export const AGENDA_LEGACY_ID = '64eb2461ff06e858d5404d16';
 
-/** Définition migrée correspondante (types produits par la CLI de migration). */
-export const APIDAE_DEFINITION = {
-  name: 'Agenda APIDAE',
-  slug: 'agenda-apidae',
-  fields: [
-    { name: 'apidaeId', label: 'apidaeId', type: 'text', required: false, hidden: true },
-    { name: 'description', label: 'Description', type: 'text', required: false, hidden: false },
-    { name: 'content', label: 'Contenu', type: 'rich-text', required: false, hidden: false },
-    { name: 'location', label: 'Localisation', type: 'json', required: false, hidden: false },
-    { name: 'email', label: 'Email', type: 'text', required: false, hidden: false },
-    { name: 'phone', label: 'Téléphone', type: 'text', required: false, hidden: false },
-    { name: 'services', label: 'Services', type: 'json', required: false, hidden: false },
-    { name: 'schedules', label: 'Horaires', type: 'json', required: false, hidden: false },
-    { name: 'cover', label: 'Couverture', type: 'media', required: false, hidden: false },
-  ],
-} as const;
+const BASE_FIELDS = [
+  { name: 'apidaeId', label: 'apidaeId', type: 'text', required: false, hidden: true },
+  { name: 'apidaeData', label: 'Objet APIDAE', type: 'json', required: false, hidden: true },
+  { name: 'description', label: 'Description', type: 'text', required: false, hidden: false },
+  { name: 'content', label: 'Contenu', type: 'rich-text', required: false, hidden: false },
+  { name: 'location', label: 'Localisation', type: 'json', required: false, hidden: false },
+  { name: 'email', label: 'Email', type: 'text', required: false, hidden: false },
+  { name: 'phone', label: 'Téléphone', type: 'text', required: false, hidden: false },
+  { name: 'website', label: 'Site web', type: 'text', required: false, hidden: false },
+  { name: 'socials', label: 'Réseaux sociaux', type: 'json', required: false, hidden: false },
+  { name: 'services', label: 'Services', type: 'json', required: false, hidden: false },
+  { name: 'equipments', label: 'Équipements', type: 'json', required: false, hidden: false },
+  {
+    name: 'paymentMethods',
+    label: 'Moyens de paiement',
+    type: 'json',
+    required: false,
+    hidden: false,
+  },
+  { name: 'languages', label: 'Langues parlées', type: 'json', required: false, hidden: false },
+  { name: 'schedules', label: 'Horaires', type: 'json', required: false, hidden: false },
+  { name: 'cover', label: 'Couverture', type: 'media', required: false, hidden: false },
+];
 
-const OT_PERTUIS_MAPPING = {
-  apidaeId: { source: 'id' },
-  title: { source: 'nom.libelleFr' },
-  description: { source: 'presentation.descriptifCourt.libelleFr' },
-  content: { source: 'presentation.descriptifDetaille.libelleFr' },
-  'location.address': {
-    transform: {
-      $concat: [
-        { source: 'localisation.adresse.adresse1' },
-        { source: 'localisation.adresse.adresse2' },
-        { source: 'localisation.adresse.commune.codePostal' },
-        { source: 'localisation.adresse.commune.nom' },
-      ],
-    },
+/** Définitions migrées correspondantes (types produits par la CLI de migration). */
+export const APIDAE_DEFINITIONS = [
+  {
+    name: 'Lieux APIDAE',
+    slug: 'lieux-apidae',
+    legacyId: LIEUX_LEGACY_ID,
+    fields: BASE_FIELDS,
   },
-  'location.coordinates': { source: 'localisation.geolocalisation.geoJson.coordinates' },
-  email: {
-    source: 'informations.moyensCommunication.$[communication].[0].coordonnees.fr',
-    transform: { $arrayFilters: [{ '$communication.type.id': { $eq: 204 } }] },
+  {
+    name: 'Agenda APIDAE',
+    slug: 'agenda-apidae',
+    legacyId: AGENDA_LEGACY_ID,
+    fields: [
+      ...BASE_FIELDS,
+      { name: 'city', label: 'Commune', type: 'text', required: false, hidden: false },
+    ],
   },
-  phone: {
-    source: 'informations.moyensCommunication.$[communication].[0].coordonnees.fr',
-    transform: { $arrayFilters: [{ '$communication.type.id': { $eq: 201 } }] },
-  },
-  services: {
-    source: 'prestations.services.$[service]',
-    transform: { $mapping: [{ '$service.id': true, '$service.libelleFr': true }] },
-  },
-  schedules: { source: 'ouverture', transform: { '@apidaeSchedules': true } },
-  cover: { source: 'illustrations', transform: { '@apidaeMedia': true } },
-};
+];
 
 /** Config `organization.legacyExtra.injector` iso production (+ pipeline airtable ignoré). */
 export const APIDAE_INJECTOR = {
@@ -65,10 +66,18 @@ export const APIDAE_INJECTOR = {
       sort: 'apidae',
       unlink: true,
       credentials: { projectId: 'projet-e2e', apiKey: 'cle-e2e' },
-      collection: APIDAE_LEGACY_COLLECTION_ID,
-      mapping: OT_PERTUIS_MAPPING,
+      collection: LIEUX_LEGACY_ID,
+      mapping: LIEUX_MAPPING,
       selectionIds: [148923],
     },
     { sort: 'airtable', unlink: false },
+    {
+      sort: 'apidae',
+      unlink: true,
+      credentials: { projectId: 'projet-e2e', apiKey: 'cle-e2e' },
+      collection: AGENDA_LEGACY_ID,
+      mapping: AGENDA_MAPPING,
+      selectionIds: [146701],
+    },
   ],
 };

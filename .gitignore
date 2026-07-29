@@ -30,3 +30,7 @@ packages/legacy-migrate/
 # son .env depuis apps/api, pas depuis la racine du monorepo) — la cible reste
 # ignorée, aucun secret dans le repo.
 !apps/api/.env
+
+# Captures APIDAE brutes (réponse avec query/apiKey échoïsées) — le dataset
+# curé vit dans e2e/data/apidae/objets.json
+/apidae-*.json

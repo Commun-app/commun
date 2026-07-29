@@ -16,7 +16,8 @@ import { APIDAE_MOCK } from '../constants.ts';
 type Objet = Record<string, unknown> & { id: number; illustrations?: unknown[] };
 
 let server: Server | null = null;
-let dataset: Objet[] = [];
+/** Capture réelle, clé = selectionId (les deux pipelines ot-pertuis). */
+let dataset: Record<string, Objet[]> = {};
 const removedIds = new Set<number>();
 let apidaeDown = false;
 let hookHits = 0;
@@ -24,19 +25,21 @@ let hookHits = 0;
 // Un vrai en-tête JPEG suffit (le sink ne décode pas l'image).
 const JPEG_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
 
-function loadDataset(): Objet[] {
+function loadDataset(): Record<string, Objet[]> {
   const raw = JSON.parse(
     readFileSync(join(__dirname, '..', 'data', 'apidae', 'objets.json'), 'utf8'),
-  ) as Objet[];
+  ) as Record<string, Objet[]>;
   // Réécriture des URLs d'illustrations vers le mock.
-  for (const objet of raw) {
-    for (const illustration of (objet.illustrations ?? []) as Array<
-      Record<string, unknown> & { identifiant?: number }
-    >) {
-      for (const translation of (illustration.traductionFichiers ?? []) as Array<
-        Record<string, unknown>
+  for (const objets of Object.values(raw)) {
+    for (const objet of objets) {
+      for (const illustration of (objet.illustrations ?? []) as Array<
+        Record<string, unknown> & { identifiant?: number }
       >) {
-        translation.url = `${APIDAE_MOCK.mediaBase}/${illustration.identifiant}.${translation.extension}`;
+        for (const translation of (illustration.traductionFichiers ?? []) as Array<
+          Record<string, unknown>
+        >) {
+          translation.url = `${APIDAE_MOCK.mediaBase}/${illustration.identifiant}.${translation.extension}`;
+        }
       }
     }
   }
@@ -57,8 +60,10 @@ export async function startApidaeMock(): Promise<void> {
       const query = JSON.parse(url.searchParams.get('query') ?? '{}') as {
         first?: number;
         count?: number;
+        selectionIds?: number[];
       };
-      const objets = dataset
+      const selection = String(query.selectionIds?.[0] ?? '');
+      const objets = (dataset[selection] ?? [])
         .filter((objet) => !removedIds.has(objet.id))
         .slice(query.first ?? 0, (query.first ?? 0) + (query.count ?? 20));
       response

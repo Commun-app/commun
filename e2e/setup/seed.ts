@@ -14,11 +14,7 @@ import {
 } from '../../packages/core/src/index.ts';
 import { ADMIN_URL, E2E_DATA_DIR, EMAIL_WEBHOOK, JWT_SECRET, S3 } from '../constants.ts';
 import { NEWS_DEFINITION, ORGANIZATION_INIT } from '../data/index.ts';
-import {
-  APIDAE_DEFINITION,
-  APIDAE_INJECTOR,
-  APIDAE_LEGACY_COLLECTION_ID,
-} from '../data/apidae/index.ts';
+import { APIDAE_DEFINITIONS, APIDAE_INJECTOR } from '../data/apidae/index.ts';
 
 // Chemin EXPLICITE uniquement (E2E_DATA_DIR, posé par e2e/steps/instance.ts) :
 // Bun charge automatiquement le .env racine, donc COMMUN_DATA_DIR peut pointer
@@ -144,9 +140,10 @@ switch (command) {
     break;
   }
   case 'apidae': {
-    // Instance ot-pertuis de jobs.feature : injector dans legacyExtra (iso
-    // migration — aucune surface service ne l'écrit), définition migrée avec
-    // son legacyId, et une entrée publiée absente de la source (cible unlink).
+    // Instance ot-pertuis de jobs.feature, ISO PRODUCTION : injector dans
+    // legacyExtra (iso migration — aucune surface service ne l'écrit), les
+    // DEUX définitions migrées (lieux + agenda) avec leurs legacyId, et une
+    // entrée publiée absente de la source (cible unlink) dans l'agenda.
     if (!(await core.services.organization.get())) {
       await core.services.organization.init({ ...ORGANIZATION_INIT });
     }
@@ -155,17 +152,25 @@ switch (command) {
     });
 
     const collections = core.services.collections;
-    const slug = APIDAE_DEFINITION.slug;
-    if (!(await collections.listDefinitions()).some((definition) => definition.slug === slug)) {
-      const definition = await new CollectionsRepository(core.db).insertDefinition({
-        ...(structuredClone(APIDAE_DEFINITION) as never),
-        legacyExtra: { legacyId: APIDAE_LEGACY_COLLECTION_ID },
+    const repository = new CollectionsRepository(core.db);
+    const existingSlugs = new Set(
+      (await collections.listDefinitions()).map((definition) => definition.slug),
+    );
+    for (const seedDefinition of APIDAE_DEFINITIONS) {
+      if (existingSlugs.has(seedDefinition.slug)) continue;
+      const definition = await repository.insertDefinition({
+        name: seedDefinition.name,
+        slug: seedDefinition.slug,
+        fields: structuredClone(seedDefinition.fields) as never,
+        legacyExtra: { legacyId: seedDefinition.legacyId },
       });
-      const stale = await collections.createEntry(definition.id, {
-        title: 'Événement disparu de la source',
-        data: { apidaeId: '424242' },
-      });
-      await collections.updateEntry(stale.id, { status: 'published' });
+      if (seedDefinition.slug === 'agenda-apidae') {
+        const stale = await collections.createEntry(definition.id, {
+          title: 'Événement disparu de la source',
+          data: { apidaeId: '424242' },
+        });
+        await collections.updateEntry(stale.id, { status: 'published' });
+      }
     }
     console.log(JSON.stringify({ configured: true }));
     break;

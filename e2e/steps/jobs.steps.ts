@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 import { dataOf, trpcMutate, trpcQuery } from '../clients/client-trpc.ts';
 import { APIDAE_MOCK } from '../constants.ts';
-import { APIDAE_DEFINITION } from '../data/apidae/index.ts';
+import { APIDAE_DEFINITIONS } from '../data/apidae/index.ts';
 import {
   removeObjet,
   setApidaeDown,
@@ -32,12 +32,16 @@ interface SyncReport {
   ignored: number;
   pipelines: PipelineReport[];
 }
+
 function syncReport(world: World): SyncReport {
   return world.taskResult as SyncReport;
 }
-function firstPipeline(world: World): PipelineReport {
-  const [pipeline] = syncReport(world).pipelines;
-  expect(pipeline).toBeDefined();
+
+function pipelineFor(world: World, collectionSlug: string): PipelineReport {
+  const pipeline = syncReport(world).pipelines.find(
+    (candidate) => candidate.collection === collectionSlug,
+  );
+  expect(pipeline, `pipeline ${collectionSlug} absent du rapport`).toBeDefined();
   return pipeline!;
 }
 
@@ -48,25 +52,30 @@ interface EntryRow {
   data: Record<string, unknown>;
 }
 
-/** Les entrées de la collection APIDAE, via la même surface tRPC que l'admin. */
-async function agendaEntries(world: World): Promise<EntryRow[]> {
+/** Les entrées d'une collection APIDAE, via la même surface tRPC que l'admin. */
+async function entriesOf(world: World, slug: string): Promise<EntryRow[]> {
   const definitions = dataOf<Array<{ id: string; slug: string }>>(
     await trpcQuery('collections.list', { token: world.sessionToken }),
   );
-  const definition = definitions.find((d) => d.slug === APIDAE_DEFINITION.slug);
-  expect(definition).toBeDefined();
+  const definition = definitions.find((d) => d.slug === slug);
+  expect(definition, `définition ${slug} introuvable`).toBeDefined();
   return dataOf<EntryRow[]>(
     await trpcQuery('collections.entries.list', {
-      input: { collectionId: definition!.id },
+      input: { collectionId: definition!.id, limit: 100 },
       token: world.sessionToken,
     }),
   );
 }
 
+/** Une entrée par son apidaeId, cherchée dans les deux collections APIDAE. */
 async function entryByApidaeId(world: World, apidaeId: string): Promise<EntryRow> {
-  const entry = (await agendaEntries(world)).find((row) => row.data.apidaeId === apidaeId);
-  expect(entry, `entrée apidaeId=${apidaeId} introuvable`).toBeDefined();
-  return entry!;
+  for (const definition of APIDAE_DEFINITIONS) {
+    const entry = (await entriesOf(world, definition.slug)).find(
+      (row) => row.data.apidaeId === apidaeId,
+    );
+    if (entry) return entry;
+  }
+  throw new Error(`entrée apidaeId=${apidaeId} introuvable`);
 }
 
 // ── Infrastructure ───────────────────────────────────────────────────────────
@@ -138,9 +147,9 @@ Then('the deployment succeeds and the Vercel hook was called', ({ world }) => {
 // ── Rapport de sync ──────────────────────────────────────────────────────────
 
 Then(
-  'the sync report counts {int} created, {int} updated and {int} expired object(s)',
-  ({ world }, created: number, updated: number, expired: number) => {
-    const pipeline = firstPipeline(world);
+  'the sync report for {string} counts {int} created, {int} updated and {int} expired',
+  ({ world }, slug: string, created: number, updated: number, expired: number) => {
+    const pipeline = pipelineFor(world, slug);
     expect(pipeline.errors).toEqual([]);
     expect(pipeline.created).toBe(created);
     expect(pipeline.updated).toBe(updated);
@@ -152,17 +161,19 @@ Then('the airtable pipeline was ignored', ({ world }) => {
   expect(syncReport(world).ignored).toBe(1);
 });
 
-Then('the sync report reused the existing media without re-uploading', ({ world }) => {
-  const pipeline = firstPipeline(world);
-  expect(pipeline.mediaReused).toBe(1);
-  expect(pipeline.mediaUploaded).toBe(0);
+Then('the sync report reused every existing media without re-uploading', ({ world }) => {
+  for (const pipeline of syncReport(world).pipelines) {
+    expect(pipeline.mediaUploaded).toBe(0);
+    expect(pipeline.mediaReused).toBeGreaterThan(0);
+  }
 });
 
 Then('the sync report flags a collect failure with the unlink skipped', ({ world }) => {
-  const pipeline = firstPipeline(world);
-  expect(pipeline.collectFailed).toBe(true);
-  expect(pipeline.unlinkSkipped).toBe(true);
-  expect(pipeline.errors.length).toBeGreaterThan(0);
+  for (const pipeline of syncReport(world).pipelines) {
+    expect(pipeline.collectFailed).toBe(true);
+    expect(pipeline.unlinkSkipped).toBe(true);
+    expect(pipeline.errors.length).toBeGreaterThan(0);
+  }
 });
 
 // ── Contenu synchronisé ──────────────────────────────────────────────────────
@@ -197,17 +208,21 @@ Then(
     const schedules = entry.data.schedules as { periods: Array<{ fromDate: string }> };
     expect(schedules.periods.length).toBeGreaterThan(0);
     expect(schedules.periods[0]?.fromDate).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    // Enums réduits aux ids (iso legacy).
-    expect(entry.data.services).toEqual([1234, 999]);
-    // Média uploadé et référencé par id.
+    // Enums réduits aux ids (iso legacy) — jamais des objets { id, libelleFr }.
+    const services = entry.data.services as unknown[];
+    expect(services.length).toBeGreaterThan(0);
+    expect(services.every((value) => typeof value !== 'object')).toBe(true);
+    // Médias uploadés et référencés par id.
     const cover = entry.data.cover as string[];
-    expect(cover).toHaveLength(1);
+    expect(cover.length).toBeGreaterThan(0);
     expect(typeof cover[0]).toBe('string');
   },
 );
 
-Then('the collection holds a single entry per APIDAE id', async ({ world }) => {
-  const entries = await agendaEntries(world);
-  const ids = entries.map((row) => row.data.apidaeId).filter(Boolean);
-  expect(new Set(ids).size).toBe(ids.length);
+Then('each collection holds a single entry per APIDAE id', async ({ world }) => {
+  for (const definition of APIDAE_DEFINITIONS) {
+    const entries = await entriesOf(world, definition.slug);
+    const ids = entries.map((row) => row.data.apidaeId).filter(Boolean);
+    expect(new Set(ids).size).toBe(ids.length);
+  }
 });
