@@ -55,7 +55,7 @@ export interface ApidaeSyncDeps extends SinkDeps {
 
 export interface ApidaeSyncOptions {
   fetchImpl?: typeof fetch;
-  /** Surcharge de l'URL APIDAE (tests, env APIDAE_API_URL). */
+  /** Surcharge de l'URL APIDAE (E2E ; env COMMUN_APIDAE_API_URL côté task). */
   apidaeBaseUrl?: string;
   /** « Maintenant » des périodes — évalué à l'exécution (correctif legacy). */
   now?: DateTime;

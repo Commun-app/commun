@@ -1,7 +1,7 @@
 Feature: Scheduled jobs
   Portage des jobs legacy (change port-legacy-jobs) : la sync APIDAE écrit le
-  contenu via les services du core, le deploy déclenche le hook Vercel, la
-  passe quotidienne enchaîne sync PUIS deploy. Le mock APIDAE sert un jeu de
+  contenu via les services du core, le deploy déclenche le hook Vercel
+  (cron : une entrée par tâche, sync avant deploy par la marge horaire). Le mock APIDAE sert un jeu de
   données ot-pertuis de bout en bout — API réelle, task réelle, S3 réel.
 
   Background:
@@ -45,9 +45,3 @@ Feature: Scheduled jobs
     When the "apidae:sync" task runs
     Then the sync report flags a collect failure with the unlink skipped
     And the entry for APIDAE id "5211547" is published
-
-  Scenario: The daily pass still deploys when the sync fails
-    Given the APIDAE API is down
-    And the Vercel deploy hook points at the local mock
-    When the "jobs:daily" task runs
-    Then the daily report carries the sync failure and a triggered deploy

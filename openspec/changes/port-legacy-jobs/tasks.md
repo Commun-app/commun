@@ -1,7 +1,7 @@
 ## 1. Socle Nitro tasks
 
-- [x] 1.1 Activer les tasks dans la config Nitro d'apps/api (`defineTask`/`runTask` via `nitro/task`) et créer une task de démonstration exécutable, avec l'entrée `scheduledTasks` quotidienne (05:00 Europe/Paris) pointant sur la tâche orchestratrice
-- [x] 1.2 Tâche orchestratrice `jobs:daily` : `runTask('apidae:sync')` puis `runTask('deploy')`, deploy maintenu si la sync échoue, rapport agrégé loggé
+- [x] 1.1 Activer les tasks dans la config Nitro d'apps/api (`defineTask`/`runTask` via `nitro/task`) avec deux entrées `scheduledTasks` quotidiennes : `apidae:sync` 05:00, `deploy` 05:30 (review PR #4 : une entrée par tâche, ordre garanti par la marge)
+- [x] 1.2 Route interne `/_tasks/:name` (COMMUN_TASKS_HTTP, harness E2E seul — l'endpoint natif de Nitro n'existe qu'en dev) ; tâche orchestratrice `jobs:daily` supprimée (review PR #4)
 
 ## 2. Deploy
 
@@ -32,6 +32,6 @@
 
 - [x] 5.1 Mock APIDAE dans le harness E2E (pagination réelle, binaires de médias, hook Vercel compté, panne simulable) servant un dataset ot-pertuis — placeholder à remplacer par la capture réelle fournie par Quentin
 - [x] 5.2 Scénarios E2E jobs.feature : deploy (sans/avec hook), import initial publié (schedules, enums, média), upsert sans doublon, expiration `E_EVENT_EXPIRED`
-- [x] 5.3 Scénarios E2E unlink : disparition → draft, créations préservées, panne APIDAE → unlink annulé ; passe quotidienne : deploy maintenu malgré la sync en échec
+- [x] 5.3 Scénarios E2E unlink : disparition → draft, créations préservées, panne APIDAE → unlink annulé (le « deploy maintenu » est garanti par l'indépendance des entrées cron)
 - [x] 5.4 Zéro appel réseau sortant en CI (URLs de médias réécrites vers le mock) ; suppression des tests unitaires bun (review PR #4)
 - [ ] 5.5 Passe manuelle sur copie de la base ot-pertuis migrée : diff du contenu avec le legacy (plan de migration, étape 2)

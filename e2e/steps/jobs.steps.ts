@@ -32,11 +32,6 @@ interface SyncReport {
   ignored: number;
   pipelines: PipelineReport[];
 }
-interface DailyReport {
-  sync: { result: SyncReport };
-  deploy: { result: { triggered: boolean } };
-}
-
 function syncReport(world: World): SyncReport {
   return world.taskResult as SyncReport;
 }
@@ -138,13 +133,6 @@ Then('the deployment fails with {string}', ({ world }, code: string) => {
 Then('the deployment succeeds and the Vercel hook was called', ({ world }) => {
   expect(world.status).toBe(200);
   expect(vercelHookHits()).toBeGreaterThan(world.hookHitsBefore ?? 0);
-});
-
-Then('the daily report carries the sync failure and a triggered deploy', ({ world }) => {
-  const daily = world.taskResult as DailyReport;
-  expect(daily.deploy.result.triggered).toBe(true);
-  const [pipeline] = daily.sync.result.pipelines;
-  expect(pipeline?.collectFailed).toBe(true);
 });
 
 // ── Rapport de sync ──────────────────────────────────────────────────────────

@@ -48,7 +48,7 @@ export default defineConfig({
         // jobs.feature : mock APIDAE (e2e/mocks/apidae.mock.ts, démarré par
         // les steps) + route interne d'exécution des tasks (le endpoint tasks
         // de Nitro n'existe qu'en dev, la suite boote le bundle de prod).
-        'APIDAE_API_URL=http://127.0.0.1:3198/apidae ' +
+        'COMMUN_APIDAE_API_URL=http://127.0.0.1:3198/apidae ' +
         'COMMUN_TASKS_HTTP=1 ' +
         'PORT=3101 bun apps/api/.output/server/index.mjs',
       url: 'http://127.0.0.1:3101/health',

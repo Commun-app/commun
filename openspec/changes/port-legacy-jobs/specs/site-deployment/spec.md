@@ -30,12 +30,12 @@ Une procédure tRPC `organization.deploy` (plan admin, authentifiée) SHALL exé
 
 ### Requirement: Planification quotidienne, sync avant deploy
 
-La tâche deploy SHALL être planifiée quotidiennement via les scheduled tasks Nitro, et SHALL s'exécuter APRÈS la synchronisation APIDAE (correction de l'ordre legacy où le deploy à 00:30 précédait la sync de 05:30). Un échec de la sync SHALL NOT empêcher le deploy (les modifications éditoriales de la veille doivent être publiées même si APIDAE est en panne).
+Les tâches SHALL être planifiées quotidiennement via les scheduled tasks Nitro, avec **une entrée cron par tâche** (review PR #4 — pas de tâche orchestratrice) : la sync APIDAE d'abord, la tâche deploy ensuite avec une marge horaire suffisante (30 min — la sync se compte en minutes). L'ordre corrige le legacy où le deploy à 00:30 précédait la sync de 05:30. Les deux entrées étant indépendantes, un échec de la sync SHALL NOT empêcher le deploy (les modifications éditoriales de la veille doivent être publiées même si APIDAE est en panne).
 
 #### Scenario: Passe quotidienne nominale
-- **WHEN** le déclencheur quotidien s'exécute
-- **THEN** la synchronisation APIDAE s'exécute d'abord, puis la tâche deploy
+- **WHEN** les déclencheurs quotidiens s'exécutent
+- **THEN** la synchronisation APIDAE s'exécute à son horaire, puis la tâche deploy au sien, après la fin de la sync
 
 #### Scenario: Sync en échec, deploy maintenu
 - **WHEN** la synchronisation APIDAE échoue
-- **THEN** la tâche deploy s'exécute quand même et l'échec de la sync est rapporté
+- **THEN** la tâche deploy s'exécute quand même à son horaire (entrées cron indépendantes) et l'échec de la sync est rapporté

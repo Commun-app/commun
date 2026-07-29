@@ -14,9 +14,10 @@ export default defineTask({
     description: 'Synchronise les objets touristiques APIDAE vers les collections',
   },
   async run() {
-    const report = await runApidaeSync(depsFromCore(useCore()), {
-      // Surcharge de l'API APIDAE (E2E, bac à sable).
-      apidaeBaseUrl: process.env.APIDAE_API_URL || undefined,
+    const core = useCore();
+    const report = await runApidaeSync(depsFromCore(core), {
+      // Surcharge de l'API APIDAE (E2E, bac à sable) — via l'env unifié du core.
+      apidaeBaseUrl: core.env.COMMUN_APIDAE_API_URL || undefined,
     });
     return { result: report };
   },

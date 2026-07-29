@@ -10,12 +10,14 @@ process.env.COMMUN_MIGRATIONS_DIR ??= resolve(import.meta.dirname, '../../packag
 export default defineConfig({
   serverDir: 'server',
   compatibilityDate: '2026-05-19',
-  // Tâches portées du legacy (change port-legacy-jobs) : sync APIDAE puis
-  // deploy, une fois par jour. Le cron suit l'heure LOCALE du serveur —
-  // 05:00, heure creuse (le legacy synchronisait à 05:30 UTC).
+  // Tâches portées du legacy (change port-legacy-jobs) : une entrée cron par
+  // tâche (review PR #4). L'ordre sync PUIS deploy est garanti par la marge
+  // de 30 min (la sync d'ot-pertuis se compte en minutes) — le legacy
+  // déployait AVANT la sync. Heure LOCALE du serveur, plage creuse.
   experimental: { tasks: true },
   scheduledTasks: {
-    '0 5 * * *': ['jobs:daily'],
+    '0 5 * * *': ['apidae:sync'],
+    '30 5 * * *': ['deploy'],
   },
   runtimeConfig: {
     // Instance data directory (overridable via COMMUN_DATA_DIR).

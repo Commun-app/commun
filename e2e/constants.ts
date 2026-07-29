@@ -39,7 +39,7 @@ export const EMAIL_WEBHOOK = {
 
 /**
  * Mock APIDAE + hook Vercel (e2e/mocks/apidae.mock.ts) — jobs.feature.
- * L'API sous test le voit via APIDAE_API_URL (webServer, littéral dupliqué).
+ * L'API sous test le voit via COMMUN_APIDAE_API_URL (webServer, littéral dupliqué).
  */
 export const APIDAE_MOCK = {
   port: 3198,

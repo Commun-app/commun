@@ -27,6 +27,12 @@ const envSchema = z.object({
   COMMUN_ADMIN_URL: z.string().optional(),
   /** Secret HMAC des JWT de session — REQUIS au boot (fail-fast). */
   COMMUN_JWT_SECRET: z.string().optional(),
+  /**
+   * Surcharge de la base de l'API APIDAE (E2E : mock local ; défaut HTTPS
+   * dans @commun/apidae-sync, seul consommateur — déclarée ici pour que TOUT
+   * l'env passe par parseEnv, review PR #4).
+   */
+  COMMUN_APIDAE_API_URL: z.string().optional(),
 });
 
 export type CoreEnv = z.infer<typeof envSchema>;
@@ -48,5 +54,6 @@ export function parseEnv(raw: Record<string, string | undefined> = process.env):
     COMMUN_EMAIL_WEBHOOK_TOKEN: raw.COMMUN_EMAIL_WEBHOOK_TOKEN,
     COMMUN_ADMIN_URL: raw.COMMUN_ADMIN_URL,
     COMMUN_JWT_SECRET: raw.COMMUN_JWT_SECRET,
+    COMMUN_APIDAE_API_URL: raw.COMMUN_APIDAE_API_URL,
   });
 }
