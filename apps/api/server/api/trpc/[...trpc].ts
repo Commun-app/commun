@@ -1,5 +1,6 @@
 import { defineHandler } from 'nitro';
 import { appRouter } from '@commun/core/trpc';
+import type { AuthSession } from '@commun/core';
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { useCore } from '../../utils/core.ts';
 
@@ -13,7 +14,9 @@ export default defineHandler(async (event) => {
     router: appRouter,
     createContext: () => ({
       services: useCore().services,
-      session: event.context.session ?? null,
+      // Cast explicite : l'augmentation de module h3 (types.d.ts) ne prend
+      // pas sur toutes les versions résolues (install --no-save en CI).
+      session: (event.context.session as AuthSession | null | undefined) ?? null,
       requestMeta: {
         ua: event.req.headers.get('user-agent'),
         ip:
