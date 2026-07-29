@@ -1,6 +1,6 @@
 ## 1. Socle Nitro tasks
 
-- [x] 1.1 Activer les tasks dans la config Nitro d'apps/api (`defineTask`/`runTask` via `nitro/task`) avec deux entrées `scheduledTasks` quotidiennes : `apidae:sync` 05:00, `deploy` 05:30 (review PR #4 : une entrée par tâche, ordre garanti par la marge)
+- [x] 1.1 Activer les tasks dans la config Nitro d'apps/api (`defineTask`/`runTask` via `nitro/task`) avec deux entrées `scheduledTasks` quotidiennes aux horaires iso legacy : `deploy` 00:30, `apidae:sync` 05:30 (review PR #4, décision 29/07)
 - [x] 1.2 Route interne `/_tasks/:name` (COMMUN_TASKS_HTTP, harness E2E seul — l'endpoint natif de Nitro n'existe qu'en dev) ; tâche orchestratrice `jobs:daily` supprimée (review PR #4)
 
 ## 2. Deploy

@@ -11,13 +11,14 @@ export default defineConfig({
   serverDir: 'server',
   compatibilityDate: '2026-05-19',
   // Tâches portées du legacy (change port-legacy-jobs) : une entrée cron par
-  // tâche (review PR #4). L'ordre sync PUIS deploy est garanti par la marge
-  // de 30 min (la sync d'ot-pertuis se compte en minutes) — le legacy
-  // déployait AVANT la sync. Heure LOCALE du serveur, plage creuse.
+  // tâche, aux horaires ISO LEGACY (review PR #4, décision Quentin 29/07) —
+  // deploy à 00:30 PUIS sync à 05:30, comme en prod aujourd'hui : le contenu
+  // APIDAE du jour n'est visible qu'au build du lendemain, comportement connu
+  // des clients, reproduit tel quel. Heure LOCALE du serveur.
   experimental: { tasks: true },
   scheduledTasks: {
-    '0 5 * * *': ['apidae:sync'],
-    '30 5 * * *': ['deploy'],
+    '30 0 * * *': ['deploy'],
+    '30 5 * * *': ['apidae:sync'],
   },
   runtimeConfig: {
     // Instance data directory (overridable via COMMUN_DATA_DIR).

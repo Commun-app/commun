@@ -10,7 +10,7 @@ La phase 1 (scaffold) est close, mais deux automatismes du legacy n'ont pas ét�
   - client APIDAE (pagination `list-objets-touristiques`, `transformMedia`, moteur de périodes `transformSchedules` en luxon/Europe-Paris) ;
   - moteur de mapping déclaratif (transforms `$concat`/`$relation`/`$condition`/`$mapping`/`$arrayFilters`/`@apidaeSchedules`/`@apidaeMedia`/`@poulpusWYSIWYG`, évaluateur `$and`/`$or`/`$eq`…) ;
   - sink via les services du core directement (**plus de JWT forgé ni d'écriture Mongo directe**) : sync des enums de collection, médias via download → driver S3 → finalize, `syncRecord` idempotent sur `apidaeId`, mode unlink (dépublication de ce qui a disparu de la source), statut `published` direct.
-- **Ordonnancement** : sync PUIS deploy — une entrée cron par tâche, marge de 30 min (review PR #4).
+- **Ordonnancement** : une entrée cron par tâche, **horaires legacy reproduits** (deploy 00:30 puis sync 05:30 — review PR #4, décision du 29/07 : iso-legacy strict, le contenu APIDAE part au build du lendemain comme aujourd'hui).
 - Config lue depuis `organization.legacyExtra.injector` (mappings préservés tels quels par la CLI de migration — pas de nouveau format).
 - **Correction des bugs legacy documentés** au passage : tri des périodes (PERIODRANKS/FIRST1), unlink exécuté dans la boucle, clé pointée `metaData` (le session leak est sans objet en SQLite).
 - Tests **E2E** sur un mock APIDAE servant un jeu de données réel (review PR #4 : pas de tests unitaires, la suite E2E est la spécification exécutable) — aucun appel réseau réel en CI.
