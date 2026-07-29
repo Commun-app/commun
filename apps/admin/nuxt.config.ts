@@ -92,11 +92,8 @@ export default defineNuxtConfig({
         ...(devtoolsApiEsm ? { '@vue/devtools-api': devtoolsApiEsm } : {})
       }
     },
-    optimizeDeps: {
-      esbuildOptions: {
-        target: 'esnext'
-      }
-    },
+    // optimizeDeps.esbuildOptions supprimé : Vite 8 optimise via Rolldown
+    // (option dépréciée, cible moderne par défaut).
     build: {
       target: 'esnext'
     }

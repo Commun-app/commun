@@ -14,7 +14,7 @@ export default defineNuxtRouteMiddleware((to, from) => {
       // Collection inconnue (ex : URL restaurée vers une collection supprimée) :
       // on renvoie à l'accueil du workspace plutôt que de planter l'app.
       if (!currentCollection) {
-        return navigateTo(`/${to.params.workspace || ''}`)
+        return navigateTo('/overview')
       }
       Object.assign(to.meta, { headings: currentCollection.headings })
     }
