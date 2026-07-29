@@ -21,7 +21,13 @@ export const entryCreateDto = createInsertSchema(entries)
   .omit({ collectionId: true })
   .extend({ slug: z.string().optional() });
 
-export const entryUpdateDto = createUpdateSchema(entries).omit(OMIT).omit({ collectionId: true });
+// `related` est ré-ouvert à l'UPDATE uniquement : les liens libres entre
+// entrées (iso legacy `records[]`, onglet Relations de l'admin) sont édités
+// directement — le serveur maintient la symétrie (voir service.updateEntry).
+export const entryUpdateDto = createUpdateSchema(entries)
+  .omit(OMIT)
+  .omit({ collectionId: true })
+  .extend({ related: z.array(z.string()).optional() });
 
 export type EntryCreateDto = z.infer<typeof entryCreateDto>;
 export type EntryUpdateDto = z.infer<typeof entryUpdateDto>;

@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
-import { DEFAULT_PASSWORD } from '../constants.ts';
+import { API_URL, DEFAULT_PASSWORD } from '../constants.ts';
 import { test } from './fixtures.ts';
 import { httpGet } from '../clients/client-http.ts';
 import { seed } from './instance.ts';
@@ -258,4 +258,30 @@ Then('the token list shows {string} as revoked', async ({ world }, name: string)
   const token = await findTokenInList(world, name);
   expect(token).toBeTruthy();
   expect(token!.revokedAt).not.toBeNull();
+});
+
+// ── CORS credentialed (upgrade-admin-nuxt4) ──────────────────────────────────
+// nuxt-auth 1.x force `credentials: 'include'` : les navigateurs exigent le
+// REFLET de l'origine (jamais le wildcard) avec Allow-Credentials.
+
+When('a preflight request arrives from origin {string}', async ({ world }, origin: string) => {
+  const response = await fetch(`${API_URL}/api/trpc/health.check`, {
+    method: 'OPTIONS',
+    headers: {
+      origin,
+      'access-control-request-method': 'POST',
+      'access-control-request-headers': 'authorization,content-type',
+    },
+  });
+  world.corsOrigin = origin;
+  world.corsHeaders = {
+    allowOrigin: response.headers.get('access-control-allow-origin'),
+    allowCredentials: response.headers.get('access-control-allow-credentials'),
+  };
+});
+
+Then('the response allows that exact origin with credentials, never a wildcard', ({ world }) => {
+  expect(world.corsHeaders?.allowOrigin).toBe(world.corsOrigin);
+  expect(world.corsHeaders?.allowOrigin).not.toBe('*');
+  expect(world.corsHeaders?.allowCredentials).toBe('true');
 });

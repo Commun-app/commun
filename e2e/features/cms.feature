@@ -40,6 +40,15 @@ Feature: CMS
     And calling procedure "collections.entries.create" with payload "entree-reunion" capturing the id as "secondEntryId"
     Then the entries captured as "firstEntryId" and "secondEntryId" have slugs "reunion-publique" and "reunion-publique-1"
 
+  Scenario: Free links between entries are saved with mutual maintenance
+    Given a logged-in "admin" session
+    And an initialized organization
+    When calling procedure "collections.create" with payload "collection-liens" capturing the id as "collectionId"
+    And calling procedure "collections.entries.create" with payload "entree-lien-source" capturing the id as "firstEntryId"
+    And calling procedure "collections.entries.create" with payload "entree-lien-cible" capturing the id as "secondEntryId"
+    And calling procedure "collections.entries.update" with payload "entree-liaison-libre" succeeds
+    Then the entries captured as "firstEntryId" and "secondEntryId" are mutually linked
+
   Scenario: Removing a field masks its values without breaking existing entries
     Given a logged-in "admin" session
     And an initialized organization

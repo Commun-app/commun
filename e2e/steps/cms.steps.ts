@@ -162,3 +162,19 @@ Then(
     expect(await json<unknown[]>(response)).toHaveLength(expected);
   },
 );
+
+Then(
+  'the entries captured as {string} and {string} are mutually linked',
+  async ({ world }, firstKey: string, secondKey: string) => {
+    // Liens libres iso legacy `records[]` : la symétrie est entretenue par le
+    // serveur — chaque entrée référence l'autre dans `related`.
+    const w = world as unknown as Record<string, string>;
+    const related: string[][] = [];
+    for (const id of [w[firstKey], w[secondKey]]) {
+      const response = await query('collections.entries.get', world.sessionToken!, { id });
+      related.push((await json<{ related: string[] | null }>(response)).related ?? []);
+    }
+    expect(related[0]).toContain(w[secondKey]);
+    expect(related[1]).toContain(w[firstKey]);
+  },
+);

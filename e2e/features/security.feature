@@ -49,3 +49,7 @@ Feature: Security
     Then the session list shows 2 active devices and flags the current one
     When the other device session is revoked
     Then the session list shows 1 active device
+
+  Scenario: CORS reflects the calling origin for credentialed clients
+    When a preflight request arrives from origin "https://admin.exemple.fr"
+    Then the response allows that exact origin with credentials, never a wildcard

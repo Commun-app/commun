@@ -42,7 +42,7 @@ const abilities = computed(() => ['update', 'remove'])
 
 // Prepare methods
 const _fetchMoreRecords = async (skip = 0) => {
-  await Record.list($route.params.collection, $route.params.workspace, { skip, limit: limit.value })
+  await Record.list($route.params.collection, undefined, { skip, limit: limit.value })
 }
 
 const _updateRecord = (item) => {
@@ -50,6 +50,6 @@ const _updateRecord = (item) => {
 }
 
 const _removeRecord = async (item) => {
-  await Record.remove(item._id, $route.params.collection, $route.params.workspace)
+  await Record.remove(item._id, $route.params.collection)
 }
 </script>

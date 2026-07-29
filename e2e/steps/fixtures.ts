@@ -27,6 +27,9 @@ export interface World {
   // jobs.feature
   taskResult?: unknown;
   hookHitsBefore?: number;
+  // security.feature (CORS)
+  corsOrigin?: string;
+  corsHeaders?: { allowOrigin: string | null; allowCredentials: string | null };
 }
 
 export const test = base.extend<{ world: World }>({

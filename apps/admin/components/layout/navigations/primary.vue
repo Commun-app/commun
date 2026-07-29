@@ -3,7 +3,7 @@
     <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:max-w-7xl lg:px-8">
       <div class="py-5 flex items-center justify-between">
         <!-- Single-tenant : identité de la collectivité, sans sélecteur. -->
-        <nuxt-link :to="`/${workspaceStore.workspaceId || ''}`" class="flex items-center space-x-3">
+        <nuxt-link to="/overview" class="flex items-center space-x-3">
           <avatar-circular :place-holder="workspaceStore.workspaceName || 'C'" :media="workspaceStore.workspaceLogo" size="sm" />
           <span class="font-medium">{{ workspaceStore.workspaceName }}</span>
         </nuxt-link>
@@ -71,7 +71,7 @@ const DEFAULT_NAV_ITEMS = [
 const WORKSPACE_NAV_ITEMS = [
   {
     title: 'Accueil',
-    route: '/',
+    route: '/overview',
     permission: ''
   },
   {
@@ -82,7 +82,7 @@ const WORKSPACE_NAV_ITEMS = [
 ]
 
 // Prepare computed data
-const displayPublishButton = computed(() => !!$route.params.workspace
+const displayPublishButton = computed(() => !!workspaceStore.workspaceId
   && ($ability.can('manage:all')
   || $ability.can('admin:organization')
   || $ability.can('create:deployments'))
@@ -94,9 +94,10 @@ const navigationItems = computed(() => {
     const [overview, ...subItemsRest] = WORKSPACE_NAV_ITEMS
     const collections = Collection.repo.find(workspaceStore.workspaceCollections)
     items.push(
-      ...[overview].map(({ route, ...rest }) => ({ ...rest, route: `/${workspaceStore.workspaceId}${route}` })),
-      ...collections.map(({ name, slug }) => ({ title: name, route: `/${workspaceStore.workspaceId}/${slug}` })),
-      ...subItemsRest.map(({ route, ...rest }) => ({ ...rest, route: `/${workspaceStore.workspaceId}${route}` }))
+      // Single-tenant : les routes vivent à la racine, sans slug d'organisation.
+      ...[overview],
+      ...collections.map(({ name, slug }) => ({ title: name, route: `/${slug}` })),
+      ...subItemsRest
     )
   } else {
     items.push(...DEFAULT_NAV_ITEMS)

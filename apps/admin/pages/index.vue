@@ -3,12 +3,12 @@
     <div class="m-auto w-full max-w-lg lg:w-96">
       <div class="flex flex-col items-center space-y-2 mb-4">
         <img
-          src="~/public/logo-black.svg"
+          src="/logo-black.svg"
           alt="Logo de Politicus"
           class="dark:hidden h-16 w-auto"
         >
         <img
-          src="~/public/logo-white.svg"
+          src="/logo-white.svg"
           alt="Logo de Politicus"
           class="hidden h-24 w-auto"
         >

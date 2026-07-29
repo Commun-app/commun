@@ -7,12 +7,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
     console.log('[midd.] - prefetch page', to.params.collection, to.params.record)
     if (to.params.record && to.params.record !== 'new') {
       const [model] = to.meta.preFetch
-      await $models[model].read(to.params.record, to.params.collection, to.params.workspace)
+      await $models[model].read(to.params.record, to.params.collection)
       return
     }
     // Use collection name in case of collection's records pages
     await Promise.all(
-      to.meta.preFetch.map(model => $models[model].list(to.params.collection, to.params.workspace, { limit: 50 }))
+      to.meta.preFetch.map(model => $models[model].list(to.params.collection, undefined, { limit: 50 }))
     )
   }
 })
