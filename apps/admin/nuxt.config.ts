@@ -39,7 +39,9 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      apiURL: process.env.NUXT_ENV_API_URL,
+      // Vide par défaut (image d'instance : admin et API MÊME origine, appels
+      // relatifs `/api/trpc`) ; NUXT_ENV_API_URL reste prioritaire (dev, harness).
+      apiURL: process.env.NUXT_ENV_API_URL ?? '',
       baseURL: process.env.NUXT_ENV_BASE_URL || 'http://localhost:3000',
       mapBoxToken: process.env.NUXT_ENV_MAPBOX_TOKEN,
     }
@@ -56,7 +58,7 @@ export default defineNuxtConfig({
   // Auth branchée sur le plan tRPC du monolithe Commun : les procédures
   // auth.login / auth.me répondent dans l'enveloppe tRPC { result: { data } }.
   auth: {
-    baseURL: `${process.env.NUXT_ENV_API_URL}/api/trpc`,
+    baseURL: `${process.env.NUXT_ENV_API_URL ?? ''}/api/trpc`,
     provider: {
       type: 'local',
       endpoints: {

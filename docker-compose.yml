@@ -15,7 +15,9 @@
 
 services:
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     ports:
       - '${COMMUN_PORT:-3000}:3000'
@@ -29,6 +31,27 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+  # TEMPORAIRE (migration silencieuse) : portail de connexion multi-instances
+  # — routage email → instance, auth déléguée. Il n'a AUCUN usage en
+  # auto-hébergement (une instance = une collectivité) : il est donc derrière
+  # un profil et ne démarre pas avec `docker compose up -d`.
+  #   docker compose --profile portal up -d
+  # Sortira du monorepo avec la vraie app portail privée (section cloud,
+  # phases 6-7).
+  portal:
+    profiles: ['portal']
+    build:
+      context: .
+      dockerfile: apps/portal/Dockerfile
+    restart: unless-stopped
+    ports:
+      - '${COMMUN_PORTAL_PORT:-3002}:3000'
+    environment:
+      PORTAL_MAP: /data/portal-map.json
+    volumes:
+      # Mapping email → instance, monté depuis l'hôte (jamais dans l'image).
+      - ./portal-map.json:/data/portal-map.json:ro
 
 volumes:
   commun-data:

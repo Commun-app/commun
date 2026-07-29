@@ -56,6 +56,14 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
+      // Portail (portal.feature) : nitro dev sur 3002, mapping E2E pointant
+      // sur l'API sous test.
+      command: 'PORTAL_MAP="$PWD/e2e/data/portal-map.json" bun --filter @commun/portal dev',
+      url: 'http://127.0.0.1:3002/',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    {
       // S3 réel pour media.feature (décision Quentin : monter un vrai S3 en
       // E2E). Le bucket est provisionné par le seed (`bucket`, idempotent).
       command:

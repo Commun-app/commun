@@ -34,3 +34,12 @@ packages/legacy-migrate/
 # Captures APIDAE brutes (réponse avec query/apiKey échoïsées) — le dataset
 # curé vit dans e2e/data/apidae/objets.json
 /apidae-*.json
+
+# Mapping réel du portail (emails clients) — jamais committé
+/portal-map.json
+
+# Accès infra locaux (Dokploy, Scaleway…) — jamais committés
+/infra/.env.infra
+
+# Outillage infra/clients LOCAL (logique privée — jamais dans le monorepo open source)
+/infra/

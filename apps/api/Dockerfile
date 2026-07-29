@@ -1,4 +1,8 @@
-# Commun API — multi-stage Bun image (spec self-hosting).
+# Image API OPEN SOURCE (spec self-hosting) : l'API seule, 100 % AGPL —
+# c'est l'image publique que n'importe qui peut self-hoster (ghcr
+# commun-api), celle du smoke CI et du docker-compose. L'image d'INSTANCE
+# (API + admin avec prose, PRIVÉE — licence TipTap Pro) est à côté :
+# Dockerfile.instance.
 FROM oven/bun:1 AS build
 WORKDIR /app
 
@@ -12,6 +16,7 @@ COPY apps/api/package.json apps/api/
 COPY apps/admin/package.json apps/admin/
 COPY packages/core/package.json packages/core/
 COPY packages/apidae-sync/package.json packages/apidae-sync/
+COPY apps/portal/package.json apps/portal/
 # patchedDependencies (prose) : bun lit patches/ à l'install — sans tokens la
 # patchée n'est pas installée, mais le dossier doit exister.
 COPY patches ./patches

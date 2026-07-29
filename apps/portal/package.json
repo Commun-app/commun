@@ -1,0 +1,19 @@
+{
+  "name": "@commun/portal",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "TEMPORAIRE (migration silencieuse) : portail de connexion app.poulp.us — login iso legacy, routage email → instance, auth déléguée. Sera remplacé par la vraie app portail PRIVÉE de la section cloud (phase 6-7) et sortira du monorepo open source.",
+  "scripts": {
+    "dev": "nitro dev --port 3002",
+    "build": "nitro build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "nitro": "3.0.260429-beta",
+    "h3": "^2.0.1-rc.22"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

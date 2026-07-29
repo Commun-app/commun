@@ -139,6 +139,26 @@ switch (command) {
     console.log(JSON.stringify({ slug }));
     break;
   }
+  case 'account': {
+    // Compte activé à email FIXE (portal.feature) — idempotent.
+    // TEMPORAIRE (review PR #6) : le portail vit dans le monorepo le temps de
+    // la migration silencieuse ; il sera remplacé par la vraie app portail
+    // PRIVÉE de la section cloud (phase 6-7) et ce seed partira avec.
+    const email = argument!.toLowerCase();
+    const repository = new UsersRepository(core.db);
+    try {
+      await repository.activateUser({
+        email,
+        name: 'Compte Portail',
+        passwordHash: Bun.password.hashSync('mot-de-passe-e2e'),
+        role: 'admin',
+      });
+    } catch {
+      // Déjà créé par un scénario précédent : rien à faire.
+    }
+    console.log(JSON.stringify({ email }));
+    break;
+  }
   case 'apidae': {
     // Instance ot-pertuis de jobs.feature, ISO PRODUCTION : injector dans
     // legacyExtra (iso migration — aucune surface service ne l'écrit), les

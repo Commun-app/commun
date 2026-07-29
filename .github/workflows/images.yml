@@ -1,0 +1,94 @@
+name: Images
+
+# Build + push des images sur ghcr.io (silent-migration : Dokploy TIRE les
+# images, il ne builde pas — décision option B, 29/07).
+#
+# Visibilité des packages (réglée à la main au premier push, GitHub crée en
+# PRIVÉ par défaut) :
+#   - commun-api, commun-portal → PUBLIQUES (100 % AGPL)
+#   - commun-instance → PRIVÉE OBLIGATOIREMENT : l'admin embarque
+#     @poulpus/prose qui bundle du code TipTap Pro (licence — pas de
+#     redistribution publique). Meurt en phase 4 avec TipTap OSS.
+#
+# Secrets requis (instance seulement) :
+#   - PROSE_GITHUB_TOKEN : PAT read:packages sur les packages @poulpus
+#     (le GITHUB_TOKEN du workflow ne lit pas les packages d'une autre org)
+#   - TIPTAP_PRO_TOKEN : registre registry.tiptap.dev
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'patches/**'
+      - 'apps/api/Dockerfile*'
+      - 'apps/portal/Dockerfile'
+      - 'bun.lock'
+      - '.github/workflows/images.yml'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  api:
+    name: commun-api (publique)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/commun-app/commun-api:latest
+            ghcr.io/commun-app/commun-api:${{ github.sha }}
+
+  portal:
+    name: commun-portal (publique)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/portal/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/commun-app/commun-portal:latest
+            ghcr.io/commun-app/commun-portal:${{ github.sha }}
+
+  instance:
+    name: commun-instance (PRIVÉE — prose/TipTap Pro)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile.instance
+          push: true
+          build-args: |
+            GITHUB_TOKEN=${{ secrets.PROSE_GITHUB_TOKEN }}
+            TIPTAP_PRO_TOKEN=${{ secrets.TIPTAP_PRO_TOKEN }}
+          tags: |
+            ghcr.io/commun-app/commun-instance:latest
+            ghcr.io/commun-app/commun-instance:${{ github.sha }}

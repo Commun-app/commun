@@ -1,4 +1,4 @@
-import { depsFromCore, runApidaeSync } from '@commun/apidae-sync';
+import { depsFromCore, runApidaeSync, type ApidaeSyncReport } from '@commun/apidae-sync';
 import { defineTask } from 'nitro/task';
 import { useCore } from '../../utils/core.ts';
 
@@ -13,7 +13,7 @@ export default defineTask({
     name: 'apidae:sync',
     description: 'Synchronise les objets touristiques APIDAE vers les collections',
   },
-  async run() {
+  async run(): Promise<{ result: ApidaeSyncReport }> {
     const core = useCore();
     const report = await runApidaeSync(depsFromCore(core), {
       // Surcharge de l'API APIDAE (E2E, bac à sable) — via l'env unifié du core.

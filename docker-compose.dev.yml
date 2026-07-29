@@ -1,6 +1,6 @@
 # Commun — services d'appoint pour le DÉVELOPPEMENT uniquement.
-# L'API et l'admin tournent en local (`bun run dev`) ; seul le stockage S3
-# est conteneurisé ici.
+# L'API, l'admin ET le portail tournent en local (`bun run dev` les lance
+# tous les trois) ; seul le stockage S3 est conteneurisé ici.
 #
 #   docker compose -f docker-compose.dev.yml up -d
 #
