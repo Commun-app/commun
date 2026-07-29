@@ -22,3 +22,11 @@
 - [x] 4.2 Suite E2E complète verte (API + nouveau scénario CORS) ; typecheck et lint verts
 - [ ] 4.3 Passe manuelle écran par écran contre l'admin ISO gelé (base smoke-grigny), éditeur prose inclus (TIPTAP_PRO_TOKEN local — étape Quentin) — divergences traitées comme défauts
 - [ ] 4.4 Fermeture de la PR #3 Dependabot (remplacée par ce change) avec commentaire de renvoi
+
+## 5. Retours de la passe manuelle (Quentin, 29/07)
+
+- [x] 5.1 Accordéon WYSIWYG : node views Vue VIDES dans prose 0.24.1 (chantier inachevé — l'admin déployé rendait le natif) → patch bun committé (`patches/`) neutralisant les addNodeView accordion/summary/content, retour au rendu natif Details ; meurt avec prose en phase 4. Install CI sans tokens revalidée cache froid
+- [x] 5.2 Relations : l'adaptateur tRPC n'envoyait JAMAIS `records[]` (écran inerte depuis la phase 1) → `related` ouvert à l'update (DTO + service, symétrie des liens inverses via linkRelations), envoyé par le modèle admin ; scénario E2E « liens libres mutuels » + delta de spec core-domains
+- [x] 5.3 updatedBy vide sur données migrées : la CLI ne préservait ni les ids users ni les auteurs → ids users legacy PRÉSERVÉS + createdBy/updatedBy copiés (mapper + migrate) ; smoke-grigny régénérée (594 entrées avec auteur) — le dump de bascule inclura les auteurs
+- [x] 5.4 Tableau hors écran : table-auto suit la largeur max-content — titre `truncate` (nowrap) et description non bornés dictaient la colonne → `max-w-xl` + `line-clamp-2` (data-summary), zéro débordement vérifié à 1440px
+- [x] 5.5 Thématiques sans couleur : badge blanc-sur-blanc par défaut + parseur de contraste ignorant l'hex → repli gris neutre lisible et luminance hex/rgb correcte (badge.vue)

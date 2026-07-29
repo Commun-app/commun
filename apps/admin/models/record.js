@@ -67,15 +67,16 @@ const _recordAPI = class RecordAPI extends ModelAPI {
   /**
    * record aplati → payload entries.* : seuls les champs DÉFINIS par la
    * collection alimentent `data` (les colonnes document _id/slug/path/…
-   * renvoyées par onSave sont ignorées, iso legacy). `records[]` n'est jamais
-   * envoyé : les liens inverses sont maintenus par le serveur.
+   * renvoyées par onSave sont ignorées, iso legacy). `records[]` (liens
+   * libres de l'onglet Relations) part en `related` — le serveur entretient
+   * la symétrie des liens inverses (upgrade-admin-nuxt4).
    */
   async _payload(record, collection) {
     const definition = await getDefinition(this.trpc, collection);
     const fieldsByName = new Map(
       definition.fields.map((field) => [field.name, field]),
     );
-    const { title, status, attributes = [] } = this.onSave(record);
+    const { title, status, records, attributes = [] } = this.onSave(record);
 
     const data = {};
     for (const { name, value } of attributes ?? []) {
@@ -88,6 +89,7 @@ const _recordAPI = class RecordAPI extends ModelAPI {
     if (title !== undefined) payload.title = title;
     if (status) payload.status = status;
     if (Object.keys(data).length) payload.data = data;
+    if (Array.isArray(records)) payload.related = records;
     return { definition, payload };
   }
 

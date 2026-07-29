@@ -234,6 +234,12 @@ export class CollectionsService {
           relationIds(definition.fields, data),
         );
       }
+      // Liens libres (iso legacy `records[]`, onglet Relations de l'admin) :
+      // la liste est posée telle quelle et la symétrie entretenue sur les
+      // cibles (ajouts/retraits inverses), comme pour les champs relation.
+      if (input.related) {
+        await this.linkRelations(definition, id, existing.related ?? [], input.related);
+      }
       return updated;
     } catch (error) {
       throw this.mapSlugConflict(error, definition.slug, input.slug ?? existing.slug);

@@ -120,6 +120,16 @@ export const PAYLOADS: Record<string, unknown> = {
   },
   'entree-reunion': { collectionId: 'notes', data: { title: 'Réunion publique', data: {} } },
 
+  // ── Liens libres entre entrées (onglet Relations, iso legacy `records[]`) ──
+  'collection-liens': {
+    name: 'Liens',
+    slug: 'liens',
+    fields: [{ name: 'body', label: 'Corps', type: 'text' }],
+  },
+  'entree-lien-source': { collectionId: 'liens', data: { title: 'Entrée source', data: {} } },
+  'entree-lien-cible': { collectionId: 'liens', data: { title: 'Entrée cible', data: {} } },
+  'entree-liaison-libre': { id: '$firstEntryId', data: { related: ['$secondEntryId'] } },
+
   // ── Évolution de schéma (collection « fiches ») ────────────────────────────
   'collection-fiches': { name: 'Fiches', slug: 'fiches', fields: FICHES_FIELDS.both },
   'entree-fiche-complete': {
