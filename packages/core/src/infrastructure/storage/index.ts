@@ -2,6 +2,7 @@ import {
   DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -27,6 +28,8 @@ export interface StorageDriver {
   put(key: string, body: Uint8Array, contentType: string): Promise<void>;
   /** Object metadata if it exists (used to confirm an upload), null otherwise. */
   head(key: string): Promise<{ size: number } | null>;
+  /** Clés sous un préfixe (rétention des sauvegardes db:backup). */
+  list(prefix: string): Promise<string[]>;
   remove(keys: string[]): Promise<void>;
   /** Time-limited signed GET URL a browser can load the object from. */
   url(key: string): Promise<string>;
@@ -92,6 +95,23 @@ export class S3Storage implements StorageDriver {
     } catch {
       return null;
     }
+  }
+
+  async list(prefix: string): Promise<string[]> {
+    const keys: string[] = [];
+    let token: string | undefined;
+    do {
+      const page = await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: this.config.bucket,
+          Prefix: prefix,
+          ContinuationToken: token,
+        }),
+      );
+      keys.push(...(page.Contents ?? []).map((object) => object.Key ?? '').filter(Boolean));
+      token = page.NextContinuationToken;
+    } while (token);
+    return keys;
   }
 
   async remove(keys: string[]): Promise<void> {

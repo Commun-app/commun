@@ -1,0 +1,46 @@
+# Image d'INSTANCE Commun (silent-migration, D1/D3) : API + admin statique
+# sur la même origine — une image COMMUNE à tous les clients (l'admin appelle
+# /api/trpc en relatif, rien de client-spécifique n'est cuit au build).
+# L'image API open source reste `Dockerfile` ; celle-ci ajoute l'étage admin,
+# buildé AVEC les registres privés (prose + patch) via des build args qui ne
+# persistent pas dans l'image finale. Disparaît avec prose (phase 4).
+#
+#   docker build -f Dockerfile.instance \
+#     --build-arg GITHUB_TOKEN=… --build-arg TIPTAP_PRO_TOKEN=… -t commun-instance .
+FROM oven/bun:1 AS build
+ARG GITHUB_TOKEN
+ARG TIPTAP_PRO_TOKEN
+WORKDIR /app
+
+COPY package.json bun.lock .npmrc ./
+COPY apps/api/package.json apps/api/
+COPY apps/admin/package.json apps/admin/
+COPY packages/core/package.json packages/core/
+COPY packages/apidae-sync/package.json packages/apidae-sync/
+COPY patches ./patches
+# --no-save : même piège lockfile que l'image API (voir Dockerfile) ; avec les
+# tokens, prose et son patch s'installent — sans, la garde hasProse joue.
+RUN bun install --no-save
+
+COPY . .
+RUN bun --filter @commun/api build
+# SPA statique (ssr:false) — la sortie est .output/public, servie par l'API
+# (fallback routes/[...spa].get.ts). Aucune URL d'API bakée : base relative.
+RUN cd apps/admin && bun run generate
+
+FROM oven/bun:1 AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+ENV COMMUN_DATA_DIR=/data
+ENV COMMUN_MIGRATIONS_DIR=/app/drizzle
+
+COPY --from=build /app/apps/api/.output ./.output
+COPY --from=build /app/apps/admin/.output/public ./.output/public
+COPY --from=build /app/packages/core/drizzle ./drizzle
+
+RUN mkdir -p /data && chown bun:bun /data
+USER bun
+VOLUME /data
+EXPOSE 3000
+
+CMD ["bun", ".output/server/index.mjs"]

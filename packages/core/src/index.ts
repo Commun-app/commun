@@ -50,7 +50,9 @@ export function createCore({ env }: { env?: CoreEnv } = {}): Core {
   const media = new MediaService(mediaRepository, storage);
   const collectionsRepository = new CollectionsRepository(db);
   const collections = new CollectionsService(collectionsRepository, media);
-  const organization = new OrganizationService(new OrganizationRepository(db));
+  const organization = new OrganizationService(new OrganizationRepository(db), {
+    jobsDisabled: e.COMMUN_JOBS_DISABLED === '1',
+  });
   const services = {
     health: new HealthService(db),
     users,

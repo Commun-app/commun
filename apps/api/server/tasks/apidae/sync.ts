@@ -1,4 +1,4 @@
-import { depsFromCore, runApidaeSync } from '@commun/apidae-sync';
+import { depsFromCore, runApidaeSync, type ApidaeSyncReport } from '@commun/apidae-sync';
 import { defineTask } from 'nitro/task';
 import { useCore } from '../../utils/core.ts';
 
@@ -13,8 +13,14 @@ export default defineTask({
     name: 'apidae:sync',
     description: 'Synchronise les objets touristiques APIDAE vers les collections',
   },
-  async run() {
+  async run(event): Promise<{ result: ApidaeSyncReport | { skipped: string } }> {
     const core = useCore();
+    // Mode ombre (silent-migration) : le CRON est neutralisé, le legacy reste
+    // l'unique synchroniseur — le déclenchement MANUEL (route /_tasks, sans
+    // payload planifié) reste possible pour comparaison ponctuelle.
+    if (core.env.COMMUN_JOBS_DISABLED === '1' && event?.payload?.scheduledTime) {
+      return { result: { skipped: 'shadow-mode' } };
+    }
     const report = await runApidaeSync(depsFromCore(core), {
       // Surcharge de l'API APIDAE (E2E, bac à sable) — via l'env unifié du core.
       apidaeBaseUrl: core.env.COMMUN_APIDAE_API_URL || undefined,

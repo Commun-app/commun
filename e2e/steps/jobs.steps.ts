@@ -226,3 +226,10 @@ Then('each collection holds a single entry per APIDAE id', async ({ world }) => 
     expect(new Set(ids).size).toBe(ids.length);
   }
 });
+
+Then('the backup report names a dated snapshot under {string}', ({ world }, prefix: string) => {
+  const report = world.taskResult as { key: string; size: number; purged: number };
+  expect(report.key).toMatch(new RegExp(`^${prefix}\\d{4}-\\d{2}-\\d{2}\\.db$`));
+  expect(report.size).toBeGreaterThan(0);
+  expect(report.purged).toBe(0);
+});
