@@ -33,11 +33,6 @@ const envSchema = z.object({
    * l'env passe par parseEnv, review PR #4).
    */
   COMMUN_APIDAE_API_URL: z.string().optional(),
-  /**
-   * Mode ombre (silent-migration) : '1' neutralise les tâches planifiées
-   * (deploy, apidae:sync) — l'instance observe, le legacy reste l'écrivain.
-   */
-  COMMUN_JOBS_DISABLED: z.string().optional(),
 });
 
 export type CoreEnv = z.infer<typeof envSchema>;
@@ -60,6 +55,5 @@ export function parseEnv(raw: Record<string, string | undefined> = process.env):
     COMMUN_ADMIN_URL: raw.COMMUN_ADMIN_URL,
     COMMUN_JWT_SECRET: raw.COMMUN_JWT_SECRET,
     COMMUN_APIDAE_API_URL: raw.COMMUN_APIDAE_API_URL,
-    COMMUN_JOBS_DISABLED: raw.COMMUN_JOBS_DISABLED,
   });
 }

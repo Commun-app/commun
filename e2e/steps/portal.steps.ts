@@ -1,3 +1,6 @@
+// TEMPORAIRE (review PR #6) : apps/portal est un dépannage de migration —
+// la vraie app portail (cloud commun.app) sera PRIVÉE et hors monorepo ;
+// cette feature partira avec elle (phase 6-7).
 import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 import { trpcQuery } from '../clients/client-trpc.ts';

@@ -40,3 +40,6 @@ packages/legacy-migrate/
 
 # Accès infra locaux (Dokploy, Scaleway…) — jamais committés
 /infra/.env.infra
+
+# Outillage infra/clients LOCAL (logique privée — jamais dans le monorepo open source)
+/infra/

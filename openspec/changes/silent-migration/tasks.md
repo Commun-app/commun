@@ -2,8 +2,8 @@
 
 - [x] 1.1 Admin en base API relative : `/api/trpc` par défaut quand `NUXT_ENV_API_URL` est absente (auth, client tRPC, axios) — dev et harness inchangés
 - [x] 1.2 `Dockerfile.instance` : étage admin buildé avec secrets de build (GITHUB_TOKEN, TIPTAP_PRO_TOKEN — prose + patch inclus), statique servi par Nitro avec fallback SPA hors `/api`, image commune à tous les clients ; build + smoke local
-- [x] 1.3 Tâche Nitro `db:backup` : snapshot SQLite à chaud → `backups/<date>.db` via le driver storage, cron quotidien, rétention 30 j, rapport ; scénario E2E
-- [x] 1.4 Mode ombre `COMMUN_JOBS_DISABLED` : no-op explicite de `deploy` (cron ET `organization.deploy` via le service) et `apidae:sync` planifiée (déclenchement manuel conservé) — vérifié par boot local dédié (le harness E2E ne peut pas re-booter l'API avec une autre env ; E2E couvert pour db:backup)
+- [x] 1.3 ~~Tâche db:backup~~ RETIRÉE (review PR #6) : les sauvegardes sont des backups de volume Dokploy → S3 (voir 3.1) — aucune logique applicative
+- [x] 1.4 ~~Mode ombre~~ RETIRÉ (review PR #6) : les crons tournent pendant l'observation — apidae:sync écrit dans l'ombre (exerce la sync réelle), deploy frappe le hook de TEST posé par le resync (garde-fou : étape obligatoire du pipeline)
 
 ## 2. Portail de connexion (apps/portal)
 
@@ -14,7 +14,7 @@
 
 ## 3. Infra par client (opérations Quentin + gabarits fournis)
 
-- [ ] 3.1 Gabarit Dokploy documenté (compose/app : image d'instance, volume, secrets, domaine `<slug>.<BASE_DOMAIN>`) + dimensionnement du VPS vérifié pour 4 instances
+- [ ] 3.1 Gabarit Dokploy documenté (app : image d'instance ghcr, volume, secrets, domaine `<slug>.<BASE_DOMAIN>`, **backup planifié du volume → S3 + restauration testée**) + dimensionnement du VPS vérifié pour 4 instances
 - [ ] 3.2 Buckets S3 dédiés créés (×4) + script de copie initiale des objets legacy depuis le manifeste de migration (clés préservées)
 - [ ] 3.3 Déploiement des 4 instances (CMAR, Grigny, LCSS, Pertuis) en mode ombre : boot, `/health`, login, écrans, médias signés depuis le bucket dédié
 - [ ] 3.4 Portail déployé sur le VPS (sans bascule DNS d'app.poulp.us) et testé contre les 4 instances

@@ -15,7 +15,9 @@
 
 services:
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     ports:
       - '${COMMUN_PORT:-3000}:3000'

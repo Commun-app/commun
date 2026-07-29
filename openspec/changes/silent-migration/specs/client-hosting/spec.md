@@ -27,3 +27,15 @@ Chaque instance SHALL utiliser un bucket S3 qui lui est propre. Les objets legac
 #### Scenario: Médias migrés servis depuis le bucket dédié
 - **WHEN** la copie S3 d'un client est faite et sa base migrée chargée
 - **THEN** les médias de l'admin et du payload public se résolvent en URLs signées du bucket dédié
+
+### Requirement: Sauvegarde du volume par Dokploy
+
+Chaque app cliente SHALL avoir une sauvegarde planifiée de son volume de données configurée DANS Dokploy vers une destination S3 (quotidienne, rétention définie) — aucune logique de sauvegarde applicative. La restauration SHALL être documentée dans le runbook et testée au moins une fois pendant l'observation.
+
+#### Scenario: Sauvegarde quotidienne du volume
+- **WHEN** la sauvegarde planifiée Dokploy d'une instance s'exécute
+- **THEN** une archive datée du volume (base SQLite incluse) apparaît sur la destination S3
+
+#### Scenario: Restauration testée
+- **WHEN** la procédure de restauration du runbook est déroulée sur une instance d'observation
+- **THEN** l'instance redémarre sur l'état sauvegardé (login + contenu vérifiés)

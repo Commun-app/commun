@@ -3,13 +3,14 @@ import { join } from 'node:path';
 import { defineHandler, HTTPError } from 'h3';
 
 /**
- * Fallback SPA de l'image d'instance (silent-migration, D1) : l'admin
- * statique est copié dans `.output/public` au build de l'image — toute route
- * GET hors plans servis (API, tasks, health) rend son index.html, pour que
- * les routes profondes de l'admin survivent au rechargement. Dans l'image
- * API open source (sans admin embarquée), le fichier est absent : 404 comme
- * avant. Les assets existants sont servis par le statique Nitro AVANT ce
- * catch-all ; les routes déclarées (plus spécifiques) gardent la priorité.
+ * Fallback SPA (review PR #6 : « c'est l'admin ? ») — ce fichier N'EST PAS
+ * l'admin : c'est un handler HTTP catch-all, donc sa place Nitro est bien
+ * routes/. L'admin est un BUILD STATIQUE copié dans `.output/public` par
+ * l'image d'instance (apps/api/Dockerfile.instance) ; le statique Nitro sert
+ * ses fichiers, et ce handler ne fait que rendre son index.html pour les
+ * routes profondes (rechargement de /events…) hors plans servis (API,
+ * tasks, health). Dans l'image API open source, pas d'admin embarquée : le
+ * fichier est absent → 404 comme avant.
  */
 const RESERVED_PREFIXES = ['/api/', '/_tasks/', '/health'];
 

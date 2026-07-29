@@ -141,6 +141,9 @@ switch (command) {
   }
   case 'account': {
     // Compte activé à email FIXE (portal.feature) — idempotent.
+    // TEMPORAIRE (review PR #6) : le portail vit dans le monorepo le temps de
+    // la migration silencieuse ; il sera remplacé par la vraie app portail
+    // PRIVÉE de la section cloud (phase 6-7) et ce seed partira avec.
     const email = argument!.toLowerCase();
     const repository = new UsersRepository(core.db);
     try {

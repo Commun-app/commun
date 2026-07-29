@@ -49,7 +49,3 @@ Feature: Scheduled jobs
     When the "apidae:sync" task runs
     Then the sync report flags a collect failure with the unlink skipped
     And the entry for APIDAE id "4612219" is published
-
-  Scenario: Daily database backup lands in the bucket
-    When the "db:backup" task runs
-    Then the backup report names a dated snapshot under "backups/"

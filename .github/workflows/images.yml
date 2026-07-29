@@ -23,7 +23,8 @@ on:
       - 'apps/**'
       - 'packages/**'
       - 'patches/**'
-      - 'Dockerfile*'
+      - 'apps/api/Dockerfile*'
+      - 'apps/portal/Dockerfile'
       - 'bun.lock'
       - '.github/workflows/images.yml'
 
@@ -45,7 +46,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile
+          file: apps/api/Dockerfile
           push: true
           tags: |
             ghcr.io/commun-app/commun-api:latest
@@ -64,7 +65,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.portal
+          file: apps/portal/Dockerfile
           push: true
           tags: |
             ghcr.io/commun-app/commun-portal:latest
@@ -83,7 +84,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.instance
+          file: apps/api/Dockerfile.instance
           push: true
           build-args: |
             GITHUB_TOKEN=${{ secrets.PROSE_GITHUB_TOKEN }}

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "private": true,
-  "description": "Portail de connexion (silent-migration, D7) : login iso legacy sur app.poulp.us, routage email → instance, authentification déléguée et remise de session — première brique du cloud commun.app. Frontière AGPL à trancher en phase 6.",
+  "description": "TEMPORAIRE (migration silencieuse) : portail de connexion app.poulp.us — login iso legacy, routage email → instance, auth déléguée. Sera remplacé par la vraie app portail PRIVÉE de la section cloud (phase 6-7) et sortira du monorepo open source.",
   "scripts": {
     "dev": "nitro dev --port 3002",
     "build": "nitro build",

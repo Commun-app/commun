@@ -16,7 +16,7 @@ const DEPLOY_TIMEOUT_MS = 30_000;
 export class OrganizationService {
   constructor(
     private readonly repository: OrganizationRepository,
-    private readonly options: { fetchImpl?: typeof fetch; jobsDisabled?: boolean } = {},
+    private readonly options: { fetchImpl?: typeof fetch } = {},
   ) {}
 
   async get(): Promise<Organization | null> {
@@ -42,13 +42,7 @@ export class OrganizationService {
    * `deployment.vercel.hook`. Appelé par la tâche Nitro `deploy` (cron
    * quotidien) et la procédure tRPC `organization.deploy` (bouton Publier).
    */
-  async deploy(): Promise<{ status?: number; skipped?: string }> {
-    // Mode ombre (silent-migration) : aucune émission, même via le bouton
-    // Publier — le hook en base pointe sur le Vercel de TEST pendant
-    // l'observation, piloté par le pipeline de resync.
-    if (this.options.jobsDisabled) {
-      return { skipped: 'shadow-mode' };
-    }
+  async deploy(): Promise<{ status: number }> {
     const organization = await this.get();
     const deployment = organization?.deployment as
       | { vercel?: { hook?: string } }

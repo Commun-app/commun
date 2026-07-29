@@ -11,15 +11,8 @@ export default defineTask({
     name: 'deploy',
     description: 'Déclenche le build Vercel du site (hook organization.deployment)',
   },
-  async run(): Promise<{
-    result: { triggered: boolean; status?: number; reason?: string; skipped?: string };
-  }> {
-    const core = useCore();
-    // Mode ombre (silent-migration) : le legacy reste l'unique déclencheur.
-    if (core.env.COMMUN_JOBS_DISABLED === '1') {
-      return { result: { triggered: false, skipped: 'shadow-mode' } };
-    }
-    const { services } = core;
+  async run(): Promise<{ result: { triggered: boolean; status?: number; reason?: string } }> {
+    const { services } = useCore();
     try {
       const { status } = await services.organization.deploy();
       return { result: { triggered: true, status } };
