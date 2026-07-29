@@ -34,4 +34,4 @@
 - [x] 5.2 Scénarios E2E jobs.feature : deploy (sans/avec hook), import initial publié (schedules, enums, média), upsert sans doublon, expiration `E_EVENT_EXPIRED`
 - [x] 5.3 Scénarios E2E unlink : disparition → draft, créations préservées, panne APIDAE → unlink annulé (le « deploy maintenu » est garanti par l'indépendance des entrées cron)
 - [x] 5.4 Zéro appel réseau sortant en CI (URLs de médias réécrites vers le mock) ; suppression des tests unitaires bun (review PR #4)
-- [ ] 5.5 Passe manuelle sur copie de la base ot-pertuis migrée : diff du contenu avec le legacy (plan de migration, étape 2)
+- [x] 5.5 Passe manuelle sur copie de la base ot-pertuis migrée (29/07, API APIDAE réelle) : 73 s, 0 erreur, idempotence parfaite (357 pros mis à jour sans doublon), 32 événements créés, 85 expirés dépubliés, 131 unlink, 1596 médias réutilisés vs 69 uploadés (1 échec URL morte), enumItems peuplés, mappings ↔ définitions migrées alignés (0 champ écarté)
