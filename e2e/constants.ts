@@ -48,6 +48,9 @@ export const APIDAE_MOCK = {
   mediaBase: 'http://127.0.0.1:3198/media',
 } as const;
 
+/** Portail de connexion (troisième webServer). */
+export const PORTAL_URL = 'http://127.0.0.1:3002';
+
 export const JWT_SECRET = 'e2e-jwt-secret';
 export const ADMIN_URL = 'https://admin.e2e.test';
 

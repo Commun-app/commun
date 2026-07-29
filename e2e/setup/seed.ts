@@ -139,6 +139,23 @@ switch (command) {
     console.log(JSON.stringify({ slug }));
     break;
   }
+  case 'account': {
+    // Compte activé à email FIXE (portal.feature) — idempotent.
+    const email = argument!.toLowerCase();
+    const repository = new UsersRepository(core.db);
+    try {
+      await repository.activateUser({
+        email,
+        name: 'Compte Portail',
+        passwordHash: Bun.password.hashSync('mot-de-passe-e2e'),
+        role: 'admin',
+      });
+    } catch {
+      // Déjà créé par un scénario précédent : rien à faire.
+    }
+    console.log(JSON.stringify({ email }));
+    break;
+  }
   case 'apidae': {
     // Instance ot-pertuis de jobs.feature, ISO PRODUCTION : injector dans
     // legacyExtra (iso migration — aucune surface service ne l'écrit), les

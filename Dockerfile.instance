@@ -17,6 +17,7 @@ COPY apps/api/package.json apps/api/
 COPY apps/admin/package.json apps/admin/
 COPY packages/core/package.json packages/core/
 COPY packages/apidae-sync/package.json packages/apidae-sync/
+COPY apps/portal/package.json apps/portal/
 COPY patches ./patches
 # --no-save : même piège lockfile que l'image API (voir Dockerfile) ; avec les
 # tokens, prose et son patch s'installent — sans, la garde hasProse joue.

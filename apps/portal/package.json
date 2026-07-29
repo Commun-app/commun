@@ -1,0 +1,19 @@
+{
+  "name": "@commun/portal",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Portail de connexion (silent-migration, D7) : login iso legacy sur app.poulp.us, routage email → instance, authentification déléguée et remise de session — première brique du cloud commun.app. Frontière AGPL à trancher en phase 6.",
+  "scripts": {
+    "dev": "nitro dev --port 3002",
+    "build": "nitro build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "nitro": "3.0.260429-beta",
+    "h3": "^2.0.1-rc.22"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

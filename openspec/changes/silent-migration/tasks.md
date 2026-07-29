@@ -7,10 +7,10 @@
 
 ## 2. Portail de connexion (apps/portal)
 
-- [ ] 2.1 App Nitro `apps/portal` : écran de login iso legacy, mapping email → instance (généré depuis les bases migrées + table d'exceptions pour les comptes internes multi-org)
-- [ ] 2.2 Authentification déléguée : `auth.login` de l'instance appelé côté serveur, erreurs restituées (invalides / indisponible), aucune énumération de comptes, aucun stockage de session côté portail
-- [ ] 2.3 Page `/sso` dans l'admin : token en fragment → session nuxt-auth, nettoyage du fragment, redirection `/overview` ; token invalide → login
-- [ ] 2.4 Scénario E2E portail (login délégué de bout en bout contre une instance du harness)
+- [x] 2.1 App Nitro `apps/portal` : écran de login iso legacy, mapping email → instance (généré depuis les bases migrées + table d'exceptions pour les comptes internes multi-org)
+- [x] 2.2 Authentification déléguée : `auth.login` de l'instance appelé côté serveur, erreurs restituées (invalides / indisponible), aucune énumération de comptes, aucun stockage de session côté portail
+- [x] 2.3 Page `/sso` dans l'admin : token en fragment → session nuxt-auth, nettoyage du fragment, redirection `/overview` ; token invalide → login
+- [x] 2.4 Scénario E2E portail (login délégué de bout en bout contre une instance du harness)
 
 ## 3. Infra par client (opérations Quentin + gabarits fournis)
 
