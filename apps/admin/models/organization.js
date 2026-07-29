@@ -77,12 +77,13 @@ const _organizationAPI = class OrganizationAPI extends ModelAPI {
     return this.repo.find(_id)
   }
 
-  // Déploiements : portage prévu avec les jobs (tâche 9.10). Le bouton
-  // Publier est désactivé d'ici là ; le polling reste silencieux.
+  /** Bouton Publier : déclenche le build Vercel via l'API (tâche deploy). */
   async createDeployment() {
-    throw new Error('E_DEPLOYMENTS_NOT_PORTED')
+    return this.trpc.organization.deploy.mutate()
   }
 
+  // L'état du déploiement Vercel n'est plus interrogé (le legacy sondait
+  // l'API Vercel) : le hook déclenché, le build part — polling neutre.
   async getDeployment() {
     return { state: 'READY' }
   }

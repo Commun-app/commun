@@ -1,0 +1,22 @@
+{
+  "name": "@commun/apidae-sync",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Portage APIDAE-only du job-data-sync legacy (ot-pertuis) — moteur de mapping + sink via les services du core. Frontière volontaire : candidat à l'extraction hors du monorepo open source (décision en phase 6).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@commun/core": "workspace:*",
+    "consola": "^3.4.2",
+    "luxon": "^3.7.2"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.7.2",
+    "typescript": "^6.0.3"
+  }
+}

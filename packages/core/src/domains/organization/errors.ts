@@ -11,3 +11,13 @@ export const OrganizationAlreadyInitializedError = createTypedError(
   'collectivité déjà initialisée',
   'BAD_REQUEST',
 );
+export const DeployHookMissingError = createTypedError(
+  'deploy-hook-missing-error',
+  'E_NO_DEPLOY_HOOK — aucun hook de déploiement configuré (organization.deployment.vercel.hook)',
+  'BAD_REQUEST',
+);
+export const DeployFailedError = createTypedError(
+  'deploy-failed-error',
+  'le déclenchement du déploiement a échoué',
+  'INTERNAL_SERVER_ERROR',
+);

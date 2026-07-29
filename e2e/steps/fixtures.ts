@@ -24,6 +24,9 @@ export interface World {
   collectionId?: string;
   entryId?: string;
   entryIds?: string[];
+  // jobs.feature
+  taskResult?: unknown;
+  hookHitsBefore?: number;
 }
 
 export const test = base.extend<{ world: World }>({

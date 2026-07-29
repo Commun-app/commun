@@ -40,19 +40,14 @@
               />
             </nuxt-link>
           </p>
-          <!-- Publication désactivée : le déclenchement des déploiements est
-               porté avec les jobs (tâche 9.10 du chantier Commun). -->
-          <p class="mb-2 rounded-md bg-amber-50 border border-amber-200 px-2 py-2 text-xs text-amber-800">
-            Publication bientôt disponible (portage en cours).
-          </p>
           <button-primary
-            :disabled="true"
-            :loading="false"
+            :disabled="publishing"
+            :loading="publishing"
             label="confirmer"
             class="w-full"
             @click="_publish"
           />
-          <div v-if="deploying" class="p-2 border border-gray-300 rounded-md mt-2">
+          <div v-if="deploying || finish" class="p-2 border border-gray-300 rounded-md mt-2">
             <p class="text-xs text-gray-400">
               Patientez 2 à 5 minutes pour que votre site soit publié...
             </p>
@@ -74,6 +69,7 @@ import buttonPrimary from '~/components/elements/buttons/primary'
 const buttonPublish = ref(null)
 const display = ref(false)
 const loading = ref(true)
+const publishing = ref(false)
 const deploying = ref(false)
 const finish = ref(false)
 
@@ -116,10 +112,23 @@ const _close = () => {
   }
 }
 
-const _publish = async (action) => {
-  // Stub : createDeployment jette tant que les déploiements ne sont pas
-  // portés (tâche 9.10) — le bouton est désactivé dans le template.
-  notificationsStore.add({ icon: 'iconoir:reload-window', type: 'warn', title: 'Publication bientôt disponible.' })
+const _publish = async () => {
+  publishing.value = true
+  try {
+    await Organization.createDeployment()
+    notificationsStore.add({ icon: 'iconoir:reload-window', type: 'default', title: 'Déploiement déclenché...' })
+    finish.value = true
+    setTimeout(() => { finish.value = false }, 8000)
+  } catch (err) {
+    const noHook = String(err?.message ?? '').includes('E_NO_DEPLOY_HOOK')
+    notificationsStore.add({
+      icon: 'iconoir:window-close',
+      type: 'warn',
+      title: noHook ? 'Aucun hook de déploiement configuré.' : 'Échec du déclenchement du déploiement.'
+    })
+  } finally {
+    publishing.value = false
+  }
 }
 
 // Prepare watch

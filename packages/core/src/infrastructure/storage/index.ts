@@ -23,6 +23,8 @@ export interface StorageDriver {
     contentType: string,
     metadata?: Record<string, string>,
   ): Promise<string>;
+  /** Direct in-process upload (tâches de sync) — même destination que les PUT pré-signés. */
+  put(key: string, body: Uint8Array, contentType: string): Promise<void>;
   /** Object metadata if it exists (used to confirm an upload), null otherwise. */
   head(key: string): Promise<{ size: number } | null>;
   remove(keys: string[]): Promise<void>;
@@ -67,6 +69,17 @@ export class S3Storage implements StorageDriver {
         Metadata: metadata,
       }),
       { expiresIn: SIGNED_URL_TTL_S },
+    );
+  }
+
+  async put(key: string, body: Uint8Array, contentType: string): Promise<void> {
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.config.bucket,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+      }),
     );
   }
 

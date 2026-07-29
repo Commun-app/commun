@@ -10,4 +10,7 @@ export const organizationRouter = router({
   update: adminProcedure
     .input(organizationUpdateDto)
     .mutation(({ ctx, input }) => ctx.services.organization.update(input, ctx.session.user.id)),
+  // Bouton « Publier » de l'admin : déclenche le build Vercel (admin ET
+  // rédacteur — iso legacy, publier fait partie du flux éditorial).
+  deploy: protectedProcedure.mutation(({ ctx }) => ctx.services.organization.deploy()),
 });

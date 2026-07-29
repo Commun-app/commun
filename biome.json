@@ -14,7 +14,9 @@
       "!bun.lock",
       "!.dump",
       "!ROADMAP.md",
-      "!packages/legacy-migrate"
+      "!packages/legacy-migrate",
+      "!apidae-*.json",
+      "!e2e/data/apidae/objets.json"
     ]
   },
   "formatter": {

@@ -99,6 +99,25 @@ export class MediaService {
     return row;
   }
 
+  /**
+   * Upload in-process (tâches de sync) : même flux que requestUpload+finalize
+   * mais l'objet est écrit directement via le driver — aucune URL pré-signée.
+   */
+  async uploadDirect(
+    filename: string,
+    mime: string,
+    body: Uint8Array,
+    metaData?: Record<string, unknown>,
+    actorId?: string,
+  ): Promise<Media> {
+    if (!ALLOWED_MIME.has(mime)) {
+      throw new UnsupportedMimeError(`type de fichier non autorisé: ${mime}`);
+    }
+    const key = `${nanoid(10)}/${sanitizeFilename(filename)}`;
+    await this.storage.put(key, body, mime);
+    return this.finalize({ key, filename, mime, metaData }, actorId);
+  }
+
   async list(): Promise<Media[]> {
     return this.repository.list();
   }

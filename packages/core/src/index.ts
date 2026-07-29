@@ -46,13 +46,17 @@ export function createCore({ env }: { env?: CoreEnv } = {}): Core {
     adminUrl: e.COMMUN_ADMIN_URL,
     jwtSecret: e.COMMUN_JWT_SECRET,
   });
-  const media = new MediaService(new MediaRepository(db), storage);
+  const mediaRepository = new MediaRepository(db);
+  const media = new MediaService(mediaRepository, storage);
+  const collectionsRepository = new CollectionsRepository(db);
+  const collections = new CollectionsService(collectionsRepository, media);
+  const organization = new OrganizationService(new OrganizationRepository(db));
   const services = {
     health: new HealthService(db),
     users,
-    organization: new OrganizationService(new OrganizationRepository(db)),
+    organization,
     media,
-    collections: new CollectionsService(new CollectionsRepository(db), media),
+    collections,
   };
 
   // No side effects here (review): boot housekeeping (purgeExpired) is the
@@ -101,6 +105,7 @@ export type {
 } from './common/types/index.ts';
 
 // Domains — schemas, validation, repositories, services, routers, errors.
+// (La sync APIDAE vit dans @commun/apidae-sync — frontière volontaire, review PR #4.)
 export * from './domains/organization/index.ts';
 export * from './domains/users/index.ts';
 export * from './domains/media/index.ts';

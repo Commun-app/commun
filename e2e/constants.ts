@@ -37,6 +37,17 @@ export const EMAIL_WEBHOOK = {
   seedDiscardUrl: 'http://127.0.0.1:9/discard',
 } as const;
 
+/**
+ * Mock APIDAE + hook Vercel (e2e/mocks/apidae.mock.ts) — jobs.feature.
+ * L'API sous test le voit via COMMUN_APIDAE_API_URL (webServer, littéral dupliqué).
+ */
+export const APIDAE_MOCK = {
+  port: 3198,
+  apiUrl: 'http://127.0.0.1:3198/apidae',
+  hookUrl: 'http://127.0.0.1:3198/vercel/hook',
+  mediaBase: 'http://127.0.0.1:3198/media',
+} as const;
+
 export const JWT_SECRET = 'e2e-jwt-secret';
 export const ADMIN_URL = 'https://admin.e2e.test';
 
