@@ -11,6 +11,10 @@ COPY package.json bun.lock .npmrc ./
 COPY apps/api/package.json apps/api/
 COPY apps/admin/package.json apps/admin/
 COPY packages/core/package.json packages/core/
+COPY packages/apidae-sync/package.json packages/apidae-sync/
+# patchedDependencies (prose) : bun lit patches/ à l'install — sans tokens la
+# patchée n'est pas installée, mais le dossier doit exister.
+COPY patches ./patches
 RUN bun install --no-save
 
 COPY . .
