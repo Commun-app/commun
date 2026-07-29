@@ -69,9 +69,42 @@ const _upload = async (file) => {
   const data = await Media.create({ _id, mime, name })
   return { id: data._id, src: data.objects.original, title: name }
 }
+// Résolution des médias des nœuds fichier/image, BORNÉE (upgrade-admin-nuxt4) :
+// chaque nœud prose résout son média au montage — un document riche (arrêtés
+// municipaux : ~700 PDF) déclenchait autant d'appels simultanés et gelait la
+// page. Cache partagé (dédoublonnage + réutilisation entre éditeurs) et
+// concurrence plafonnée, sans changer le comportement unitaire.
+const FETCH_CONCURRENCY = 6
+const mediaCache = new Map()
+let inFlight = 0
+const waiters = []
+
+const _withSlot = async (task) => {
+  while (inFlight >= FETCH_CONCURRENCY) {
+    await new Promise((resolve) => waiters.push(resolve))
+  }
+  inFlight += 1
+  try {
+    return await task()
+  } finally {
+    inFlight -= 1
+    waiters.shift()?.()
+  }
+}
+
 const _fetch = async (file) => {
-  const data = await Media.read(file.id, null, workspaceStore.workspaceId)
-  return { ...file, src: data?.objects?.original, title: data.name }
+  if (!mediaCache.has(file.id)) {
+    mediaCache.set(file.id, _withSlot(async () => {
+      const data = await Media.read(file.id, null, workspaceStore.workspaceId)
+      return { src: data?.objects?.original, title: data?.name }
+    }).catch((error) => {
+      // Un échec ne doit pas empoisonner le cache (retente au prochain montage).
+      mediaCache.delete(file.id)
+      throw error
+    }))
+  }
+  const resolved = await mediaCache.get(file.id)
+  return { ...file, ...resolved }
 }
 
 // Prepare watchers

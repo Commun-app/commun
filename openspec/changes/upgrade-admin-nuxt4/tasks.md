@@ -25,8 +25,9 @@
 
 ## 5. Retours de la passe manuelle (Quentin, 29/07)
 
-- [x] 5.1 Accordéon WYSIWYG : node views Vue VIDES dans prose 0.24.1 (chantier inachevé — l'admin déployé rendait le natif) → patch bun committé (`patches/`) neutralisant les addNodeView accordion/summary/content, retour au rendu natif Details ; meurt avec prose en phase 4. Install CI sans tokens revalidée cache froid
+- [x] 5.1 Accordéon WYSIWYG (diagnostic v2, retour Quentin : le rendu doit être ISO legacy +/−) : l'UI vit dans les node views summary/content du dist — le VRAI bug est le wrapper sans `NodeViewContent`, dont TipTap ≤2.11 faisait retomber le contentDOM sur l'élément racine, plus TipTap 2.27 (tiré par le lock régénéré) → enfants jamais montés. Patch bun v2 : le wrapper gagne un `<node-view-content>`, summary/content d'origine conservés — rendu iso legacy vérifié (18 encadrés +/−, toggle OK). Meurt avec prose en phase 4
 - [x] 5.2 Relations : l'adaptateur tRPC n'envoyait JAMAIS `records[]` (écran inerte depuis la phase 1) → `related` ouvert à l'update (DTO + service, symétrie des liens inverses via linkRelations), envoyé par le modèle admin ; scénario E2E « liens libres mutuels » + delta de spec core-domains
 - [x] 5.3 updatedBy vide sur données migrées : la CLI ne préservait ni les ids users ni les auteurs → ids users legacy PRÉSERVÉS + createdBy/updatedBy copiés (mapper + migrate) ; smoke-grigny régénérée (594 entrées avec auteur) — le dump de bascule inclura les auteurs
 - [x] 5.4 Tableau hors écran : table-auto suit la largeur max-content — titre `truncate` (nowrap) et description non bornés dictaient la colonne → `max-w-xl` + `line-clamp-2` (data-summary), zéro débordement vérifié à 1440px
 - [x] 5.5 Thématiques sans couleur : badge blanc-sur-blanc par défaut + parseur de contraste ignorant l'hex → repli gris neutre lisible et luminance hex/rgb correcte (badge.vue)
+- [x] 5.6 ~700 appels médias simultanés sur un record riche (arrêtés) gelaient la page : chaque nœud fichier/image prose résout son média au montage (comportement prose, iso legacy) → cache partagé + concurrence plafonnée à 6 dans input-wysiwyg ; page réactive vérifiée sur le record aux 858 fichiers

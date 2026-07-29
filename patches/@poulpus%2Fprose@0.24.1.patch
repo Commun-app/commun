@@ -1,36 +1,33 @@
-diff --git a/dist/runtime/extensions/accordion/index.mjs b/dist/runtime/extensions/accordion/index.mjs
-index 292edcf085c90a04507ad0bdd6e7457e35ee1c44..ed2ffeba4315efc460f78b108c3c2f496a4513dd 100644
---- a/dist/runtime/extensions/accordion/index.mjs
-+++ b/dist/runtime/extensions/accordion/index.mjs
-@@ -1,2 +1,11 @@
--import node from "./node.mjs";
--export default { node };
-+import Details from "@tiptap-pro/extension-details";
-+export default {
-+  node: Details.extend({
-+    addAttributes() {
-+      return {
-+        ...this.parent?.(),
-+        toggle: { default: true }
-+      };
-+    }
-+  }).configure({ persist: true, HTMLAttributes: { class: "details" } })
-+};
-diff --git a/dist/runtime/extensions/accordion-content/index.mjs b/dist/runtime/extensions/accordion-content/index.mjs
-index 292edcf085c90a04507ad0bdd6e7457e35ee1c44..067632d29bf44692a348afa89f9e3f27ddbc1626 100644
---- a/dist/runtime/extensions/accordion-content/index.mjs
-+++ b/dist/runtime/extensions/accordion-content/index.mjs
-@@ -1,2 +1,2 @@
--import node from "./node.mjs";
--export default { node };
-+import DetailsContent from "@tiptap-pro/extension-details-content";
-+export default { node: DetailsContent };
-diff --git a/dist/runtime/extensions/accordion-summary/index.mjs b/dist/runtime/extensions/accordion-summary/index.mjs
-index 292edcf085c90a04507ad0bdd6e7457e35ee1c44..40d853dcee8e961a8175feb92d6985d15e117610 100644
---- a/dist/runtime/extensions/accordion-summary/index.mjs
-+++ b/dist/runtime/extensions/accordion-summary/index.mjs
-@@ -1,2 +1,2 @@
--import node from "./node.mjs";
--export default { node };
-+import DetailsSummary from "@tiptap-pro/extension-details-summary";
-+export default { node: DetailsSummary };
+diff --git a/node_modules/@poulpus/prose/.bun-tag-a93cf0096f70fd4c b/.bun-tag-a93cf0096f70fd4c
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/dist/runtime/extensions/accordion/node-handler.vue b/dist/runtime/extensions/accordion/node-handler.vue
+index e1944fd40d065b1fdb4ef680402730769b612e97..9564b6196dbd272ac94d5af987bd0870d6d9d19e 100644
+--- a/dist/runtime/extensions/accordion/node-handler.vue
++++ b/dist/runtime/extensions/accordion/node-handler.vue
+@@ -1,10 +1,11 @@
+ <template>
+   <node-view-wrapper as="div" class="w-full border border-gray-300">
++    <node-view-content as="div" />
+   </node-view-wrapper>
+ </template>
+ 
+ <script setup>
+-import { NodeViewWrapper, nodeViewProps } from '@tiptap/vue-3'
++import { NodeViewContent, NodeViewWrapper, nodeViewProps } from '@tiptap/vue-3'
+ import { defineProps } from 'vue'
+ 
+ defineProps({ ...nodeViewProps })
+diff --git a/dist/runtime/extensions/accordion/node.mjs b/dist/runtime/extensions/accordion/node.mjs
+index 2deff43af84661a70ce28d4ac294948b1116fca5..b22541211e05b881b359b186c345c2ce09b15cbe 100644
+--- a/dist/runtime/extensions/accordion/node.mjs
++++ b/dist/runtime/extensions/accordion/node.mjs
+@@ -9,8 +9,6 @@ export default Details.extend({
+     return {
+       toggle: {
+         default: true
+-        // parseHTML: element => element.getAttribute('data-icon'),
+-        // renderHTML: attributes => ({ 'data-icon': attributes.icon })
+       }
+     };
+   }
