@@ -37,3 +37,6 @@ packages/legacy-migrate/
 
 # Mapping réel du portail (emails clients) — jamais committé
 /portal-map.json
+
+# Accès infra locaux (Dokploy, Scaleway…) — jamais committés
+/infra/.env.infra
