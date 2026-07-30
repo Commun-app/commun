@@ -21,11 +21,23 @@ const INVALID = { error: 'Identifiants invalides' } as const;
 const LOGIN_TIMEOUT_MS = 10_000;
 
 let map: PortalMap | undefined;
-function portalMap(): PortalMap {
-  map ??= JSON.parse(
-    readFileSync(process.env.PORTAL_MAP ?? './portal-map.json', 'utf8'),
-  ) as PortalMap;
-  return map;
+
+/**
+ * Mapping monté au déploiement : tant qu'il est absent (instances pas encore
+ * chargées), le portail répond « indisponible » — jamais une exception non
+ * gérée. Relu à chaque échec pour qu'ajouter le fichier suffise, sans
+ * redéployer.
+ */
+function portalMap(): PortalMap | null {
+  if (map) return map;
+  try {
+    map = JSON.parse(
+      readFileSync(process.env.PORTAL_MAP ?? './portal-map.json', 'utf8'),
+    ) as PortalMap;
+    return map;
+  } catch {
+    return null;
+  }
 }
 
 export default defineHandler(async (event) => {
@@ -38,7 +50,12 @@ export default defineHandler(async (event) => {
     return INVALID;
   }
 
-  const { instances, emails } = portalMap();
+  const routing = portalMap();
+  if (!routing) {
+    event.res.status = 503;
+    return { error: 'Service momentanément indisponible, réessayez dans un instant' };
+  }
+  const { instances, emails } = routing;
   const instance = instances[emails[email.trim().toLowerCase()] ?? ''];
   if (!instance) {
     event.res.status = 401;
