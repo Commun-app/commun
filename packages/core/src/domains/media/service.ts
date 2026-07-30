@@ -36,6 +36,14 @@ const LEGACY_VARIANTS = [
 const sanitizeFilename = (name: string) =>
   name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-120) || 'file';
 
+/**
+ * Préfixe de TOUS les objets média du bucket (silent-migration) : sépare les
+ * médias des autres usages du bucket — au premier chef les sauvegardes de
+ * volume déposées par l'hébergeur sous `_backups/`. La CLI de migration
+ * applique le même préfixe aux clés migrées.
+ */
+const MEDIA_PREFIX = 'medias/';
+
 type MediaObjects = { original: string; variants: Record<string, string> };
 
 /**
@@ -73,7 +81,7 @@ export class MediaService {
     if (!ALLOWED_MIME.has(mime)) {
       throw new UnsupportedMimeError(`type de fichier non autorisé: ${mime}`);
     }
-    const key = `${nanoid(10)}/${sanitizeFilename(filename)}`;
+    const key = `${MEDIA_PREFIX}${nanoid(10)}/${sanitizeFilename(filename)}`;
     return { key, url: await this.storage.presignedPutUrl(key, mime, metaData) };
   }
 
@@ -113,7 +121,7 @@ export class MediaService {
     if (!ALLOWED_MIME.has(mime)) {
       throw new UnsupportedMimeError(`type de fichier non autorisé: ${mime}`);
     }
-    const key = `${nanoid(10)}/${sanitizeFilename(filename)}`;
+    const key = `${MEDIA_PREFIX}${nanoid(10)}/${sanitizeFilename(filename)}`;
     await this.storage.put(key, body, mime);
     return this.finalize({ key, filename, mime, metaData }, actorId);
   }
