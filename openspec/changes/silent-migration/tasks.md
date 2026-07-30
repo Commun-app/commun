@@ -14,10 +14,16 @@
 
 ## 3. Infra par client (opérations Quentin + gabarits fournis)
 
-- [ ] 3.1 Gabarit Dokploy documenté (app : image d'instance ghcr, volume, secrets, domaine `<slug>.<BASE_DOMAIN>`, **backup planifié du volume → S3 + restauration testée**) + dimensionnement du VPS vérifié pour 4 instances
-- [ ] 3.2 Buckets S3 dédiés créés (×4) + script de copie initiale des objets legacy depuis le manifeste de migration (clés préservées)
-- [ ] 3.3 Déploiement des 4 instances (CMAR, Grigny, LCSS, Pertuis) en mode ombre : boot, `/health`, login, écrans, médias signés depuis le bucket dédié
-- [ ] 3.4 Portail déployé sur le VPS (sans bascule DNS d'app.poulp.us) et testé contre les 4 instances
+- [x] 3.1a Gabarit reproductible : scripts `infra/provision-{scaleway,dokploy,backups}.py` (idempotents) + compose par client ; registre ghcr configuré (tire l'image privée) ; dimensionnement mesuré — **54 Mo par instance Bun contre ~300 Mo par service legacy** (7 conteneurs legacy ≈ 2 Go à libérer au décommissionnement)
+- [ ] 3.1b Backups de volume : configurés (cron 03:00, préfixe `_backups/`, conteneur arrêté = SQLite cohérent, rétention 30) mais **l'exécution ne produit aucun objet** — cause à identifier dans l'UI Dokploy (logs de backup) ; restauration à tester ensuite
+- [ ] 3.1c Domaines + certificats : en attente du DNS `*.commun.flotte.app` (volontairement non créés — Let's Encrypt échouerait en boucle avant résolution)
+- [x] 3.2a Buckets S3 dédiés (×4) + **isolation réelle** : un projet Scaleway par client, application IAM + policy scopée, clé dédiée — vérifié (la clé d'un client se voit refuser les buckets des autres ET ceux des autres projets)
+- [ ] 3.2b Préfixe `medias/` (option A validée) : la CLI de migration et `MediaService` préfixent les clés — 3 lignes, à faire AVANT la copie
+- [ ] 3.2c Script de copie legacy → bucket client (`sync` par préfixe, ~17 Go au total)
+- [x] 3.3a Déploiement des 4 instances : conteneurs `running` + **`healthy`** (elles bootent avec S3 dédié, JWT unique, fail-fast satisfait) ; emails volontairement inertes pendant l'observation
+- [ ] 3.3b Login, écrans, médias signés : non testables tant que les instances sont vides (dépend du chargement des données)
+- [x] 3.4a Portail déployé sur le VPS (conteneur `running`), sans bascule DNS d'app.poulp.us
+- [ ] 3.4b Mapping email → instance généré et monté, puis test de bout en bout contre les 4 instances (dépend du chargement des données)
 
 ## 4. Observation
 
@@ -29,7 +35,7 @@
 
 ## 5. Bascule et décommission (runbook)
 
-- [ ] 5.1 Runbook de bascule PAR CLIENT : gel legacy (lecture seule) → resync final → routage portail actif → app.poulp.us basculée sur le portail (DNS) → Vercel PROD re-pointé sur l'instance → `COMMUN_JOBS_DISABLED` retiré (jobs actifs, horaires iso) → contrôles post-bascule
+- [ ] 5.1 Runbook de bascule PAR CLIENT : gel legacy (lecture seule) → resync final → routage portail actif → app.poulp.us basculée sur le portail (DNS) → Vercel PROD re-pointé sur l'instance → hook Vercel de PROD remis en base → contrôles post-bascule
 - [ ] 5.2 Bascule CMAR → Grigny → LCSS → Pertuis, un client à la fois, point de contrôle après chacun (site publié, admin utilisé, jobs passés)
 - [ ] 5.3 Checklist de décommission legacy (après le DERNIER client + délai de grâce) : jobs GitHub Actions coupés, microservices éteints, Mongo et S3 legacy archivés puis décommissionnés
 - [ ] 5.4 ROADMAP et mémoire à jour (phase 3 close) ; reliquats notés pour la phase 6 (frontière du portail, domaine définitif)

@@ -5,7 +5,10 @@ name: Images
 #
 # Visibilité des packages (réglée à la main au premier push, GitHub crée en
 # PRIVÉ par défaut) :
-#   - commun-api, commun-portal → PUBLIQUES (100 % AGPL)
+#   - commun-api → PUBLIQUE : c'est l'artefact self-hosting (AGPL pur).
+#   - commun-portal → PRIVÉE : AGPL certes, mais c'est notre outillage de
+#     migration, personne d'autre n'en a l'usage (review PR #6) ; sortira du
+#     monorepo avec la vraie app portail du cloud.
 #   - commun-instance → PRIVÉE OBLIGATOIREMENT : l'admin embarque
 #     @poulpus/prose qui bundle du code TipTap Pro (licence — pas de
 #     redistribution publique). Meurt en phase 4 avec TipTap OSS.
@@ -53,7 +56,7 @@ jobs:
             ghcr.io/commun-app/commun-api:${{ github.sha }}
 
   portal:
-    name: commun-portal (publique)
+    name: commun-portal (privée — outillage de migration)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
