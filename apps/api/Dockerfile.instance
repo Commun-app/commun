@@ -24,10 +24,13 @@ COPY patches ./patches
 RUN bun install --no-save
 
 COPY . .
-RUN bun --filter @commun/api build
-# SPA statique (ssr:false) — la sortie est .output/public, servie par l'API
-# (fallback routes/[...spa].get.ts). Aucune URL d'API bakée : base relative.
+# ORDRE CRITIQUE : l'admin est généré AVANT le build de l'API et déposé dans
+# son dossier `public/`. Nitro fige la liste de ses assets publics AU BUILD —
+# copier les fichiers après coup les rendrait invisibles (il les servirait en
+# text/html via le fallback SPA, cassant tous les imports de modules).
 RUN cd apps/admin && bun run generate
+RUN mkdir -p apps/api/public && cp -R apps/admin/.output/public/. apps/api/public/
+RUN bun --filter @commun/api build
 
 FROM oven/bun:1 AS runtime
 WORKDIR /app
@@ -35,8 +38,8 @@ ENV NODE_ENV=production
 ENV COMMUN_DATA_DIR=/data
 ENV COMMUN_MIGRATIONS_DIR=/app/drizzle
 
+# .output contient déjà l'admin (public/ intégré au manifeste Nitro au build).
 COPY --from=build /app/apps/api/.output ./.output
-COPY --from=build /app/apps/admin/.output/public ./.output/public
 COPY --from=build /app/packages/core/drizzle ./drizzle
 
 RUN mkdir -p /data && chown bun:bun /data

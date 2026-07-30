@@ -43,3 +43,6 @@ packages/legacy-migrate/
 
 # Outillage infra/clients LOCAL (logique privée — jamais dans le monorepo open source)
 /infra/
+
+# Admin statique déposé au build de l'image d'instance (jamais committé)
+/apps/api/public/

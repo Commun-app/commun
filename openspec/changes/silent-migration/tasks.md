@@ -15,10 +15,11 @@
 ## 3. Infra par client (opérations Quentin + gabarits fournis)
 
 - [x] 3.1a Gabarit reproductible : scripts `infra/provision-{scaleway,dokploy,backups}.py` (idempotents) + compose par client ; registre ghcr configuré (tire l'image privée) ; dimensionnement mesuré — **54 Mo par instance Bun contre ~300 Mo par service legacy** (7 conteneurs legacy ≈ 2 Go à libérer au décommissionnement)
-- [ ] 3.1b Backups de volume : configurés (cron 03:00, préfixe `_backups/`, conteneur arrêté = SQLite cohérent, rétention 30) mais **l'exécution ne produit aucun objet** — cause à identifier dans l'UI Dokploy (logs de backup) ; restauration à tester ensuite
-- [ ] 3.1c Domaines + certificats : en attente du DNS `*.commun.flotte.app` (volontairement non créés — Let's Encrypt échouerait en boucle avant résolution)
+- [x] 3.1b Backups de volume OPÉRATIONNELS : le champ `serviceName` manquait (Dokploy lançait `docker stop` sans argument — lock `…_null`) ; corrigé sur les 4, archive vérifiée dans le bucket (`<app>_instance/_backups/<volume>-<date>.tar`)
+- [ ] 3.1d Restauration testée (procédure Dokploy « Restore Volume ») — à faire une fois les vraies données chargées
+- [x] 3.1c Domaines + certificats Let's Encrypt : les 5 domaines répondent en HTTPS (`<slug>.commun.flotte.app`), certificats valides, admin servi à la racine de chaque instance et page de login du portail servie
 - [x] 3.2a Buckets S3 dédiés (×4) + **isolation réelle** : un projet Scaleway par client, application IAM + policy scopée, clé dédiée — vérifié (la clé d'un client se voit refuser les buckets des autres ET ceux des autres projets)
-- [ ] 3.2b Préfixe `medias/` (option A validée) : la CLI de migration et `MediaService` préfixent les clés — 3 lignes, à faire AVANT la copie
+- [x] 3.2b Préfixe `medias/` (PR #7 mergée) : `MediaService` et la CLI de migration préfixent les clés ; le manifeste expose `sourceKey` (bucket legacy) et `targetKey` (bucket client)
 - [ ] 3.2c Script de copie legacy → bucket client (`sync` par préfixe, ~17 Go au total)
 - [x] 3.3a Déploiement des 4 instances : conteneurs `running` + **`healthy`** (elles bootent avec S3 dédié, JWT unique, fail-fast satisfait) ; emails volontairement inertes pendant l'observation
 - [ ] 3.3b Login, écrans, médias signés : non testables tant que les instances sont vides (dépend du chargement des données)
