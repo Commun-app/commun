@@ -18,6 +18,10 @@ export default defineConfig({
   experimental: { tasks: true },
   scheduledTasks: {
     '30 0 * * *': ['deploy'],
+    // Avant le sync et le build : l'assainissement passe sur ce que la
+    // resynchronisation nocturne vient de réinstaller. TEMPORAIRE — meurt avec
+    // le legacy (voir `tasks/sanitize/media.ts`).
+    '0 4 * * *': ['sanitize:media'],
     '30 5 * * *': ['apidae:sync'],
   },
   runtimeConfig: {

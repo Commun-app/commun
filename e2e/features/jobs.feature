@@ -49,3 +49,15 @@ Feature: Scheduled jobs
     When the "apidae:sync" task runs
     Then the sync report flags a collect failure with the unlink skipped
     And the entry for APIDAE id "4612219" is published
+
+  # TEMPORAIRE — meurt avec le legacy (voir tasks/sanitize/media.ts).
+  # L'éditeur legacy recopiait l'enregistrement média entier dans le nœud de
+  # rich-text. Cette copie n'est jamais rafraîchie : elle transporte des URLs
+  # signées vers le bucket legacy, qui n'existera plus après décommissionnement.
+  Scenario: The daily sweep drops frozen media snapshots from rich text
+    Given an entry carrying a frozen legacy media snapshot
+    Then its rich text still holds the frozen snapshot
+    When the "sanitize:media" task runs
+    Then the sweep reports one cleaned node
+    And its rich text no longer holds any frozen snapshot
+    And its image keeps the identifier that makes it live
