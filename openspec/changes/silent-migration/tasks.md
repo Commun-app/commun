@@ -20,8 +20,10 @@
 - [x] 3.1c Domaines + certificats Let's Encrypt : les 5 domaines répondent en HTTPS (`<slug>.commun.flotte.app`), certificats valides, admin servi à la racine de chaque instance et page de login du portail servie
 - [x] 3.2a Buckets S3 dédiés (×4) + **isolation réelle** : un projet Scaleway par client, application IAM + policy scopée, clé dédiée — vérifié (la clé d'un client se voit refuser les buckets des autres ET ceux des autres projets)
 - [x] 3.2b Préfixe `medias/` (PR #7 mergée) : `MediaService` et la CLI de migration préfixent les clés ; le manifeste expose `sourceKey` (bucket legacy) et `targetKey` (bucket client)
-- [ ] 3.2c Script de copie legacy → bucket client (`sync` par préfixe, ~17 Go au total)
-- [x] 3.3a Déploiement des 4 instances : conteneurs `running` + **`healthy`** (elles bootent avec S3 dédié, JWT unique, fail-fast satisfait) ; emails volontairement inertes pendant l'observation
+- [x] 3.2c Copie legacy → bucket client (`infra/sync-medias.sh`, rclone S3→S3 en streaming — deux comptes Scaleway distincts, `aws s3 sync` inopérant) : les 4 clients copiés (grigny 8,3 Go, lcss 862 Mo, cmar 63 Mo, ot-pertuis 10,6 Go)
+- [x] 3.2d Médias servis publiquement (D10) : bucket policy `medias/` en lecture seule sur les 4 buckets (`infra/set-bucket-policy.py`), `_seed/`, `_backup/` et le listing vérifiés privés ; `StorageDriver.url()` renvoie une URL directe sous ce préfixe, l'écriture reste signée
+- [x] 3.3a Déploiement des 4 instances : conteneurs `running` + **`healthy`**, admin réellement servi (assets `text/javascript` vérifiés en HTTPS après correction du manifeste Nitro), emails volontairement inertes
+- [x] 3.3c Déploiement continu : webhooks GitHub `registry_package` → `POST /api/deploy/compose/<token>` (aucun credential Dokploy dans le repo ni la CI) + `pull_policy: always` — sans lui Compose relançait l'ANCIENNE image malgré le webhook (piège du tag mouvant, constaté le 30/07)
 - [ ] 3.3b Login, écrans, médias signés : non testables tant que les instances sont vides (dépend du chargement des données)
 - [x] 3.4a Portail déployé sur le VPS (conteneur `running`), sans bascule DNS d'app.poulp.us
 - [ ] 3.4b Mapping email → instance généré et monté, puis test de bout en bout contre les 4 instances (dépend du chargement des données)
