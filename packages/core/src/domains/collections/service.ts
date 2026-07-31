@@ -337,6 +337,65 @@ export class CollectionsService {
     return copy;
   }
 
+  /**
+   * Retire les instantanés de média FIGÉS des nœuds de rich-text
+   * (`attrs.data`) — dette héritée du legacy, à supprimer avec la tâche
+   * `sanitize:media` une fois les clients migrés.
+   *
+   * L'éditeur legacy recopiait l'enregistrement média complet dans le nœud au
+   * moment de l'insertion. Cette copie n'est JAMAIS rafraîchie : elle
+   * transporte indéfiniment des URLs signées périmées vers le bucket legacy,
+   * qui n'existera plus après le décommissionnement. Personne ne la lit —
+   * `@poulpus/prose` n'utilise que `attrs.src`, et le générateur du SSG
+   * `attrs.mediaRecord` — et ces deux valeurs-là sont, elles, recalculées à
+   * chaque lecture par `resolveRichTextMedia`. L'instantané est donc du poids
+   * mort porteur d'adresses mortes.
+   *
+   * `updatedAt` et `updatedBy` sont PRÉSERVÉS : c'est une opération de
+   * maintenance, elle ne doit pas se faire passer pour une modification
+   * éditoriale dans l'admin.
+   */
+  async sanitizeLegacyMediaSnapshots(): Promise<{ entries: number; nodes: number }> {
+    let entriesTouched = 0;
+    let nodesCleaned = 0;
+
+    const strip = (node: unknown): boolean => {
+      if (Array.isArray(node)) return node.map(strip).some(Boolean);
+      if (node === null || typeof node !== 'object') return false;
+      const record = node as Record<string, unknown>;
+      let changed = false;
+      const attrs = record.attrs as Record<string, unknown> | undefined;
+      if (
+        (record.type === 'image' || record.type === 'file') &&
+        attrs &&
+        attrs.data !== null &&
+        typeof attrs.data === 'object'
+      ) {
+        delete attrs.data;
+        nodesCleaned += 1;
+        changed = true;
+      }
+      for (const value of Object.values(record)) {
+        if (strip(value)) changed = true;
+      }
+      return changed;
+    };
+
+    for (const definition of await this.repository.listDefinitions()) {
+      for (const entry of await this.repository.listEntries(definition.id)) {
+        const data = structuredClone(entry.data);
+        if (!strip(data)) continue;
+        await this.repository.updateEntry(entry.id, {
+          data,
+          updatedAt: entry.updatedAt,
+          updatedBy: entry.updatedBy,
+        });
+        entriesTouched += 1;
+      }
+    }
+    return { entries: entriesTouched, nodes: nodesCleaned };
+  }
+
   /** Iso legacy: les events sans période d'agenda ne sont pas publiés. */
   private hasEmptySchedules(entry: Entry): boolean {
     const schedules = (entry.data.schedules ?? entry.legacyExtra?.schedules) as
