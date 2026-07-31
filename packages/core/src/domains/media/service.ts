@@ -47,7 +47,7 @@ const MEDIA_PREFIX = 'medias/';
 type MediaObjects = { original: string; variants: Record<string, string> };
 
 /**
- * The media shape legacy clients consume: `objects` values are SIGNED URLs
+ * The media shape legacy clients consume: `objects` values are PUBLIC URLs
  * (every legacy variant name points at the original until real resize lands).
  */
 export interface LegacyMedia {
@@ -62,9 +62,10 @@ export interface LegacyMedia {
 /**
  * Media library — iso legacy flow: the API hands out a pre-signed S3 PUT URL
  * (`requestUpload`), the client uploads DIRECTLY to object storage, then
- * `finalize` verifies the object and records the row. Reads return SIGNED
- * URLs (iso legacy — clients display straight from the payload). Resize is
- * stubbed (legacy SQS had no worker left) — end of phase.
+ * `finalize` verifies the object and records the row. L'ÉCRITURE reste signée ;
+ * la LECTURE ne l'est plus — les objets `medias/` sont servis publiquement par
+ * le stockage (voir `PUBLIC_PREFIX`). Resize is stubbed (legacy SQS had no
+ * worker left) — end of phase.
  */
 export class MediaService {
   constructor(
@@ -130,19 +131,17 @@ export class MediaService {
     return this.repository.list();
   }
 
-  /** List with `objects` resolved to signed URLs (iso legacy read shape). */
+  /** List with `objects` resolved to their URLs (iso legacy read shape). */
   async listResolved(): Promise<Array<Media & { objects: Record<string, string> }>> {
     const rows = await this.repository.list();
-    return Promise.all(
-      rows.map(async (row) => ({ ...row, objects: await this.signedObjects(row) })),
-    );
+    return Promise.all(rows.map(async (row) => ({ ...row, objects: await this.objectUrls(row) })));
   }
 
-  /** One media with signed `objects` (iso legacy `GET /media/:org/:id`). */
+  /** One media with resolved `objects` (iso legacy `GET /media/:org/:id`). */
   async get(id: string): Promise<Media & { objects: Record<string, string> }> {
     const row = await this.repository.findById(id);
     if (!row) throw new MediaNotFoundError(`média introuvable: ${id}`);
-    return { ...row, objects: await this.signedObjects(row) };
+    return { ...row, objects: await this.objectUrls(row) };
   }
 
   async updateEditorial(id: string, input: MediaUpdateDto, actorId?: string): Promise<Media> {
@@ -160,7 +159,7 @@ export class MediaService {
     await this.repository.delete(id);
   }
 
-  /** Signed GET URL of a media's original object (null if the media is unknown). */
+  /** Public GET URL of a media's original object (null if the media is unknown). */
   async url(id: string): Promise<string | null> {
     const row = await this.repository.findById(id);
     if (!row) return null;
@@ -170,7 +169,7 @@ export class MediaService {
   /**
    * Legacy media record for the public payloads (`fetchMediaRecords` /
    * `populateWysiwygMedia` parity): every legacy variant key points at the
-   * signed original until real resize lands.
+   * original until real resize lands.
    */
   async toLegacyMedia(id: string): Promise<LegacyMedia | null> {
     const row = await this.repository.findById(id);
@@ -199,13 +198,13 @@ export class MediaService {
 
   /**
    * Iso legacy `_parseRecursively` (content/deployment): walk any JSON value
-   * and replace `_media:<id>` strings with the signed legacy media record.
+   * and replace `_media:<id>` strings with the legacy media record.
    */
   async resolveMediaPlaceholders(node: unknown): Promise<unknown> {
     const isPlaceholder = (v: unknown): v is string =>
       typeof v === 'string' && v.startsWith('_media:');
     // Iso legacy `_fetchMediaRecords` : une valeur `_media:` (ou un tableau de
-    // `_media:`) est remplacée par un TABLEAU PLAT de records signés.
+    // `_media:`) est remplacée par un TABLEAU PLAT de records médias.
     const resolveList = async (ids: string[]): Promise<unknown[]> => {
       const records = await Promise.all(
         ids.map((v) => this.toLegacyMedia(v.slice('_media:'.length))),
@@ -227,13 +226,13 @@ export class MediaService {
     return node;
   }
 
-  private async signedObjects(row: Media): Promise<Record<string, string>> {
+  private async objectUrls(row: Media): Promise<Record<string, string>> {
     const objects = row.objects as MediaObjects;
     const url = await this.storage.url(objects.original);
-    const signed: Record<string, string> = { original: url };
+    const urls: Record<string, string> = { original: url };
     for (const [name, key] of Object.entries(objects.variants ?? {})) {
-      signed[name] = await this.storage.url(key);
+      urls[name] = await this.storage.url(key);
     }
-    return signed;
+    return urls;
   }
 }

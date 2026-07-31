@@ -63,7 +63,7 @@ When('the upload is finalized', async ({ world }) => {
   world.mediaId = (response.body as { result: { data: { id: string } } }).result.data.id;
 });
 
-Then('the media library lists it with signed object URLs', async ({ world }) => {
+Then('the media library lists it with public object URLs', async ({ world }) => {
   const response = await query('media.list', world.sessionToken!);
   expect(response.status).toBe(200);
   const body = response.body as {
@@ -71,19 +71,26 @@ Then('the media library lists it with signed object URLs', async ({ world }) => 
   };
   const media = body.result.data.find((row) => row.id === world.mediaId)!;
   expect(media).toBeTruthy();
-  expect(media.objects.original).toContain('X-Amz-Signature');
+  // Ni signature ni péremption : c'est tout l'objet du changement. L'URL est
+  // l'adresse directe de l'objet, sous le préfixe servi publiquement.
+  expect(media.objects.original).not.toContain('X-Amz-Signature');
+  expect(media.objects.original).not.toContain('X-Amz-Expires');
+  expect(media.objects.original).toContain(uploadKey);
 });
 
-Then('downloading the signed original URL returns the uploaded bytes', async ({ world }) => {
-  const media = await (async () => {
-    const response = await query('media.get', world.sessionToken!, { id: world.mediaId });
-    expect(response.status).toBe(200);
-    return (response.body as { result: { data: { objects: { original: string } } } }).result.data;
-  })();
-  const download = await fetch(media.objects.original);
-  expect(download.status).toBe(200);
-  expect(new Uint8Array(await download.arrayBuffer())).toEqual(FILE_BYTES);
-});
+Then(
+  'downloading the original URL without credentials returns the uploaded bytes',
+  async ({ world }) => {
+    const media = await (async () => {
+      const response = await query('media.get', world.sessionToken!, { id: world.mediaId });
+      expect(response.status).toBe(200);
+      return (response.body as { result: { data: { objects: { original: string } } } }).result.data;
+    })();
+    const download = await fetch(media.objects.original);
+    expect(download.status).toBe(200);
+    expect(new Uint8Array(await download.arrayBuffer())).toEqual(FILE_BYTES);
+  },
+);
 
 // ── Métadonnées & suppression ────────────────────────────────────────────────
 

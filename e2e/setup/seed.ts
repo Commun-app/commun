@@ -98,7 +98,8 @@ switch (command) {
     const requireFromCore = createRequire(
       new URL('../../packages/core/src/index.ts', import.meta.url).pathname,
     );
-    const { S3Client, CreateBucketCommand } = requireFromCore('@aws-sdk/client-s3');
+    const { S3Client, CreateBucketCommand, PutBucketPolicyCommand } =
+      requireFromCore('@aws-sdk/client-s3');
     const client = new S3Client({
       region: S3.region,
       endpoint: S3.endpoint,
@@ -111,6 +112,29 @@ switch (command) {
       const name = (error as { name?: string }).name ?? '';
       if (!name.includes('BucketAlready')) throw error;
     }
+    // Le préfixe des médias est lisible ANONYMEMENT, comme en production
+    // (`infra/set-bucket-policy.py`) : sans ça, l'E2E validerait un contrat de
+    // lecture que le vrai stockage ne rendrait pas. Le reste du bucket demeure
+    // privé, et le listing n'est jamais ouvert.
+    // NB : MinIO attend des ARN complets là où Scaleway prend le nom nu du
+    // bucket — la FORME diffère, la règle est la même.
+    await client.send(
+      new PutBucketPolicyCommand({
+        Bucket: S3.bucket,
+        Policy: JSON.stringify({
+          Version: '2012-10-17',
+          Statement: [
+            {
+              Sid: 'public-medias-read',
+              Effect: 'Allow',
+              Principal: { AWS: ['*'] },
+              Action: ['s3:GetObject'],
+              Resource: [`arn:aws:s3:::${S3.bucket}/medias/*`],
+            },
+          ],
+        }),
+      }),
+    );
     console.log(JSON.stringify({ bucket: 'commun-e2e' }));
     break;
   }

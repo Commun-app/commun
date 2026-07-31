@@ -28,7 +28,7 @@ export interface StorageDriver {
   /** Object metadata if it exists (used to confirm an upload), null otherwise. */
   head(key: string): Promise<{ size: number } | null>;
   remove(keys: string[]): Promise<void>;
-  /** Time-limited signed GET URL a browser can load the object from. */
+  /** URL a browser can load the object from (public under `medias/`, signed elsewhere). */
   url(key: string): Promise<string>;
 }
 
@@ -40,8 +40,25 @@ export interface S3Config {
   secretKey: string;
 }
 
-// Iso legacy: 7 days (site builds cache signed URLs).
+// Durée de vie des URLs signées, qui ne servent plus qu'à l'ÉCRITURE (upload
+// direct depuis l'admin) et aux objets privés.
 const SIGNED_URL_TTL_S = 7 * 24 * 3600;
+
+/**
+ * Préfixe servi en lecture publique par le stockage objet (bucket policy posée
+ * par `infra/set-bucket-policy.py`). Tout le reste du bucket — `_seed/`,
+ * `_backup/` — demeure privé.
+ *
+ * Pourquoi les médias ne sont plus signés (31/07) : le legacy signait ses URLs
+ * de lecture pour 7 jours, or elles sont FIGÉES dans un site statique. Un site
+ * non reconstruit pendant une semaine perdait toutes ses images — le cron de
+ * déploiement quotidien masquait la panne en permanence. Ces médias sont de
+ * toute façon publics (ils sont sur le site public d'une commune) : les servir
+ * directement supprime la péremption, raccourcit les URLs de ~470 à ~100
+ * caractères, et garde le stockage objet — et non l'instance — dans le chemin
+ * du trafic, pour que les sites survivent à une panne du CMS.
+ */
+const PUBLIC_PREFIX = 'medias/';
 
 /** Works with any S3-compatible endpoint: Scaleway Object Storage, MinIO, Garage… */
 export class S3Storage implements StorageDriver {
@@ -105,6 +122,7 @@ export class S3Storage implements StorageDriver {
   }
 
   url(key: string): Promise<string> {
+    if (key.startsWith(PUBLIC_PREFIX)) return Promise.resolve(this.publicUrl(key));
     return getSignedUrl(
       this.client,
       new GetObjectCommand({ Bucket: this.config.bucket, Key: key }),
@@ -112,6 +130,18 @@ export class S3Storage implements StorageDriver {
         expiresIn: SIGNED_URL_TTL_S,
       },
     );
+  }
+
+  /** URL directe, sans signature ni expiration — voir `PUBLIC_PREFIX`. */
+  private publicUrl(key: string): string {
+    const base = (this.config.endpoint ?? `https://s3.${this.config.region}.scw.cloud`).replace(
+      /\/+$/,
+      '',
+    );
+    // Chaque segment est encodé séparément : les `/` de la clé sont des
+    // séparateurs de chemin, pas des caractères à échapper.
+    const path = key.split('/').map(encodeURIComponent).join('/');
+    return `${base}/${this.config.bucket}/${path}`;
   }
 }
 
