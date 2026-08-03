@@ -18,6 +18,8 @@
     button:hover { background: #fff; color: #000; }
     button[disabled] { opacity: .5; cursor: default; }
     .error { color: #b91c1c; font-size: .875rem; text-align: center; min-height: 1.25rem; }
+    .hint { font-size: .875rem; text-align: center; opacity: .8; }
+    #choices-list { display: flex; flex-direction: column; gap: .5rem; }
   </style>
 </head>
 <body>
@@ -29,10 +31,33 @@
       <p class="error" id="error"></p>
       <button type="submit">S'identifier</button>
     </form>
+    <!-- Affiché seulement quand les identifiants ouvrent PLUSIEURS instances
+         (comptes internes) : on demande laquelle plutôt que d'en choisir une
+         arbitrairement. -->
+    <div id="choices" hidden>
+      <p class="hint">Vos identifiants ouvrent plusieurs espaces. Lequel ouvrir ?</p>
+      <div id="choices-list"></div>
+    </div>
   </main>
   <script>
     const form = document.getElementById('login');
     const error = document.getElementById('error');
+    const choices = document.getElementById('choices');
+    const choicesList = document.getElementById('choices-list');
+
+    function offerChoices(list) {
+      form.hidden = true;
+      choicesList.replaceChildren(
+        ...list.map(({ slug, url }) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = slug;
+          button.addEventListener('click', () => location.assign(url));
+          return button;
+        }),
+      );
+      choices.hidden = false;
+    }
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       error.textContent = '';
@@ -47,6 +72,10 @@
         const data = await response.json();
         if (response.ok && data.url) {
           location.assign(data.url);
+          return;
+        }
+        if (response.ok && Array.isArray(data.choices)) {
+          offerChoices(data.choices);
           return;
         }
         error.textContent = data.error || 'Identifiants invalides';
