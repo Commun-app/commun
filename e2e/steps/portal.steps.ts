@@ -21,7 +21,7 @@ async function portalLogin(world: World, email: string, password: string) {
 }
 
 // biome-ignore lint/correctness/noEmptyPattern: playwright-bdd exige un pattern destructuré en premier argument
-Given('a portal-mapped account {string}', ({}, email: string) => {
+Given('an account {string} on the instance', ({}, email: string) => {
   seed('account', email);
 });
 
@@ -36,11 +36,12 @@ When(
   },
 );
 
-Then('the portal returns an sso hand-off URL for the mapped instance', ({ world }) => {
+Then('the portal returns a hand-off URL for that instance', ({ world }) => {
   expect(world.status).toBe(200);
   const { url } = world.body as { url: string };
-  // Remise de session en FRAGMENT (jamais en query — rien dans les logs).
-  expect(url).toMatch(new RegExp(`^${API_URL}/sso#token=.+`));
+  // Remise de session en FRAGMENT (jamais en query — rien dans les logs), sur
+  // le point de rappel GÉNÉRIQUE que servira aussi le connecteur OIDC.
+  expect(url).toMatch(new RegExp(`^${API_URL}/auth/callback#token=.+`));
 });
 
 Then('the hand-off token opens a session on the instance', async ({ world }) => {
@@ -50,6 +51,15 @@ Then('the hand-off token opens a session on the instance', async ({ world }) => 
   expect(response.status).toBe(200);
   expect(response.body.result?.data?.user?.email).toBe('portal@e2e.fr');
 });
+
+When(
+  'the portal is hammered {int} times with {string}',
+  async ({ world }, times: number, email: string) => {
+    for (let attempt = 0; attempt < times; attempt += 1) {
+      await portalLogin(world, email, 'peu-importe');
+    }
+  },
+);
 
 Then('the portal answers {int} with {string}', ({ world }, status: number, message: string) => {
   expect(world.status).toBe(status);

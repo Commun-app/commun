@@ -1,8 +1,0 @@
-{
-  "instances": {
-    "e2e": "http://127.0.0.1:3101"
-  },
-  "emails": {
-    "portal@e2e.fr": "e2e"
-  }
-}

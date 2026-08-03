@@ -56,9 +56,11 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      // Portail (portal.feature) : nitro dev sur 3002, mapping E2E pointant
-      // sur l'API sous test.
-      command: 'PORTAL_MAP="$PWD/e2e/data/portal-map.json" bun --filter @commun/portal dev',
+      // Portail (portal.feature) : nitro dev sur 3002, pointé sur l'API sous
+      // test. Plus d'annuaire email → instance : le portail interroge les
+      // instances qu'il connaît.
+      command:
+        'PORTAL_INSTANCES=\'{"e2e":"http://127.0.0.1:3101"}\' bun --filter @commun/portal dev',
       url: 'http://127.0.0.1:3002/',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
