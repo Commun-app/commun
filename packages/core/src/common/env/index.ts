@@ -23,6 +23,8 @@ const envSchema = z.object({
   // calqué sur Loops events/send, REQUIS au boot (fail-fast, comme le S3).
   COMMUN_EMAIL_WEBHOOK_URL: z.string().optional(),
   COMMUN_EMAIL_WEBHOOK_TOKEN: z.string().optional(),
+  /** Table eventName → identifiant d'email transactionnel (JSON). */
+  COMMUN_EMAIL_TRANSACTIONAL_IDS: z.string().optional(),
   /** URL publique de l'admin — sert à construire les liens des emails. */
   COMMUN_ADMIN_URL: z.string().optional(),
   /** Secret HMAC des JWT de session — REQUIS au boot (fail-fast). */
@@ -52,6 +54,7 @@ export function parseEnv(raw: Record<string, string | undefined> = process.env):
     COMMUN_S3_SECRET_KEY: raw.COMMUN_S3_SECRET_KEY,
     COMMUN_EMAIL_WEBHOOK_URL: raw.COMMUN_EMAIL_WEBHOOK_URL,
     COMMUN_EMAIL_WEBHOOK_TOKEN: raw.COMMUN_EMAIL_WEBHOOK_TOKEN,
+    COMMUN_EMAIL_TRANSACTIONAL_IDS: raw.COMMUN_EMAIL_TRANSACTIONAL_IDS,
     COMMUN_ADMIN_URL: raw.COMMUN_ADMIN_URL,
     COMMUN_JWT_SECRET: raw.COMMUN_JWT_SECRET,
     COMMUN_APIDAE_API_URL: raw.COMMUN_APIDAE_API_URL,

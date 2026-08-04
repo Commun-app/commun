@@ -43,6 +43,11 @@ export default defineConfig({
         // — teste l'émission d'ÉVÉNEMENTS réelle, Bearer token compris.
         'COMMUN_EMAIL_WEBHOOK_URL=http://127.0.0.1:3199/emails ' +
         'COMMUN_EMAIL_WEBHOOK_TOKEN=e2e-webhook-token ' +
+        // Neutralisée EXPLICITEMENT : bun charge le .env du dépôt, où elle
+        // peut porter de vrais identifiants transactionnels. Sans ça, la suite
+        // testerait un format qui dépend de la machine — et pourrait envoyer
+        // de vrais emails.
+        'COMMUN_EMAIL_TRANSACTIONAL_IDS= ' +
         'COMMUN_ADMIN_URL=https://admin.e2e.test ' +
         'COMMUN_JWT_SECRET=e2e-jwt-secret ' +
         // jobs.feature : mock APIDAE (e2e/mocks/apidae.mock.ts, démarré par
