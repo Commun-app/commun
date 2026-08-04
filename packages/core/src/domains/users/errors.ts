@@ -21,3 +21,13 @@ export const CannotRemoveSelfError = createTypedError(
   'impossible de supprimer son propre compte',
   'BAD_REQUEST',
 );
+
+/**
+ * Trop de tentatives de connexion sur un MÊME compte. Distinct d'un échec
+ * d'identifiants : le compte existe peut-être, mais on refuse d'essayer.
+ */
+export const TooManyAttemptsError = createTypedError(
+  'too-many-attempts-error',
+  'trop de tentatives, réessayez dans quelques minutes',
+  'TOO_MANY_REQUESTS',
+);

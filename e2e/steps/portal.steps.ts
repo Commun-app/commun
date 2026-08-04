@@ -4,7 +4,7 @@
 import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 import { trpcQuery } from '../clients/client-trpc.ts';
-import { API_URL, DEFAULT_PASSWORD, PORTAL_URL } from '../constants.ts';
+import { API_URL, DEFAULT_PASSWORD, PORTAL_URL, PORTAL_WEBHOOK_TOKEN } from '../constants.ts';
 import { test, type World } from './fixtures.ts';
 import { seed } from './instance.ts';
 
@@ -64,4 +64,41 @@ When(
 Then('the portal answers {int} with {string}', ({ world }, status: number, message: string) => {
   expect(world.status).toBe(status);
   expect((world.body as { error: string }).error).toBe(message);
+});
+
+// ── Adaptateur d'emails transactionnels ──────────────────────────────────────
+
+const postEmailEvent = async (world: World, token: string | null, eventName: string) => {
+  const response = await fetch(`${PORTAL_URL}/emails`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      email: 'agent@e2e.fr',
+      eventName,
+      eventProperties: { url: 'https://e2e' },
+    }),
+  });
+  world.status = response.status;
+  world.body = await response.json();
+};
+
+When('an email event is posted without the shared secret', async ({ world }) => {
+  await postEmailEvent(world, null, 'userInvited');
+});
+
+When(
+  'an email event {string} is posted with the shared secret',
+  async ({ world }, eventName: string) => {
+    await postEmailEvent(world, PORTAL_WEBHOOK_TOKEN, eventName);
+  },
+);
+
+Then('the portal accepts it without delivering', ({ world }) => {
+  // 202 : l'instance a fait son travail, c'est notre configuration qui manque.
+  // Faire échouer l'appel casserait un flux métier pour un modèle absent.
+  expect(world.status).toBe(202);
+  expect((world.body as { delivered: boolean }).delivered).toBe(false);
 });

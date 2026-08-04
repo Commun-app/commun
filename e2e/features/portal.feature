@@ -32,3 +32,14 @@ Feature: Auth portal
   Scenario: Repeated attempts are throttled
     When the portal is hammered 11 times with "brute@e2e.fr"
     Then the portal answers 429 with "Trop de tentatives, réessayez dans quelques minutes"
+
+  # Le portail traduit l'événement métier de l'instance en email transactionnel.
+  # Cette logique vit ICI, jamais dans le cœur : un self-hosteur doit rester
+  # libre de brancher son propre fournisseur.
+  Scenario: The email webhook refuses an unauthenticated caller
+    When an email event is posted without the shared secret
+    Then the portal answers 401 with "non autorisé"
+
+  Scenario: A known event without a configured template is accepted, not lost
+    When an email event "eventInconnu" is posted with the shared secret
+    Then the portal accepts it without delivering
