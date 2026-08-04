@@ -53,3 +53,13 @@ Feature: Security
   Scenario: CORS reflects the calling origin for credentialed clients
     When a preflight request arrives from origin "https://admin.exemple.fr"
     Then the response allows that exact origin with credentials, never a wildcard
+
+  # Le proxy ne lit pas le corps de la requête : il plafonne une adresse, pas
+  # un compte. Une attaque distribuée visant un compte précis passerait donc
+  # sous son radar — c'est ce que ce freinage arrête.
+  Scenario: Repeated failures throttle the targeted account
+    Given a virgin instance with an admin invitation for "freine@e2e.fr"
+    When the invitee accepts the invitation and sets a password
+    And 10 wrong passwords are tried against "freine@e2e.fr"
+    Then a further attempt is refused as TOO_MANY_REQUESTS
+    And the correct password is refused too, until the window passes

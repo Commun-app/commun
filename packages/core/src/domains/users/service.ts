@@ -5,6 +5,7 @@ import {
   CannotRemoveSelfError,
   InvitationInvalidError,
   SessionNotFoundError,
+  TooManyAttemptsError,
   UserNotFoundError,
 } from './errors.ts';
 import type { EmailEvent, EmailService } from '../../infrastructure/email/index.ts';
@@ -20,6 +21,43 @@ const INVITATION_TTL_MS = 7 * 24 * 3600 * 1000; // 7 jours
 // Verified against when the email is unknown, so login cost is identical for
 // existing and non-existing accounts (no user-enumeration timing oracle).
 const DUMMY_HASH = Bun.password.hashSync('commun-dummy-password-for-timing');
+
+/**
+ * Freinage des tentatives de connexion, PAR COMPTE.
+ *
+ * La limitation générique avait été retirée de l'application (décision Quentin
+ * 27/07 : c'est le rôle du reverse proxy). Ce cas-ci est différent et ne peut
+ * pas y être traité : le proxy ne lit pas le corps de la requête, donc il ne
+ * sait pas QUEL compte est visé. Il plafonne une adresse — utile contre un
+ * client isolé, inopérant contre une attaque distribuée qui vise un compte
+ * précis depuis mille adresses. C'est le compte qu'on protège ici ; le proxy
+ * reste libre de plafonner les adresses par-dessus.
+ *
+ * En mémoire, donc par processus : suffisant pour une instance par client, et
+ * cohérent avec le fait qu'un redémarrage remet naturellement les compteurs à
+ * zéro. Une attaque qui survit à ça relève du proxy, pas d'ici.
+ */
+const LOGIN_WINDOW_MS = 5 * 60_000;
+const LOGIN_MAX_FAILURES = 10;
+const loginFailures = new Map<string, number[]>();
+
+const recentFailures = (email: string): number[] => {
+  const now = Date.now();
+  const recent = (loginFailures.get(email) ?? []).filter((at) => now - at < LOGIN_WINDOW_MS);
+  if (recent.length) loginFailures.set(email, recent);
+  else loginFailures.delete(email);
+  return recent;
+};
+
+const tooManyAttempts = (email: string) => recentFailures(email).length >= LOGIN_MAX_FAILURES;
+
+const recordFailure = (email: string) => {
+  loginFailures.set(email, [...recentFailures(email), Date.now()]);
+};
+
+// Une connexion réussie efface l'ardoise : l'utilisateur qui retrouve son mot
+// de passe après quelques essais ne doit pas rester pénalisé.
+const clearAttempts = (email: string) => loginFailures.delete(email);
 
 /** Device metadata captured at login (iso legacy: the account page lists devices). */
 export interface SessionMeta {
@@ -82,10 +120,17 @@ export class UsersService {
     password: string,
     meta?: SessionMeta,
   ): Promise<{ token: string; session: AuthSession } | null> {
-    const user = await this.repository.findUserByEmail(email.toLowerCase());
+    const normalized = email.toLowerCase();
+    if (tooManyAttempts(normalized)) throw new TooManyAttemptsError();
+
+    const user = await this.repository.findUserByEmail(normalized);
     // Always run one argon2 verification — unknown emails cost the same as known ones.
     const verified = await this.verifyPassword(password, user?.passwordHash ?? DUMMY_HASH);
-    if (!user?.passwordHash || !verified) return null;
+    if (!user?.passwordHash || !verified) {
+      recordFailure(normalized);
+      return null;
+    }
+    clearAttempts(normalized);
     return this.createSession(user, meta);
   }
 

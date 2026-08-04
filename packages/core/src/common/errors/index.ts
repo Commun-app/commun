@@ -10,6 +10,7 @@ export type TrpcErrorCode =
   | 'FORBIDDEN'
   | 'CONFLICT'
   | 'UNAUTHORIZED'
+  | 'TOO_MANY_REQUESTS'
   | 'INTERNAL_SERVER_ERROR';
 
 /** Classe de base — permet `instanceof DomainError` dans le mapper tRPC. */

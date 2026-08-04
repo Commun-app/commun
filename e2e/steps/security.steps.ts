@@ -285,3 +285,32 @@ Then('the response allows that exact origin with credentials, never a wildcard',
   expect(world.corsHeaders?.allowOrigin).not.toBe('*');
   expect(world.corsHeaders?.allowCredentials).toBe('true');
 });
+
+// ── Freinage des tentatives, PAR COMPTE ──────────────────────────────────────
+
+When(
+  '{int} wrong passwords are tried against {string}',
+  async ({ world }, times: number, email: string) => {
+    for (let attempt = 0; attempt < times; attempt += 1) {
+      await trpcMutate('auth.login', { input: { email, password: `faux-${attempt}` } });
+    }
+    world.accountEmail = email;
+  },
+);
+
+Then('a further attempt is refused as TOO_MANY_REQUESTS', async ({ world }) => {
+  const response = await trpcMutate('auth.login', {
+    input: { email: world.accountEmail, password: 'encore-faux' },
+  });
+  expect(response.status).toBe(429);
+});
+
+// Le freinage porte sur le COMPTE, pas sur la validité du mot de passe : tant
+// que la fenêtre court, même le bon est refusé. C'est ce qui rend une attaque
+// par essais successifs sans intérêt.
+Then('the correct password is refused too, until the window passes', async ({ world }) => {
+  const response = await trpcMutate('auth.login', {
+    input: { email: world.accountEmail, password: DEFAULT_PASSWORD },
+  });
+  expect(response.status).toBe(429);
+});
