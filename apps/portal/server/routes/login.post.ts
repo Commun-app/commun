@@ -1,4 +1,6 @@
 import { defineHandler, readBody } from 'h3';
+import { type Instance, instances } from '../utils/instances.ts';
+import { createEmailThrottle } from '../utils/throttle.ts';
 
 /**
  * Authentification DÉLÉGUÉE, SANS annuaire (décision Quentin 03/08).
@@ -22,11 +24,6 @@ import { defineHandler, readBody } from 'h3';
  * Elle disparaît avec le connecteur OIDC de la phase 6, où le fournisseur
  * d'identité rend le routage inutile.
  */
-interface Instance {
-  slug: string;
-  url: string;
-}
-
 const INVALID = { error: 'Identifiants invalides' } as const;
 const UNAVAILABLE = {
   error: 'Service momentanément indisponible, réessayez dans un instant',
@@ -35,34 +32,9 @@ const LOGIN_TIMEOUT_MS = 10_000;
 
 // Fenêtre glissante PAR COMPTE : une tentative de connexion en devient autant
 // qu'il y a d'instances, et le portail amplifierait sinon une attaque par
-// force brute.
-//
-// Le plafond par ADRESSE a été retiré (décision Quentin 04/08) : il vit
-// désormais dans Traefik, attaché au routeur du portail. Le proxy est le bon
-// endroit pour cela — il voit toutes les requêtes, pas seulement celles qui
-// atteignent cette route. Il ne peut en revanche pas lire le corps, donc il
-// ignore quel COMPTE est visé : c'est ce que fait ce compteur, et lui seul.
-const RATE_WINDOW_MS = 5 * 60_000;
-const RATE_MAX_PER_EMAIL = 10;
-const attempts = new Map<string, number[]>();
-
-function rateLimited(email: string): boolean {
-  const now = Date.now();
-  const recent = (attempts.get(email) ?? []).filter((at) => now - at < RATE_WINDOW_MS);
-  recent.push(now);
-  attempts.set(email, recent);
-  return recent.length > RATE_MAX_PER_EMAIL;
-}
-
-/** `PORTAL_INSTANCES` : {"grigny":"https://grigny.…", …} */
-function instances(): Instance[] {
-  try {
-    const parsed = JSON.parse(process.env.PORTAL_INSTANCES ?? '{}') as Record<string, string>;
-    return Object.entries(parsed).map(([slug, url]) => ({ slug, url }));
-  } catch {
-    return [];
-  }
-}
+// force brute. Le compteur est PROPRE à cette route — marteler la connexion ne
+// doit pas fermer la réinitialisation, ni l'inverse.
+const rateLimited = createEmailThrottle();
 
 /**
  * Tente une connexion sur UNE instance. Ne jette jamais : une instance

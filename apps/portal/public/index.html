@@ -20,6 +20,9 @@
     .error { color: #b91c1c; font-size: .875rem; text-align: center; min-height: 1.25rem; }
     .hint { font-size: .875rem; text-align: center; opacity: .8; }
     #choices-list { display: flex; flex-direction: column; gap: .5rem; }
+    .link { margin-top: 2rem; text-align: center; }
+    .link button { width: auto; padding: .25rem; color: #6b7280; background: none; border: none; font-size: .875rem; text-decoration: underline; }
+    .link button:hover { color: #111827; background: none; }
   </style>
 </head>
 <body>
@@ -31,6 +34,30 @@
       <p class="error" id="error"></p>
       <button type="submit">S'identifier</button>
     </form>
+    <p class="link" id="forgot-link">
+      <button type="button" id="forgot">Vous avez oublié votre mot de passe ?</button>
+    </p>
+    <!-- Réinitialisation DIFFUSÉE (voir password-reset.post.ts) : le portail
+         ignore où vit le compte, il demande à toutes les instances et n'en dit
+         rien à l'utilisateur — la réponse est la même dans tous les cas. -->
+    <form id="reset" hidden>
+      <p class="hint">
+        Entrez votre adresse email et nous vous enverrons un lien pour définir
+        un nouveau mot de passe.
+      </p>
+      <input type="email" name="email" placeholder="Adresse email" autocomplete="email" required>
+      <p class="error" id="reset-error"></p>
+      <button type="submit">Envoyer le lien</button>
+    </form>
+    <div id="sent" hidden>
+      <p class="hint">
+        Si un compte correspond à cette adresse, le lien vient de partir.
+        N'hésitez pas à vérifier vos courriers indésirables.
+      </p>
+    </div>
+    <p class="link" id="back-link" hidden>
+      <button type="button" id="back">← Revenir à l'écran de connexion</button>
+    </p>
     <!-- Affiché seulement quand les identifiants ouvrent PLUSIEURS instances
          (comptes internes) : on demande laquelle plutôt que d'en choisir une
          arbitrairement. -->
@@ -44,9 +71,59 @@
     const error = document.getElementById('error');
     const choices = document.getElementById('choices');
     const choicesList = document.getElementById('choices-list');
+    const forgotLink = document.getElementById('forgot-link');
+    const backLink = document.getElementById('back-link');
+    const reset = document.getElementById('reset');
+    const resetError = document.getElementById('reset-error');
+    const sent = document.getElementById('sent');
+
+    // Bascule entre les deux écrans : le portail tient en une page, sans routeur.
+    function show(step) {
+      form.hidden = step !== 'login';
+      forgotLink.hidden = step !== 'login';
+      reset.hidden = step !== 'reset';
+      sent.hidden = step !== 'sent';
+      backLink.hidden = step === 'login';
+    }
+    document.getElementById('forgot').addEventListener('click', () => {
+      error.textContent = '';
+      show('reset');
+    });
+    document.getElementById('back').addEventListener('click', () => {
+      resetError.textContent = '';
+      reset.reset();
+      show('login');
+    });
+
+    reset.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      resetError.textContent = '';
+      const button = reset.querySelector('button');
+      button.disabled = true;
+      try {
+        const response = await fetch('/password-reset', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(Object.fromEntries(new FormData(reset))),
+        });
+        const data = await response.json();
+        // Succès affiché sans confirmer que le compte existe — ne pas en faire
+        // un oracle d'énumération côté écran non plus.
+        if (response.ok && data.sent) {
+          show('sent');
+          return;
+        }
+        resetError.textContent = data.error || 'Service momentanément indisponible, réessayez dans un instant';
+      } catch {
+        resetError.textContent = 'Service momentanément indisponible, réessayez dans un instant';
+      } finally {
+        button.disabled = false;
+      }
+    });
 
     function offerChoices(list) {
       form.hidden = true;
+      forgotLink.hidden = true;
       choicesList.replaceChildren(
         ...list.map(({ slug, url }) => {
           const button = document.createElement('button');
