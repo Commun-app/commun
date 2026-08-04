@@ -66,6 +66,38 @@ Then('the portal answers {int} with {string}', ({ world }, status: number, messa
   expect((world.body as { error: string }).error).toBe(message);
 });
 
+// ── Mot de passe oublié, diffusé ─────────────────────────────────────────────
+
+async function portalReset(world: World, email: string) {
+  const response = await fetch(`${PORTAL_URL}/password-reset`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  world.status = response.status;
+  world.body = await response.json();
+}
+
+When('the portal is asked to reset {string}', async ({ world }, email: string) => {
+  await portalReset(world, email);
+});
+
+When(
+  'the portal is asked {int} times to reset {string}',
+  async ({ world }, times: number, email: string) => {
+    for (let attempt = 0; attempt < times; attempt += 1) {
+      await portalReset(world, email);
+    }
+  },
+);
+
+// Compte connu ou inconnu, la réponse est strictement la même — c'est ce que
+// ces deux scénarios comparent.
+Then('the portal confirms the request was taken', ({ world }) => {
+  expect(world.status).toBe(200);
+  expect((world.body as { sent: boolean }).sent).toBe(true);
+});
+
 // ── Adaptateur d'emails transactionnels ──────────────────────────────────────
 
 const postEmailEvent = async (world: World, token: string | null, eventName: string) => {

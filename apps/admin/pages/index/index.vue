@@ -23,8 +23,16 @@
       />
       <button-primary type="submit" label="S'identifier" :loading="isLoading" class="w-full" />
     </form>
+    <!-- Le lien de réinitialisation était commenté depuis le legacy, qui
+         n'envoyait AUCUN email : le seul recours était le formulaire de
+         support. L'événement `passwordResetRequested` étant désormais relayé
+         vers un fournisseur d'emails, le parcours autonome reprend sa place —
+         et Fillout redevient ce qu'il doit être, un second recours. -->
     <div class="flex mt-8 flex-col items-center justify-center">
-      <!-- <button-tertiary label="Vous avez oublié votre mot de passe ?" @click="$router.push({ path: '/password/recover' })"/> -->
+      <button-tertiary
+        label="Vous avez oublié votre mot de passe ?"
+        @click="$router.push({ path: '/password/recover' })"
+      />
       <button-tertiary class="h-10" label="Je n'arrive pas à m'identifier" @click="_openForm()" />
     </div>
   </div>
