@@ -50,6 +50,8 @@ export const APIDAE_MOCK = {
 
 /** Portail de connexion (troisième webServer). */
 export const PORTAL_URL = 'http://127.0.0.1:3002';
+/** Secret partagé instance → portail (adaptateur d'emails). */
+export const PORTAL_WEBHOOK_TOKEN = 'e2e-portal-webhook-token';
 
 export const JWT_SECRET = 'e2e-jwt-secret';
 export const ADMIN_URL = 'https://admin.e2e.test';
