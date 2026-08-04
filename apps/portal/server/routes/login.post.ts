@@ -1,4 +1,4 @@
-import { defineHandler, getRequestIP, readBody } from 'h3';
+import { defineHandler, readBody } from 'h3';
 
 /**
  * Authentification DÉLÉGUÉE, SANS annuaire (décision Quentin 03/08).
@@ -33,29 +33,25 @@ const UNAVAILABLE = {
 } as const;
 const LOGIN_TIMEOUT_MS = 10_000;
 
-// Fenêtre glissante : une tentative de connexion en devient QUATRE en amont.
-// Sans ce garde-fou, le portail amplifierait une attaque par force brute d'un
-// facteur égal au nombre d'instances.
+// Fenêtre glissante PAR COMPTE : une tentative de connexion en devient autant
+// qu'il y a d'instances, et le portail amplifierait sinon une attaque par
+// force brute.
 //
-// Deux seuils, et l'écart entre eux est délibéré : une mairie entière sort
-// derrière UNE adresse publique. Une limite par IP aussi stricte que par
-// compte bloquerait tous les agents dès qu'un seul se trompe de mot de passe.
-// C'est le compte qu'on protège, l'adresse ne sert que de garde-fou grossier.
+// Le plafond par ADRESSE a été retiré (décision Quentin 04/08) : il vit
+// désormais dans Traefik, attaché au routeur du portail. Le proxy est le bon
+// endroit pour cela — il voit toutes les requêtes, pas seulement celles qui
+// atteignent cette route. Il ne peut en revanche pas lire le corps, donc il
+// ignore quel COMPTE est visé : c'est ce que fait ce compteur, et lui seul.
 const RATE_WINDOW_MS = 5 * 60_000;
 const RATE_MAX_PER_EMAIL = 10;
-const RATE_MAX_PER_IP = 60;
 const attempts = new Map<string, number[]>();
 
-function rateLimited(keys: Array<{ key: string; max: number }>): boolean {
+function rateLimited(email: string): boolean {
   const now = Date.now();
-  let limited = false;
-  for (const { key, max } of keys) {
-    const recent = (attempts.get(key) ?? []).filter((at) => now - at < RATE_WINDOW_MS);
-    recent.push(now);
-    attempts.set(key, recent);
-    if (recent.length > max) limited = true;
-  }
-  return limited;
+  const recent = (attempts.get(email) ?? []).filter((at) => now - at < RATE_WINDOW_MS);
+  recent.push(now);
+  attempts.set(email, recent);
+  return recent.length > RATE_MAX_PER_EMAIL;
 }
 
 /** `PORTAL_INSTANCES` : {"grigny":"https://grigny.…", …} */
@@ -99,13 +95,7 @@ export default defineHandler(async (event) => {
   }
 
   const normalized = email.trim().toLowerCase();
-  const ip = getRequestIP(event, { xForwardedFor: true }) ?? 'inconnue';
-  if (
-    rateLimited([
-      { key: `email:${normalized}`, max: RATE_MAX_PER_EMAIL },
-      { key: `ip:${ip}`, max: RATE_MAX_PER_IP },
-    ])
-  ) {
+  if (rateLimited(normalized)) {
     event.res.status = 429;
     return { error: 'Trop de tentatives, réessayez dans quelques minutes' };
   }
