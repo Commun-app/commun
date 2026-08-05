@@ -22,6 +22,7 @@
       v-model="doc"
       :image="false"
       :mention="false"
+      :starter-kit="communStarterKit"
       :extensions="extensions"
       :enable-content-check="true"
       :on-content-error="onContentError"
@@ -75,14 +76,14 @@ const SAMPLE = {
         { type: 'text', text: ', un ' },
         {
           type: 'text',
-          marks: [{ type: 'link', attrs: { href: 'https://exemple.fr', target: '_blank' } }],
+          marks: [{ type: 'link', attrs: { href: 'https://exemple.fr', target: '_blank', rel: 'noopener noreferrer nofollow', class: 'underline text-primary' } }],
           text: 'lien'
         },
         { type: 'text', text: ' et une ' },
         {
           type: 'text',
-          marks: [{ type: 'textStyle', attrs: { color: '#e11d48' } }],
-          text: 'couleur'
+          marks: [{ type: 'textStyle' }],
+          text: 'portion neutre'
         },
         { type: 'text', text: '.' }
       ]
@@ -101,8 +102,8 @@ const SAMPLE = {
     },
     {
       type: 'callout',
-      attrs: { icon: 'info-circle', uid: 'a1b2c3d4-0000-4000-8000-000000000002' },
-      content: [{ type: 'paragraph', attrs: { textAlign: 'left', uid: 'a1b2c3d4-0000-4000-8000-000000000003' }, content: [{ type: 'text', text: 'Un encart d’information.' }] }]
+      attrs: { icon: 'iconoir:megaphone', uid: 'a1b2c3d4-0000-4000-8000-000000000002' },
+      content: [{ type: 'text', text: 'Un encart d’information.' }]
     },
     {
       type: 'file',
@@ -111,7 +112,6 @@ const SAMPLE = {
         src: 'https://bucket.exemple.fr/medias/document.pdf',
         title: 'document.pdf',
         alt: null,
-        data: null,
         uid: 'a1b2c3d4-0000-4000-8000-000000000004'
       }
     },
@@ -122,7 +122,6 @@ const SAMPLE = {
         src: 'https://bucket.exemple.fr/medias/photo.jpg',
         title: 'photo.jpg',
         alt: 'Une photo',
-        data: null,
         uid: 'a1b2c3d4-0000-4000-8000-000000000005'
       }
     },
@@ -136,7 +135,7 @@ const SAMPLE = {
         placeholder: null,
         allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
         allowfullscreen: true,
-        frameborder: 0,
+        frameborder: '0',
         height: 315
       }
     },
@@ -163,15 +162,17 @@ const SAMPLE = {
 const doc = ref(structuredClone(SAMPLE))
 const contentErrors = ref([])
 
-// Le futur jeu d'extensions de parité (groupe 2) se branche ici.
-const extensions = []
+import { communExtensions, communStarterKit } from '~/editor'
+
+// L'assemblage de parité réel (groupe 2) — sans branchement médias ici.
+const extensions = communExtensions()
 
 function onContentError({ error }) {
   contentErrors.value.push(error?.message ?? String(error))
 }
 
 // Vert = l'aller-retour chargement → sortie n'a rien altéré (préfiguration
-// du harnais D9). Rouge attendu tant que les nœuds custom ne sont pas portés.
+// du harnais D9). Depuis la parité (2.3-2.6), rouge = régression.
 const roundTripOk = computed(
   () => JSON.stringify(doc.value) === JSON.stringify(SAMPLE)
 )
