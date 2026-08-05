@@ -23,7 +23,7 @@ export const authRouter = router({
    * sends it back as `Authorization: Bearer <token>`. No cookies. */
   login: procedure.input(loginDto).mutation(async ({ ctx, input }) => {
     const result = await ctx.services.users.login(input.email, input.password, ctx.requestMeta);
-    if (!result) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'identifiants invalides' });
+    if (!result) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'invalid credentials' });
     return {
       token: result.token,
       expiresAt: result.session.expiresAt,

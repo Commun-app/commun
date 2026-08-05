@@ -15,7 +15,7 @@ Feature: Scheduled jobs
   Scenario: The Publier button triggers the Vercel hook
     Given no Vercel deploy hook is configured
     When the site deployment is triggered
-    Then the deployment fails with "E_NO_DEPLOY_HOOK"
+    Then the deployment fails with "deploy-hook-missing-error"
     When the Vercel deploy hook points at the local mock
     And the site deployment is triggered
     Then the deployment succeeds and the Vercel hook was called

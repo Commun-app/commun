@@ -134,9 +134,11 @@ When('the site deployment is triggered', async ({ world }) => {
   world.body = response.body;
 });
 
-Then('the deployment fails with {string}', ({ world }, code: string) => {
+// Assert on the error TYPE, never on its message: the type is the contract the
+// interface matches on, the message is optional context for logs.
+Then('the deployment fails with {string}', ({ world }, type: string) => {
   expect(world.status).toBe(400);
-  expect(JSON.stringify(world.body)).toContain(code);
+  expect((world.body as { error?: { data?: { type?: string } } })?.error?.data?.type).toBe(type);
 });
 
 Then('the deployment succeeds and the Vercel hook was called', ({ world }) => {
