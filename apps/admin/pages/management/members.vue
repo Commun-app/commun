@@ -37,7 +37,6 @@ const { User } = useModels()
 const $route = useRoute()
 const $modalStore = useModalStore()
 const notificationsStore = useNotificationsStore()
-const { public: { baseURL } } = useRuntimeConfig()
 
 // Prepare constants
 const TABLE_HEADERS = [
@@ -84,10 +83,12 @@ const _handle = async (action, data = {}) => {
   const { _id } = data
   switch (action) {
     case 'create': {
-      // Flux Commun : une INVITATION est émise ; tant que l'envoi de mails
-      // n'est pas porté (tâche 9.9), le lien est copié au presse-papier.
+      // Une INVITATION est émise : l'email part côté serveur, et le lien est
+      // copié au presse-papier comme second recours.
+      // L'origine vient du navigateur, jamais d'une URL cuite au build —
+      // l'image d'instance est commune à tous les clients.
       const { token } = await User.create(data)
-      const link = `${baseURL}/welcome/${token}`
+      const link = `${window.location.origin}/welcome/${token}`
       try {
         await navigator.clipboard.writeText(link)
         notificationsStore.add({
