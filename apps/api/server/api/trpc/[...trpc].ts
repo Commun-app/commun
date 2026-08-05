@@ -4,9 +4,8 @@ import type { AuthSession } from '@commun/core';
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { useCore } from '../../utils/core.ts';
 
-// Mounts the core tRPC router under /api/trpc/* (server/api/ dir convention).
-// The context is assembled from what the plugin (core) and the session
-// middleware already attached to the event — nothing is recomputed here.
+// Mounts the core tRPC router under /api/trpc/*. The context is assembled from
+// what the plugin and the session middleware already attached to the event.
 export default defineHandler(async (event) => {
   return fetchRequestHandler({
     endpoint: '/api/trpc',
@@ -14,8 +13,8 @@ export default defineHandler(async (event) => {
     router: appRouter,
     createContext: () => ({
       services: useCore().services,
-      // Cast explicite : l'augmentation de module h3 (types.d.ts) ne prend
-      // pas sur toutes les versions résolues (install --no-save en CI).
+      // Explicit cast: the h3 module augmentation does not apply across every
+      // resolved version.
       session: (event.context.session as AuthSession | null | undefined) ?? null,
       requestMeta: {
         ua: event.req.headers.get('user-agent'),

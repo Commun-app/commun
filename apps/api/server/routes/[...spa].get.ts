@@ -3,14 +3,12 @@ import { join } from 'node:path';
 import { defineHandler, HTTPError } from 'h3';
 
 /**
- * Fallback SPA (review PR #6 : « c'est l'admin ? ») — ce fichier N'EST PAS
- * l'admin : c'est un handler HTTP catch-all, donc sa place Nitro est bien
- * routes/. L'admin est un BUILD STATIQUE copié dans `.output/public` par
- * l'image d'instance (apps/api/Dockerfile.instance) ; le statique Nitro sert
- * ses fichiers, et ce handler ne fait que rendre son index.html pour les
- * routes profondes (rechargement de /events…) hors plans servis (API,
- * tasks, health). Dans l'image API open source, pas d'admin embarquée : le
- * fichier est absent → 404 comme avant.
+ * SPA fallback for the admin, which ships as a static build under
+ * `.output/public`. Deep routes (a reload on /events…) fall through to its
+ * index.html, except on the served planes below.
+ *
+ * Without an embedded admin — the open source API image — the file is absent
+ * and every path 404s, as before.
  */
 const RESERVED_PREFIXES = ['/api/', '/_tasks/', '/health'];
 
@@ -23,7 +21,7 @@ export default defineHandler(async (event) => {
   }
 
   if (indexHtml === undefined) {
-    // .output/server/… → ../public/index.html (layout du bundle Nitro).
+    // .output/server/… → ../public/index.html (Nitro bundle layout).
     indexHtml = await readFile(join(process.cwd(), '.output/public/index.html'), 'utf8')
       .catch(() => readFile(join(import.meta.dirname, '../public/index.html'), 'utf8'))
       .catch(() => null);

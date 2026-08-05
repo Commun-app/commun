@@ -85,14 +85,7 @@ export {
   DomainError,
   type TrpcErrorCode,
 } from './common/errors/index.ts';
-export type {
-  Core,
-  CoreContext,
-  CoreEnv,
-  CoreServices,
-  Id,
-  IsoTimestamp,
-} from './common/types/index.ts';
+export type { Core, CoreContext, CoreEnv, CoreServices } from './common/types/index.ts';
 
 // Domains — schemas, validation, repositories, services, routers, errors.
 // (La sync APIDAE vit dans @commun/apidae-sync — frontière volontaire, review PR #4.)

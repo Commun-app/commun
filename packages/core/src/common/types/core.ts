@@ -18,10 +18,7 @@ export interface CoreServices {
   collections: CollectionsService;
 }
 
-/**
- * The fully-wired dependency graph returned by `createCore({ env })`:
- * infrastructure (db, storage) + the service layer built on repositories.
- */
+/** The fully-wired dependency graph returned by `createCore({ env })`. */
 export interface Core {
   env: CoreEnv;
   db: StoreDb;
@@ -29,14 +26,10 @@ export interface Core {
   services: CoreServices;
 }
 
-/**
- * The per-request context exposed to tRPC procedures. Auth is iso-legacy:
- * an opaque token carried in `Authorization: Bearer` — no cookies anywhere.
- */
+/** Per-request context exposed to tRPC procedures. */
 export interface CoreContext {
   services: CoreServices;
   /** Authenticated session, or null for anonymous requests. */
   session: AuthSession | null;
-  /** Device metadata of the request (captured at login, iso legacy). */
   requestMeta?: SessionMeta;
 }

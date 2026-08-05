@@ -4,9 +4,8 @@ import { DomainError } from '../../common/errors/index.ts';
 
 export const t = initTRPC.context<CoreContext>().create({
   /**
-   * Expose le discriminant des erreurs typées au CLIENT : le front lit
-   * `error.data.type` (ex : 'entry-not-found-error') et parse sans regex sur
-   * les messages — c'est le contrat du dictionnaire d'erreurs côté UI.
+   * Exposes the error TYPE to the client. The interface matches on
+   * `error.data.type`, never on the message — that is the whole contract.
    */
   errorFormatter({ shape, error }) {
     const cause = error.cause;
@@ -24,11 +23,7 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 export const middleware = t.middleware;
 
-/**
- * Transmet les erreurs typées des domaines (revue PR #1, 28/07) : chaque
- * domaine exporte son catalogue (`domains/<domain>/errors.ts`), la couche
- * tRPC ne fait que convertir `error.trpcCode` en code transport.
- */
+/** Forwards domain errors, converting `trpcCode` into a transport code. */
 export const errorMapper = middleware(async ({ next }) => {
   const result = await next();
   if (!result.ok) {
@@ -42,11 +37,7 @@ export const errorMapper = middleware(async ({ next }) => {
 
 export const procedure = publicProcedure.use(errorMapper);
 
-/**
- * Middleware d'accès UNIQUE (revue PR #1) : vérifie la session et,
- * optionnellement, le rôle — `protectedProcedure` et `adminProcedure` n'en
- * sont que deux paramétrages.
- */
+/** The single access middleware: session, and optionally role. */
 const requireSession = (role?: 'admin') =>
   middleware(({ ctx, next }) => {
     if (!ctx.session) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -54,7 +45,7 @@ const requireSession = (role?: 'admin') =>
     return next({ ctx: { ...ctx, session: ctx.session } });
   });
 
-/** Requires an authenticated session (admin or rédacteur). */
+/** Requires an authenticated session, whatever the role. */
 export const protectedProcedure = procedure.use(requireSession());
 
 /** Requires an authenticated admin. */
