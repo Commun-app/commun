@@ -10,8 +10,8 @@ import {
 } from './schema.ts';
 
 /**
- * All database access of the collections domain. Methods are async by
- * contract (layering decision) even though bun:sqlite executes synchronously.
+ * All database access of the collections domain. Methods are async by contract,
+ * even though bun:sqlite executes synchronously.
  */
 export class CollectionsRepository {
   constructor(private readonly db: StoreDb) {}
@@ -38,7 +38,7 @@ export class CollectionsRepository {
       .get();
   }
 
-  /** Résolution de l'injector APIDAE : la config référence l'ObjectId legacy. */
+  /** The APIDAE sync config references collections by their legacy id. */
   async findDefinitionByLegacyId(legacyId: string): Promise<CollectionDefinition | undefined> {
     return this.db
       .select()
@@ -82,7 +82,7 @@ export class CollectionsRepository {
       .all();
   }
 
-  /** Iso legacy admin listing: tri updatedAt desc + skip/limit. */
+  /** Admin listing: most recently updated first, paginated. */
   async listEntriesPaginated(
     collectionId: string,
     options: { skip: number; limit: number },
@@ -110,7 +110,7 @@ export class CollectionsRepository {
       this.db
         .select()
         .from(entries)
-        // Iso legacy : le plan public filtre sur le STATUT seul (publishedAt = horodatage).
+        // The public plane filters on STATUS alone — publishedAt is just a stamp.
         .where(and(eq(entries.collectionId, collectionId), eq(entries.status, 'published')))
         .orderBy(desc(entries.createdAt))
         .all()
@@ -121,7 +121,7 @@ export class CollectionsRepository {
     return this.db.select().from(entries).where(eq(entries.id, id)).get();
   }
 
-  /** Idempotence de la sync APIDAE : retrouve une entrée par une clé de son data. */
+  /** Finds an entry by a key of its data — what makes the APIDAE sync idempotent. */
   async findEntryByDataField(
     collectionId: string,
     name: string,

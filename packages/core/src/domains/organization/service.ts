@@ -8,8 +8,8 @@ import type { OrganizationRepository } from './repository.ts';
 import type { Organization } from './schema.ts';
 import type { OrganizationInitDto, OrganizationUpdateDto } from './dtos/index.ts';
 
-// Borné : le hook Vercel répond en quelques secondes (le job legacy n'avait
-// AUCUN timeout et avalait les erreurs — sortie toujours en succès).
+// The hook answers in seconds; a bound is what keeps a hung call from hanging
+// the caller — the legacy job had none and swallowed the error.
 const DEPLOY_TIMEOUT_MS = 30_000;
 
 /** Instance settings — a singleton: initialised once, then only updated. */
@@ -37,11 +37,7 @@ export class OrganizationService {
     return updated;
   }
 
-  /**
-   * Déclenche le build du site : GET sur le hook Vercel stocké dans
-   * `deployment.vercel.hook`. Appelé par la tâche Nitro `deploy` (cron
-   * quotidien) et la procédure tRPC `organization.deploy` (bouton Publier).
-   */
+  /** Triggers the site build through the configured deploy hook. */
   async deploy(): Promise<{ status: number }> {
     const organization = await this.get();
     const deployment = organization?.deployment as
@@ -57,11 +53,11 @@ export class OrganizationService {
       response = await fetchImpl(hook, { signal: AbortSignal.timeout(DEPLOY_TIMEOUT_MS) });
     } catch (error) {
       throw new DeployFailedError(
-        `hook Vercel injoignable: ${error instanceof Error ? error.message : String(error)}`,
+        `deploy hook unreachable: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
     if (!response.ok) {
-      throw new DeployFailedError(`hook Vercel: ${response.status} ${response.statusText}`);
+      throw new DeployFailedError(`deploy hook: ${response.status} ${response.statusText}`);
     }
     return { status: response.status };
   }

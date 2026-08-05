@@ -6,10 +6,7 @@ import type { MediaRepository } from './repository.ts';
 import type { Media } from './schema.ts';
 import type { MediaFinalizeDto, MediaUpdateDto } from './dtos/index.ts';
 
-/**
- * Closed allowlist — iso legacy (`png/jpg/webp/pdf`) plus office documents.
- * SVG deliberately excluded (XSS surface — review decision), never executables.
- */
+/** Closed allowlist. SVG is excluded on purpose: it is an XSS surface. */
 export const ALLOWED_MIME = new Set([
   'image/jpeg',
   'image/png',
@@ -37,19 +34,14 @@ const sanitizeFilename = (name: string) =>
   name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-120) || 'file';
 
 /**
- * Préfixe de TOUS les objets média du bucket (silent-migration) : sépare les
- * médias des autres usages du bucket — au premier chef les sauvegardes de
- * volume déposées par l'hébergeur sous `_backups/`. La CLI de migration
- * applique le même préfixe aux clés migrées.
+ * Prefix of every media object. It separates them from the bucket's other uses,
+ * chiefly the volume backups the host drops under `_backups/`.
  */
 const MEDIA_PREFIX = 'medias/';
 
 type MediaObjects = { original: string; variants: Record<string, string> };
 
-/**
- * The media shape legacy clients consume: `objects` values are PUBLIC URLs
- * (every legacy variant name points at the original until real resize lands).
- */
+/** The media shape existing clients consume: `objects` values are public URLs. */
 export interface LegacyMedia {
   _id: string;
   id: string;
@@ -60,12 +52,11 @@ export interface LegacyMedia {
 }
 
 /**
- * Media library — iso legacy flow: the API hands out a pre-signed S3 PUT URL
- * (`requestUpload`), the client uploads DIRECTLY to object storage, then
- * `finalize` verifies the object and records the row. L'ÉCRITURE reste signée ;
- * la LECTURE ne l'est plus — les objets `medias/` sont servis publiquement par
- * le stockage (voir `PUBLIC_PREFIX`). Resize is stubbed (legacy SQS had no
- * worker left) — end of phase.
+ * Media library. The API hands out a pre-signed PUT URL, the client uploads
+ * DIRECTLY to storage, then `finalize` verifies the object and records the row.
+ *
+ * Writes stay signed; reads do not — objects under `medias/` are public.
+ * Resizing is not implemented yet.
  */
 export class MediaService {
   constructor(
@@ -80,7 +71,7 @@ export class MediaService {
     metaData?: Record<string, string>,
   ): Promise<{ key: string; url: string }> {
     if (!ALLOWED_MIME.has(mime)) {
-      throw new UnsupportedMimeError(`type de fichier non autorisé: ${mime}`);
+      throw new UnsupportedMimeError(`unsupported mime type: ${mime}`);
     }
     const key = `${MEDIA_PREFIX}${nanoid(10)}/${sanitizeFilename(filename)}`;
     return { key, url: await this.storage.presignedPutUrl(key, mime, metaData) };
@@ -90,7 +81,7 @@ export class MediaService {
   async finalize(input: MediaFinalizeDto, actorId?: string): Promise<Media> {
     const head = await this.storage.head(input.key);
     if (!head) {
-      throw new UploadIncompleteError(`objet non trouvé sur le stockage: ${input.key}`);
+      throw new UploadIncompleteError(`object not found in storage: ${input.key}`);
     }
     const row = await this.repository.insert({
       filename: sanitizeFilename(input.filename),
@@ -102,15 +93,14 @@ export class MediaService {
       updatedBy: actorId ?? null,
       objects: { original: input.key, variants: {} },
     });
-    // TODO(fin de phase): produire réellement les variantes. Le legacy publiait
-    // ces jobs sur SQS mais plus aucun worker n'écoute — stub assumé (review).
+    // TODO: actually produce the variants.
     consola.info(`[media] resize à implémenter pour ${row.id} (${LEGACY_VARIANTS.join(', ')})`);
     return row;
   }
 
   /**
-   * Upload in-process (tâches de sync) : même flux que requestUpload+finalize
-   * mais l'objet est écrit directement via le driver — aucune URL pré-signée.
+   * In-process upload, for sync tasks: same flow, but the object is written
+   * through the driver instead of a pre-signed URL.
    */
   async uploadDirect(
     filename: string,
@@ -120,7 +110,7 @@ export class MediaService {
     actorId?: string,
   ): Promise<Media> {
     if (!ALLOWED_MIME.has(mime)) {
-      throw new UnsupportedMimeError(`type de fichier non autorisé: ${mime}`);
+      throw new UnsupportedMimeError(`unsupported mime type: ${mime}`);
     }
     const key = `${MEDIA_PREFIX}${nanoid(10)}/${sanitizeFilename(filename)}`;
     await this.storage.put(key, body, mime);
@@ -140,20 +130,20 @@ export class MediaService {
   /** One media with resolved `objects` (iso legacy `GET /media/:org/:id`). */
   async get(id: string): Promise<Media & { objects: Record<string, string> }> {
     const row = await this.repository.findById(id);
-    if (!row) throw new MediaNotFoundError(`média introuvable: ${id}`);
+    if (!row) throw new MediaNotFoundError(`media not found: ${id}`);
     return { ...row, objects: await this.objectUrls(row) };
   }
 
   async updateEditorial(id: string, input: MediaUpdateDto, actorId?: string): Promise<Media> {
     const updated = await this.repository.update(id, { ...input, updatedBy: actorId ?? null });
-    if (!updated) throw new MediaNotFoundError(`média introuvable: ${id}`);
+    if (!updated) throw new MediaNotFoundError(`media not found: ${id}`);
     return updated;
   }
 
   /** Delete the row AND every stored object (original + variants). */
   async remove(id: string): Promise<void> {
     const row = await this.repository.findById(id);
-    if (!row) throw new MediaNotFoundError(`média introuvable: ${id}`);
+    if (!row) throw new MediaNotFoundError(`media not found: ${id}`);
     const objects = row.objects as MediaObjects;
     await this.storage.remove([objects.original, ...Object.values(objects.variants ?? {})]);
     await this.repository.delete(id);
@@ -166,45 +156,38 @@ export class MediaService {
     return this.storage.url((row.objects as MediaObjects).original);
   }
 
-  /**
-   * Legacy media record for the public payloads (`fetchMediaRecords` /
-   * `populateWysiwygMedia` parity): every legacy variant key points at the
-   * original until real resize lands.
-   */
+  /** The media record public payloads carry, with its URLs resolved. */
   async toLegacyMedia(id: string): Promise<LegacyMedia | null> {
     const row = await this.repository.findById(id);
     if (!row) return null;
     const originalKey = (row.objects as MediaObjects).original;
     const originalUrl = await this.storage.url(originalKey);
     const objects: Record<string, string> = { original: originalUrl };
-    // Iso legacy : les clés de variantes suivent la convention du worker de
-    // resize (`<id>-original.<ext>` → `<id>-webp-<taille>.webp`) — les objets
-    // existent réellement sur le bucket historique. Hors convention (nouveaux
-    // uploads), les variantes pointent sur l'original.
+    // The 7 variant keys are OPTIMISTIC: they follow the naming a resize worker
+    // would produce, but almost none of those objects exist — 506 out of 23 713
+    // migrated objects, none at all for two clients. Any consumer putting them
+    // in a `srcset` gets broken images, since a browser never falls back to
+    // `src`. To revisit when resizing is actually implemented.
     const base = originalKey.match(/^(.*)-original\.[^.]+$/)?.[1];
     for (const variant of LEGACY_VARIANTS) {
       objects[variant] = base ? await this.storage.url(`${base}-${variant}.webp`) : originalUrl;
     }
     return {
       _id: row.id,
-      id: row.id, // virtual Mongoose `id` — présent dans le payload legacy
+      id: row.id, // both spellings: existing clients read one or the other
       originalName: row.filename,
       mime: row.mime,
-      // Iso Mongoose toJSON : le champ est omis quand il est absent.
+      // Omitted when absent, as the clients expect.
       ...(row.metaData ? { metaData: row.metaData } : {}),
       objects,
     };
   }
 
-  /**
-   * Iso legacy `_parseRecursively` (content/deployment): walk any JSON value
-   * and replace `_media:<id>` strings with the legacy media record.
-   */
+  /** Walks any JSON value, replacing `_media:<id>` strings with media records. */
   async resolveMediaPlaceholders(node: unknown): Promise<unknown> {
     const isPlaceholder = (v: unknown): v is string =>
       typeof v === 'string' && v.startsWith('_media:');
-    // Iso legacy `_fetchMediaRecords` : une valeur `_media:` (ou un tableau de
-    // `_media:`) est remplacée par un TABLEAU PLAT de records médias.
+    // A `_media:` value — or an array of them — resolves to a FLAT array of records.
     const resolveList = async (ids: string[]): Promise<unknown[]> => {
       const records = await Promise.all(
         ids.map((v) => this.toLegacyMedia(v.slice('_media:'.length))),
