@@ -32,6 +32,14 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      # Harnais de conservation du contenu (refonte-admin-ui, D9) : chaque
+      # document du corpus synthétique traverse un VRAI éditeur TipTap
+      # (happy-dom) et doit ressortir identique — hors familles documentées.
+      # Le balayage des bases clientes réelles reste local (sweep-bases.mjs).
+      - name: Éditeur — harnais de conservation
+        run: bun test editor
+        working-directory: apps/admin
+
       # La suite E2E est LA spécification exécutable du produit (décision
       # 27/07) : elle boote l'API buildée + un MinIO (docker) et rejoue les
       # scénarios Gherkin.
