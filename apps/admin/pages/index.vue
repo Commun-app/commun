@@ -35,5 +35,10 @@ definePageMeta({
 })
 
 // Prepare computed
-const demoEnv = computed(() => $config.public.baseURL.includes(`.beta`) || $config.public.baseURL.includes(`localhost`))
+// L'image d'instance est COMMUNE à tous les clients : rien de spécifique n'y est
+// cuit. L'hôte servi est donc la seule source fiable pour distinguer une démo.
+const demoEnv = computed(() => {
+  const host = import.meta.client ? window.location.host : ''
+  return host.includes('.beta') || host.includes('localhost')
+})
 </script>
