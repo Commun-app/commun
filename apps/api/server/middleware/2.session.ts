@@ -2,12 +2,10 @@ import { defineMiddleware } from 'h3';
 import { useCore } from '../utils/core.ts';
 
 /**
- * Session resolution (middleware — numbered, order matters). Auth transport
- * is iso legacy: an opaque session token in `Authorization: Bearer <token>`,
- * no cookies. (The legacy carried a JWT the same way, but verified the
- * Session in DB on every request anyway; the opaque token keeps that exact
- * behaviour without the signed wrapper.) Downstream handlers — the tRPC
- * catch-all first — read `event.context.session`.
+ * Session resolution. Middlewares are numbered because order matters.
+ *
+ * Auth travels as a Bearer token, never a cookie, and is verified against the
+ * database on every request. Handlers read `event.context.session`.
  */
 function readSessionToken(req: Request): string | null {
   const auth = req.headers.get('authorization') ?? '';

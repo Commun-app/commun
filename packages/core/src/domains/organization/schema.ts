@@ -1,4 +1,3 @@
-// Tranche « organization » du schéma central (infrastructure/db/schema.ts).
 export {
   addressSchema,
   organization,

@@ -1,4 +1,3 @@
-// Tranche « users » du schéma central (infrastructure/db/schema.ts).
 export {
   apiTokens,
   invitations,

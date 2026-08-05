@@ -1,15 +1,10 @@
-// @commun/core — public entrypoint + IoC root.
+// @commun/core — public entrypoint and composition root.
 //
-// `createCore({ env })` is the single composition root: it instantiates the
-// infrastructure adapters, the repositories and the services, and returns the
-// wired `Core`. It is the ONLY place concrete implementations are chosen.
+// `createCore({ env })` is the ONLY place concrete implementations are chosen.
 // Layering: trpc/REST → services → repositories → Drizzle.
 //
-// Deux surfaces d'usage (revue PR #1) :
-// - `appRouter` (tRPC) : le plan admin, consommé par l'adaptateur HTTP et le
-//   client de l'admin (type `AppRouter`).
-// - `services` : consommés par le plan REST legacy-compat, les tâches
-//   planifiées et l'outillage — même logique, sans transport.
+// Two consumption surfaces: `appRouter` (tRPC) for the admin plane, `services`
+// for the REST plane, scheduled tasks and tooling — same logic, no transport.
 
 import type { Core, CoreEnv } from './common/types/index.ts';
 import { parseEnv } from './common/env/index.ts';
@@ -21,7 +16,11 @@ import { healthRouter, router } from './infrastructure/trpc/index.ts';
 import { UsersRepository, UsersService } from './domains/users/index.ts';
 import { OrganizationRepository, OrganizationService } from './domains/organization/index.ts';
 import { MediaRepository, MediaService } from './domains/media/index.ts';
-import { CollectionsRepository, CollectionsService } from './domains/collections/index.ts';
+import {
+  CollectionsService,
+  DefinitionRepository,
+  EntryRepository,
+} from './domains/collections/index.ts';
 import { organizationRouter } from './domains/organization/index.ts';
 import { authRouter, usersRouter, apiTokensRouter } from './domains/users/index.ts';
 import { mediaRouter } from './domains/media/index.ts';
@@ -35,11 +34,6 @@ export function createCore({ env }: { env?: CoreEnv } = {}): Core {
   // mal configurée refuse de démarrer plutôt que d'échouer à l'usage.
   const storage = createStorage(e);
   const email = EmailService.fromEnv(e);
-  if (!e.COMMUN_JWT_SECRET) {
-    throw new Error(
-      'COMMUN_JWT_SECRET non configuré — requis pour signer les sessions (le serveur refuse de démarrer sans)',
-    );
-  }
 
   const users = new UsersService(new UsersRepository(db), {
     email,
@@ -48,8 +42,11 @@ export function createCore({ env }: { env?: CoreEnv } = {}): Core {
   });
   const mediaRepository = new MediaRepository(db);
   const media = new MediaService(mediaRepository, storage);
-  const collectionsRepository = new CollectionsRepository(db);
-  const collections = new CollectionsService(collectionsRepository, media);
+  const collections = new CollectionsService(
+    new DefinitionRepository(db),
+    new EntryRepository(db),
+    media,
+  );
   const organization = new OrganizationService(new OrganizationRepository(db));
   const services = {
     health: new HealthService(db),
@@ -95,14 +92,7 @@ export {
   DomainError,
   type TrpcErrorCode,
 } from './common/errors/index.ts';
-export type {
-  Core,
-  CoreContext,
-  CoreEnv,
-  CoreServices,
-  Id,
-  IsoTimestamp,
-} from './common/types/index.ts';
+export type { Core, CoreContext, CoreEnv, CoreServices } from './common/types/index.ts';
 
 // Domains — schemas, validation, repositories, services, routers, errors.
 // (La sync APIDAE vit dans @commun/apidae-sync — frontière volontaire, review PR #4.)

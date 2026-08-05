@@ -1,4 +1,3 @@
-// Tranche « collections » du schéma central (infrastructure/db/schema.ts).
 export {
   FIELD_TYPES,
   PUBLICATION_STATUSES,

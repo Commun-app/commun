@@ -6,7 +6,7 @@
 import { join } from 'node:path';
 // Relative import: e2e/ is not a workspace package, @commun/core is unresolvable here.
 import {
-  CollectionsRepository,
+  DefinitionRepository,
   createCore,
   OrganizationRepository,
   parseEnv,
@@ -163,46 +163,6 @@ switch (command) {
     console.log(JSON.stringify({ slug }));
     break;
   }
-  case 'legacy-media-snapshot': {
-    // Reproduit ce que l'éditeur legacy laissait dans le rich-text : un nœud
-    // image portant, à côté de son `id`, un INSTANTANÉ figé du média —
-    // `attrs.data` — avec des URLs signées vers le bucket legacy. Jamais
-    // rafraîchi, il survit aux resynchronisations et transporte des adresses
-    // mortes. C'est ce que `sanitize:media` doit retirer.
-    const collections = core.services.collections;
-    const slug = 'legacy-snapshot';
-    const exists = (await collections.listDefinitions()).some((d) => d.slug === slug);
-    if (!exists) {
-      await collections.createDefinition({
-        name: 'Héritage legacy',
-        slug,
-        fields: [{ name: 'content', label: 'Contenu', type: 'rich-text' }],
-      } as never);
-    }
-    const legacyUrl =
-      'https://core-eu-prd.s3.fr-par.scw.cloud/lcss/65c25851bc84f65d30266b05-original.webp?X-Amz-Signature=perimee';
-    const entry = await collections.createEntry(slug, {
-      title: 'Entrée avec instantané legacy',
-      slug: argument!,
-      data: {
-        content: {
-          type: 'doc',
-          content: [
-            {
-              type: 'image',
-              attrs: {
-                id: '65c25851bc84f65d30266b05',
-                src: legacyUrl,
-                data: { _id: '65c25851bc84f65d30266b05', objects: { original: legacyUrl } },
-              },
-            },
-          ],
-        },
-      },
-    });
-    console.log(JSON.stringify({ id: entry.id, slug: entry.slug }));
-    break;
-  }
   case 'account': {
     // Compte activé à email FIXE (portal.feature) — idempotent.
     // TEMPORAIRE (review PR #6) : le portail vit dans le monorepo le temps de
@@ -236,13 +196,13 @@ switch (command) {
     });
 
     const collections = core.services.collections;
-    const repository = new CollectionsRepository(core.db);
+    const repository = new DefinitionRepository(core.db);
     const existingSlugs = new Set(
       (await collections.listDefinitions()).map((definition) => definition.slug),
     );
     for (const seedDefinition of APIDAE_DEFINITIONS) {
       if (existingSlugs.has(seedDefinition.slug)) continue;
-      const definition = await repository.insertDefinition({
+      const definition = await repository.insert({
         name: seedDefinition.name,
         slug: seedDefinition.slug,
         fields: structuredClone(seedDefinition.fields) as never,

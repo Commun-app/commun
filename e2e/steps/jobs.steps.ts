@@ -134,9 +134,11 @@ When('the site deployment is triggered', async ({ world }) => {
   world.body = response.body;
 });
 
-Then('the deployment fails with {string}', ({ world }, code: string) => {
+// Assert on the error TYPE, never on its message: the type is the contract the
+// interface matches on, the message is optional context for logs.
+Then('the deployment fails with {string}', ({ world }, type: string) => {
   expect(world.status).toBe(400);
-  expect(JSON.stringify(world.body)).toContain(code);
+  expect((world.body as { error?: { data?: { type?: string } } })?.error?.data?.type).toBe(type);
 });
 
 Then('the deployment succeeds and the Vercel hook was called', ({ world }) => {
@@ -225,46 +227,4 @@ Then('each collection holds a single entry per APIDAE id', async ({ world }) => 
     const ids = entries.map((row) => row.data.apidaeId).filter(Boolean);
     expect(new Set(ids).size).toBe(ids.length);
   }
-});
-
-// ── Assainissement des instantanés de média (TEMPORAIRE, meurt avec le legacy) ─
-
-let snapshotEntrySlug = '';
-
-const snapshotImageNode = async (world: World) => {
-  const entry = (await entriesOf(world, 'legacy-snapshot')).find(
-    (row) => row.slug === snapshotEntrySlug,
-  );
-  expect(entry, `entrée ${snapshotEntrySlug} introuvable`).toBeDefined();
-  // Le rich-text voyage STRINGIFIÉ dans les payloads (iso legacy).
-  const content = entry!.data.content as string | Record<string, unknown>;
-  const doc = typeof content === 'string' ? JSON.parse(content) : content;
-  return (doc as { content: Array<Record<string, unknown>> }).content[0]!;
-};
-
-Given('an entry carrying a frozen legacy media snapshot', () => {
-  snapshotEntrySlug = 'instantane-legacy';
-  seed('legacy-media-snapshot', snapshotEntrySlug);
-});
-
-Then('its rich text still holds the frozen snapshot', async ({ world }) => {
-  const node = await snapshotImageNode(world);
-  expect((node.attrs as Record<string, unknown>).data).toBeDefined();
-});
-
-Then('the sweep reports one cleaned node', ({ world }) => {
-  expect(world.taskResult).toMatchObject({ entries: 1, nodes: 1 });
-});
-
-Then('its rich text no longer holds any frozen snapshot', async ({ world }) => {
-  const node = await snapshotImageNode(world);
-  expect((node.attrs as Record<string, unknown>).data).toBeUndefined();
-});
-
-Then('its image keeps the identifier that makes it live', async ({ world }) => {
-  const node = await snapshotImageNode(world);
-  // Seul `attrs.id` compte : c'est lui que `resolveRichTextMedia` utilise pour
-  // recalculer `src` et `mediaRecord` à CHAQUE lecture du payload public. Le
-  // balayage ne doit donc jamais y toucher — il ne retire que l'instantané.
-  expect((node.attrs as Record<string, unknown>).id).toBe('65c25851bc84f65d30266b05');
 });

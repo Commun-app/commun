@@ -1,25 +1,22 @@
-// Drizzle schema of the single-tenant instance database — THE single source
-// of truth for every table (revue PR #1, 28/07 : schéma regroupé ici plutôt
-// que dispersé dans les domaines ; les domaines re-exportent leur tranche).
-// `drizzle-kit generate` lit ce fichier pour produire `packages/core/drizzle/`.
+// Drizzle schema of the instance database — THE single source of truth for every
+// table; domains re-export their own slice. `drizzle-kit generate` reads this
+// file to produce `packages/core/drizzle/`.
 //
-// Phase 1 reproduces the legacy platform iso-functionally: every content
-// table carries a `legacy_extra` JSON column so nothing is lost when
-// migrating from the legacy Mongo platform.
+// Every content table carries a `legacy_extra` JSON column, so nothing is lost
+// while migrating off the previous platform.
 import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { z } from 'zod';
 
 // ── Column helpers ───────────────────────────────────────────────────────────
 
-/** Primary key: UUID (natif, zéro dépendance), generated at insert time. */
+/** Primary key: a UUID generated at insert time. */
 const id = () =>
   text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID());
 
-// ISO-8601 avec millisecondes et fuseau (iso legacy JSON) — les défauts SQL
-// de SQLite (`CURRENT_TIMESTAMP`) produisent un autre format, d'où les
-// défauts applicatifs.
+// ISO-8601 with milliseconds and zone. SQLite's own `CURRENT_TIMESTAMP` yields
+// another format, hence the application-side defaults.
 const createdAt = () =>
   text('created_at')
     .notNull()
@@ -32,18 +29,16 @@ const updatedAt = () =>
     .$onUpdateFn(() => new Date().toISOString());
 
 /**
- * Catch-all des attributs legacy sans destination typée — rempli par la CLI
- * de migration pour ne rien perdre : config `injector` (mappings APIDAE) sur
- * l'organisation, variantes webp historiques sur les médias, attributs non
- * mappés et quarantaine `_invalidData` sur les entrées.
+ * Catch-all for legacy attributes with no typed home, filled by the migration
+ * CLI so nothing is lost: APIDAE mappings, historical media variants, unmapped
+ * attributes and quarantined data.
  */
 const legacyExtra = () =>
   text('legacy_extra', { mode: 'json' }).$type<Record<string, unknown> | null>();
 
 /**
- * Publication lifecycle shared by every publishable content table — iso legacy
- * (record.constants) : le flux éditorial draft → waiting → ready → published
- * est piloté par l'admin ; seul `published` est servi sur le plan public.
+ * Publication lifecycle shared by every publishable table. The editorial flow
+ * is driven from the admin; only `published` reaches the public plane.
  */
 export const PUBLICATION_STATUSES = [
   'draft',
@@ -56,16 +51,14 @@ const publicationStatus = () =>
   text('status', { enum: PUBLICATION_STATUSES }).notNull().default('draft');
 
 /**
- * ISO timestamp de la (re)publication — simple horodatage iso legacy
- * (réécrit à chaque passage en published), AUCUN rôle de planification :
- * le plan public filtre sur le statut seul (vérifié dans service-records,
- * revue 28/07).
+ * Timestamp of the last publication, rewritten on every transition. It plays NO
+ * scheduling role — the public plane filters on status alone.
  */
 const publishedAt = () => text('published_at');
 
-// ── Organization (singleton single-tenant) ───────────────────────────────────
+// ── Organization (singleton) ─────────────────────────────────────────────────
 
-/** Adresse postale de la collectivité — un champ JSON typé (revue 28/07). */
+/** Postal address, as a typed JSON field. */
 export const addressSchema = z.object({
   street: z.string().optional(),
   postalCode: z.string().optional(),
@@ -84,17 +77,16 @@ export const organization = sqliteTable('organization', {
   type: text('type', { enum: ['commune', 'intercommunality', 'syndicate', 'other'] })
     .notNull()
     .default('commune'),
-  /** Identifiant lisible — routes de l'admin, sous-domaine SaaS (`slug.commun.app`). */
+  /** Readable identifier, used in admin routes and hosted subdomains. */
   slug: text('slug').notNull(),
   description: text('description'),
   address: text('address', { mode: 'json' }).$type<Address>(),
   /**
-   * Legacy deployment payload served ISO on `/api/v1/content/deployment`
-   * (`theme` + `definition` = the `_theme`/`_pages` the current site builds
-   * consume). Superseded by the phase-5 theme layer, kept for the cutover.
+   * Deployment payload served on `/api/v1/content/deployment` — the `_theme`
+   * and `_pages` current site builds consume. Superseded by the theme layer.
    */
   deployment: text('deployment', { mode: 'json' }).$type<Record<string, unknown>>(),
-  /** Réglages d'instance (iso legacy `organization.settings` : logo, ticketRef…). */
+  /** Instance settings: logo, support reference… */
   settings: text('settings', { mode: 'json' }).$type<Record<string, unknown>>(),
   updatedBy: text('updated_by'),
   legacyExtra: legacyExtra(),
@@ -121,9 +113,8 @@ export const users = sqliteTable('users', {
 });
 
 /**
- * Sessions serveur — le client porte un JWT signé contenant { session: <id> }
- * (décision Quentin 28/07) ; la révocation reste EN BASE : un JWT valide dont
- * la ligne est révoquée/expirée est refusé.
+ * Server-side sessions. The client carries a signed JWT holding `{ session }`,
+ * but revocation lives HERE: a valid JWT whose row is revoked is refused.
  */
 export const sessions = sqliteTable('sessions', {
   id: id(),
@@ -132,7 +123,7 @@ export const sessions = sqliteTable('sessions', {
     .references(() => users.id, { onDelete: 'cascade' }),
   expiresAt: text('expires_at').notNull(),
   revokedAt: text('revoked_at'),
-  // Device metadata (iso legacy: the account page lists devices).
+  // Device metadata — the account page lists them.
   ua: text('ua'),
   ip: text('ip'),
   createdAt: createdAt(),
@@ -151,7 +142,7 @@ export const invitations = sqliteTable('invitations', {
   createdAt: createdAt(),
 });
 
-/** Machine tokens (site builds) — shown once, stored hashed, revocable. */
+/** Machine tokens for site builds — shown once, stored hashed, revocable. */
 export const apiTokens = sqliteTable('api_tokens', {
   id: id(),
   name: text('name').notNull(),
@@ -169,7 +160,7 @@ export type ApiToken = typeof apiTokens.$inferSelect;
 
 // ── Media ────────────────────────────────────────────────────────────────────
 
-// No storage-driver column: S3 is the only backend (review 2026-07-23).
+// No storage-driver column: object storage is the only backend.
 export const media = sqliteTable('media', {
   id: id(),
   filename: text('filename').notNull(),
@@ -191,9 +182,8 @@ export type Media = typeof media.$inferSelect;
 export type NewMedia = typeof media.$inferInsert;
 
 // ── Collections (content engine) ─────────────────────────────────────────────
-// The CLOSED set of field types available to collections. Extending this set
-// is a spec-level decision — arbitrary field types are exactly the legacy
-// JSON free-for-all this design replaces.
+// The CLOSED set of field types. Extending it is a spec-level decision:
+// arbitrary field types are the free-for-all this design replaces.
 
 export const FIELD_TYPES = [
   'text',
@@ -204,9 +194,9 @@ export const FIELD_TYPES = [
   'media',
   'relation',
   'select',
-  // Iso legacy `array-of-steps`: ordered steps whose content is rich text.
+  // Ordered steps whose content is rich text.
   'steps',
-  // Iso legacy raw JSON attributes (location, socials, schedules…): served as-is.
+  // Raw JSON attributes (location, socials, schedules…), served as-is.
   'json',
 ] as const;
 
@@ -214,7 +204,7 @@ export type FieldType = (typeof FIELD_TYPES)[number];
 
 export const fieldDefinitionSchema = z
   .object({
-    /** Machine name of the field inside `data` (casse préservée iso legacy). */
+    /** Machine name of the field inside `data`; case is preserved. */
     name: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/, 'nom de champ invalide'),
     label: z.string().min(1),
     type: z.enum(FIELD_TYPES),
@@ -252,7 +242,7 @@ export const collectionDefinitions = sqliteTable('collection_definitions', {
   slug: text('slug').notNull().unique(),
   description: text('description'),
   fields: text('fields', { mode: 'json' }).$type<FieldDefinition[]>().notNull(),
-  // Iso legacy Collection model: admin form layout, list display and page headings.
+  // Admin form layout, list display and page headings.
   editor: text('editor', { mode: 'json' }).$type<Record<string, unknown>>(),
   display: text('display', { mode: 'json' }).$type<Record<string, unknown>>(),
   headings: text('headings', { mode: 'json' }).$type<Record<string, unknown>>(),
@@ -274,7 +264,7 @@ export const entries = sqliteTable(
     title: text('title').notNull(),
     slug: text('slug').notNull(),
     data: text('data', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
-    /** Reverse relations (iso legacy `records[]`): ids of entries referencing this one. */
+    /** Reverse relations: ids of the entries referencing this one. */
     related: text('related', { mode: 'json' }).$type<string[]>(),
     createdBy: text('created_by'),
     updatedBy: text('updated_by'),

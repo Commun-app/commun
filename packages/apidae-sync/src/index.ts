@@ -6,7 +6,7 @@
 // Frontière volontaire (review PR #4) : machinerie de bascule spécifique à
 // ot-pertuis, hors du cœur open source — candidate à l'extraction dans un
 // dépôt privé au moment de la publication (phase 6).
-import { CollectionsRepository, MediaRepository, type Core } from '@commun/core';
+import { DefinitionRepository, EntryRepository, MediaRepository, type Core } from '@commun/core';
 import type { ApidaeSyncDeps } from './injector.ts';
 
 export {
@@ -37,7 +37,8 @@ export function depsFromCore(core: Core): ApidaeSyncDeps {
   return {
     organization: core.services.organization,
     collections: core.services.collections,
-    collectionsRepository: new CollectionsRepository(core.db),
+    definitionRepository: new DefinitionRepository(core.db),
+    entryRepository: new EntryRepository(core.db),
     media: core.services.media,
     mediaRepository: new MediaRepository(core.db),
   };

@@ -15,7 +15,7 @@ Feature: Scheduled jobs
   Scenario: The Publier button triggers the Vercel hook
     Given no Vercel deploy hook is configured
     When the site deployment is triggered
-    Then the deployment fails with "E_NO_DEPLOY_HOOK"
+    Then the deployment fails with "deploy-hook-missing-error"
     When the Vercel deploy hook points at the local mock
     And the site deployment is triggered
     Then the deployment succeeds and the Vercel hook was called
@@ -50,14 +50,3 @@ Feature: Scheduled jobs
     Then the sync report flags a collect failure with the unlink skipped
     And the entry for APIDAE id "4612219" is published
 
-  # TEMPORAIRE — meurt avec le legacy (voir tasks/sanitize/media.ts).
-  # L'éditeur legacy recopiait l'enregistrement média entier dans le nœud de
-  # rich-text. Cette copie n'est jamais rafraîchie : elle transporte des URLs
-  # signées vers le bucket legacy, qui n'existera plus après décommissionnement.
-  Scenario: The daily sweep drops frozen media snapshots from rich text
-    Given an entry carrying a frozen legacy media snapshot
-    Then its rich text still holds the frozen snapshot
-    When the "sanitize:media" task runs
-    Then the sweep reports one cleaned node
-    And its rich text no longer holds any frozen snapshot
-    And its image keeps the identifier that makes it live

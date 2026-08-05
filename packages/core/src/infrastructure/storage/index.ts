@@ -9,26 +9,23 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { CoreEnv } from '../../common/env/index.ts';
 
 /**
- * Media storage — iso legacy: S3-compatible object storage is the ONLY
- * backend (Scaleway, MinIO, Garage…). L'interface subsiste pour les doubles
- * de test, pas pour des backends alternatifs.
- *
- * FAIL-FAST (revue PR #1, 28/07) : sans configuration S3 complète, le boot
- * échoue — plus de driver « unconfigured » qui échoue à l'usage.
+ * S3-compatible object storage is the only media backend (Scaleway, MinIO,
+ * Garage…). The interface exists for test doubles, not for alternative
+ * backends.
  */
 export interface StorageDriver {
-  /** Pre-signed URL for a direct client PUT (metadata attached, iso legacy). */
+  /** Pre-signed URL for a direct client PUT. */
   presignedPutUrl(
     key: string,
     contentType: string,
     metadata?: Record<string, string>,
   ): Promise<string>;
-  /** Direct in-process upload (tâches de sync) — même destination que les PUT pré-signés. */
+  /** In-process upload, same destination as a pre-signed PUT. */
   put(key: string, body: Uint8Array, contentType: string): Promise<void>;
-  /** Object metadata if it exists (used to confirm an upload), null otherwise. */
+  /** Object metadata if it exists (confirms an upload), null otherwise. */
   head(key: string): Promise<{ size: number } | null>;
   remove(keys: string[]): Promise<void>;
-  /** URL a browser can load the object from (public under `medias/`, signed elsewhere). */
+  /** URL a browser can load the object from: public under `medias/`, signed elsewhere. */
   url(key: string): Promise<string>;
 }
 
@@ -40,23 +37,16 @@ export interface S3Config {
   secretKey: string;
 }
 
-// Durée de vie des URLs signées, qui ne servent plus qu'à l'ÉCRITURE (upload
-// direct depuis l'admin) et aux objets privés.
+/** Signed URLs now only cover WRITES and private objects. */
 const SIGNED_URL_TTL_S = 7 * 24 * 3600;
 
 /**
- * Préfixe servi en lecture publique par le stockage objet (bucket policy posée
- * par `infra/set-bucket-policy.py`). Tout le reste du bucket — `_seed/`,
- * `_backup/` — demeure privé.
+ * Prefix served publicly by the object storage (bucket policy). Everything else
+ * stays private.
  *
- * Pourquoi les médias ne sont plus signés (31/07) : le legacy signait ses URLs
- * de lecture pour 7 jours, or elles sont FIGÉES dans un site statique. Un site
- * non reconstruit pendant une semaine perdait toutes ses images — le cron de
- * déploiement quotidien masquait la panne en permanence. Ces médias sont de
- * toute façon publics (ils sont sur le site public d'une commune) : les servir
- * directement supprime la péremption, raccourcit les URLs de ~470 à ~100
- * caractères, et garde le stockage objet — et non l'instance — dans le chemin
- * du trafic, pour que les sites survivent à une panne du CMS.
+ * These URLs are frozen into static builds, so they must never expire — and
+ * serving them straight from storage keeps the instance out of the traffic path,
+ * letting public sites survive a CMS outage.
  */
 const PUBLIC_PREFIX = 'medias/';
 
@@ -132,26 +122,20 @@ export class S3Storage implements StorageDriver {
     );
   }
 
-  /** URL directe, sans signature ni expiration — voir `PUBLIC_PREFIX`. */
+  /** Direct URL, unsigned and non-expiring — see `PUBLIC_PREFIX`. */
   private publicUrl(key: string): string {
     const base = (this.config.endpoint ?? `https://s3.${this.config.region}.scw.cloud`).replace(
       /\/+$/,
       '',
     );
-    // Chaque segment est encodé séparément : les `/` de la clé sont des
-    // séparateurs de chemin, pas des caractères à échapper.
+    // Encode each segment separately: `/` in the key is a path separator.
     const path = key.split('/').map(encodeURIComponent).join('/');
     return `${base}/${this.config.bucket}/${path}`;
   }
 }
 
-/** Construit le storage depuis l'env — jette au BOOT si incomplet (fail-fast). */
+/** Build the storage driver from the parsed environment. */
 export function createStorage(env: CoreEnv): StorageDriver {
-  if (!env.COMMUN_S3_BUCKET || !env.COMMUN_S3_ACCESS_KEY || !env.COMMUN_S3_SECRET_KEY) {
-    throw new Error(
-      'stockage S3 non configuré — renseignez COMMUN_S3_BUCKET / COMMUN_S3_ACCESS_KEY / COMMUN_S3_SECRET_KEY (le serveur refuse de démarrer sans)',
-    );
-  }
   return new S3Storage({
     endpoint: env.COMMUN_S3_ENDPOINT || undefined,
     region: env.COMMUN_S3_REGION,

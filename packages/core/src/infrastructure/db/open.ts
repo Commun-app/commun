@@ -5,15 +5,11 @@ import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import * as schema from './schema.ts';
 
-// packages/core/drizzle/ — relative to this file at src/infrastructure/db/.
-// In bundled deployments (Docker image, e2e) the relative path breaks: pass
-// an explicit folder instead (env COMMUN_MIGRATIONS_DIR via createCore).
+// Relative to this file. Bundled deployments break that path, and pass an
+// explicit folder through COMMUN_MIGRATIONS_DIR instead.
 const DEFAULT_MIGRATIONS_FOLDER = join(import.meta.dir, '..', '..', '..', 'drizzle');
 
-/**
- * Open (and migrate) the single-tenant instance database at
- * `<dataDir>/commun.db`. One instance = one collectivité = one SQLite file.
- */
+/** Open and migrate the instance database: one instance, one SQLite file. */
 export function connectDb(dataDir: string, migrationsDir?: string) {
   const migrationsFolder = migrationsDir ?? DEFAULT_MIGRATIONS_FOLDER;
   mkdirSync(dataDir, { recursive: true });

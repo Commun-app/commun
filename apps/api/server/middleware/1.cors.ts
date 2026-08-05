@@ -1,14 +1,12 @@
 import { defineMiddleware, handleCors } from 'h3';
 
 /**
- * CORS — iso legacy (the gateway allowed any origin). Safe here because auth
- * is a Bearer header (never auto-attached by browsers), not a cookie.
+ * Any origin is allowed: auth is a Bearer header, never a cookie, so a browser
+ * never attaches credentials on its own.
  *
- * Reflet d'origine + credentials, PAS de wildcard (upgrade-admin-nuxt4) :
- * nuxt-auth 1.x force `credentials: 'include'` sur ses fetches et les
- * navigateurs refusent `Access-Control-Allow-Origin: *` en mode credentialed.
- * La politique de fond est inchangée — toute origine, aucun cookie serveur,
- * le mode credentialed n'ouvre rien de plus.
+ * The origin is REFLECTED rather than wildcarded — browsers reject
+ * `Access-Control-Allow-Origin: *` on credentialed requests, and nuxt-auth
+ * sends `credentials: 'include'`.
  */
 export default defineMiddleware((event) => {
   const response = handleCors(event, {

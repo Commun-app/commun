@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
-// Iso legacy two-step upload flow: request a pre-signed PUT URL, upload
-// directly to S3, then finalize.
+// Two-step upload: request a pre-signed PUT URL, upload straight to storage,
+// then finalize.
 
 export const mediaRequestUploadDto = z.object({
   filename: z.string().min(1),
   mime: z.string().min(1),
-  /** Attached to the S3 object as user metadata (iso legacy). */
+  /** Attached to the stored object as user metadata. */
   metaData: z.record(z.string(), z.string()).optional(),
 });
 
@@ -15,7 +15,7 @@ export const mediaFinalizeDto = z.object({
   filename: z.string().min(1),
   mime: z.string().min(1),
   alt: z.string().optional(),
-  /** Stored on the media row (iso legacy — job-data-sync deduplicates via apidaeId). */
+  /** Stored on the media row — the APIDAE sync deduplicates on `apidaeId`. */
   metaData: z.record(z.string(), z.unknown()).optional(),
 });
 

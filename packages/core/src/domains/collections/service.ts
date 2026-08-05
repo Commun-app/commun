@@ -6,7 +6,7 @@ import {
   InvalidEntryDataError,
 } from './errors.ts';
 import { slugify } from '../../common/utils/slug.ts';
-import type { CollectionsRepository } from './repository.ts';
+import type { DefinitionRepository, EntryRepository } from './repositories/index.ts';
 import type { MediaService } from '../media/service.ts';
 import type { CollectionDefinition, Entry, FieldDefinition, FieldType } from './schema.ts';
 import type {
@@ -16,7 +16,7 @@ import type {
   EntryUpdateDto,
 } from './dtos/index.ts';
 
-// Iso legacy : les étapes sont des objets riches (_id, name, description…) servis tels quels.
+// Steps are rich objects, served as-is.
 const stepSchema = z.record(z.string(), z.unknown());
 
 const FIELD_VALUE_SCHEMAS: Record<FieldType, z.ZodType> = {
@@ -29,7 +29,7 @@ const FIELD_VALUE_SCHEMAS: Record<FieldType, z.ZodType> = {
   relation: z.string().or(z.array(z.string())), // target entry id(s)
   select: z.string(),
   steps: z.array(stepSchema), // iso legacy array-of-steps
-  // Iso legacy raw JSON : tout sauf undefined (le dump réel contient aussi des scalaires).
+  // Raw JSON: anything but undefined — real content also holds scalars.
   json: z.union([
     z.record(z.string(), z.unknown()),
     z.array(z.unknown()),
@@ -70,28 +70,26 @@ function relationIds(fields: FieldDefinition[], data: Record<string, unknown>): 
 }
 
 /**
- * The content engine: collection definitions (closed field-type set) and
- * their entries, validated against the Zod schema generated from each
- * definition. Public payloads are served ISO legacy (signed media, stringified
- * rich text, hidden fields excluded).
+ * The content engine: collection definitions over a closed field-type set, and
+ * their entries, validated against the Zod schema generated from each definition.
  */
 export class CollectionsService {
   constructor(
-    private readonly repository: CollectionsRepository,
+    private readonly definitions: DefinitionRepository,
+    private readonly entries: EntryRepository,
     private readonly media: MediaService,
   ) {}
 
   // ── Definitions ────────────────────────────────────────────────────────────
 
   async listDefinitions(): Promise<CollectionDefinition[]> {
-    return this.repository.listDefinitions();
+    return this.definitions.list();
   }
 
   async getDefinition(idOrSlug: string): Promise<CollectionDefinition> {
     const found =
-      (await this.repository.findDefinitionBySlug(idOrSlug)) ??
-      (await this.repository.findDefinitionById(idOrSlug));
-    if (!found) throw new CollectionNotFoundError(`collection introuvable: ${idOrSlug}`);
+      (await this.definitions.findBySlug(idOrSlug)) ?? (await this.definitions.findById(idOrSlug));
+    if (!found) throw new CollectionNotFoundError(`collection not found: ${idOrSlug}`);
     return found;
   }
 
@@ -99,7 +97,7 @@ export class CollectionsService {
     input: DefinitionCreateDto,
     actorId?: string,
   ): Promise<CollectionDefinition> {
-    return this.repository.insertDefinition({
+    return this.definitions.insert({
       ...input,
       slug: input.slug || (await this.uniqueDefinitionSlug(slugify(input.name))),
       createdBy: actorId ?? null,
@@ -112,17 +110,17 @@ export class CollectionsService {
     input: DefinitionUpdateDto,
     actorId?: string,
   ): Promise<CollectionDefinition> {
-    const updated = await this.repository.updateDefinition(id, {
+    const updated = await this.definitions.update(id, {
       ...input,
       updatedBy: actorId ?? null,
     });
-    if (!updated) throw new CollectionNotFoundError(`collection introuvable: ${id}`);
+    if (!updated) throw new CollectionNotFoundError(`collection not found: ${id}`);
     return updated;
   }
 
   async removeDefinition(id: string): Promise<void> {
-    if (!(await this.repository.deleteDefinition(id))) {
-      throw new CollectionNotFoundError(`collection introuvable: ${id}`);
+    if (!(await this.definitions.delete(id))) {
+      throw new CollectionNotFoundError(`collection not found: ${id}`);
     }
   }
 
@@ -133,36 +131,36 @@ export class CollectionsService {
     const parsed = schema.safeParse(data);
     if (!parsed.success) {
       throw new InvalidEntryDataError(
-        `données invalides pour la collection ${definition.slug}: ${parsed.error.message}`,
+        `invalid data for collection ${definition.slug}: ${parsed.error.message}`,
       );
     }
     return parsed.data;
   }
 
   async listEntries(collectionIdOrSlug: string): Promise<Entry[]> {
-    return this.repository.listEntries((await this.getDefinition(collectionIdOrSlug)).id);
+    return this.entries.list((await this.getDefinition(collectionIdOrSlug)).id);
   }
 
   async getEntry(id: string): Promise<Entry> {
-    const found = await this.repository.findEntryById(id);
-    if (!found) throw new EntryNotFoundError(`entrée introuvable: ${id}`);
+    const found = await this.entries.findById(id);
+    if (!found) throw new EntryNotFoundError(`entry not found: ${id}`);
     return found;
   }
 
-  /** Paginated admin listing — iso legacy (skip/limit 20, tri updatedAt desc). */
+  /** Paginated admin listing, most recently updated first. */
   async listEntriesPaginated(
     collectionIdOrSlug: string,
     options: { skip?: number; limit?: number } = {},
   ): Promise<Entry[]> {
     const definition = await this.getDefinition(collectionIdOrSlug);
-    return this.repository.listEntriesPaginated(definition.id, {
+    return this.entries.listPaginated(definition.id, {
       skip: options.skip ?? 0,
       limit: options.limit ?? 20,
     });
   }
 
   async listPublishedEntries(collectionIdOrSlug: string): Promise<Entry[]> {
-    return this.repository.listPublishedEntries((await this.getDefinition(collectionIdOrSlug)).id);
+    return this.entries.listPublished((await this.getDefinition(collectionIdOrSlug)).id);
   }
 
   async createEntry(
@@ -172,16 +170,16 @@ export class CollectionsService {
   ): Promise<Entry> {
     const definition = await this.getDefinition(collectionIdOrSlug);
     const data = this.validateData(definition, input.data);
-    // Iso legacy: slug généré depuis le titre (slugify fr) + unicité incrémentale -1/-2…
+    // Slug derived from the title, with an incremental suffix on collision.
     const slug = await this.uniqueEntrySlug(definition.id, input.slug || slugify(input.title));
-    const entry = await this.repository.insertEntry({
+    const entry = await this.entries.insert({
       ...input,
       slug,
       data,
       collectionId: definition.id,
       createdBy: actorId ?? null,
       updatedBy: actorId ?? null,
-      // Iso legacy: publishedAt posé automatiquement à la publication.
+      // publishedAt is stamped automatically on publication.
       publishedAt:
         input.status === 'published'
           ? (input.publishedAt ?? new Date().toISOString())
@@ -191,17 +189,15 @@ export class CollectionsService {
     return entry;
   }
 
-  /** Iso legacy: update PARTIEL — `data` est fusionné champ par champ avec l'existant. */
+  /** PARTIAL update: `data` is merged field by field with what already exists. */
   async updateEntry(id: string, input: EntryUpdateDto, actorId?: string): Promise<Entry> {
-    const existing = await this.repository.findEntryById(id);
-    if (!existing) throw new EntryNotFoundError(`entrée introuvable: ${id}`);
+    const existing = await this.entries.findById(id);
+    if (!existing) throw new EntryNotFoundError(`entry not found: ${id}`);
     const definition = await this.getDefinition(existing.collectionId);
 
-    // Évolution de schéma : une clé de l'ENTRÉE EXISTANTE qui ne correspond
-    // plus à aucun champ (champ retiré de la collection) est conservée telle
-    // quelle hors validation — masquée des payloads (qui itèrent les champs
-    // définis) et restaurée si le champ revient. Les clés inconnues VENANT DE
-    // L'APPEL restent refusées (strictObject sur la partie définie).
+    // Schema evolution: a key of the EXISTING entry that no longer matches any
+    // field is kept untouched, hidden from payloads, and restored if the field
+    // comes back. Unknown keys coming from the CALLER are still rejected.
     const definedNames = new Set(definition.fields.map((field) => field.name));
     const orphanData = Object.fromEntries(
       Object.entries(existing.data ?? {}).filter(([key]) => !definedNames.has(key)),
@@ -218,14 +214,14 @@ export class CollectionsService {
 
     const patch: Partial<Entry> = { ...input, updatedBy: actorId ?? null };
     if (data) patch.data = data;
-    // Iso legacy (service-records update.action) : publishedAt est RÉÉCRIT à
-    // chaque passage en published — simple horodatage, aucune planification.
+    // publishedAt is REWRITTEN on every transition to published: it is a stamp,
+    // never a schedule.
     if (input.status === 'published' && !input.publishedAt) {
       patch.publishedAt = new Date().toISOString();
     }
 
     try {
-      const updated = (await this.repository.updateEntry(id, patch))!;
+      const updated = (await this.entries.update(id, patch))!;
       if (data) {
         await this.linkRelations(
           definition,
@@ -234,9 +230,8 @@ export class CollectionsService {
           relationIds(definition.fields, data),
         );
       }
-      // Liens libres (iso legacy `records[]`, onglet Relations de l'admin) :
-      // la liste est posée telle quelle et la symétrie entretenue sur les
-      // cibles (ajouts/retraits inverses), comme pour les champs relation.
+      // Free links: the list is set as given, and symmetry is maintained on the
+      // targets — same as relation fields.
       if (input.related) {
         await this.linkRelations(definition, id, existing.related ?? [], input.related);
       }
@@ -247,21 +242,19 @@ export class CollectionsService {
   }
 
   async removeEntry(id: string): Promise<void> {
-    const existing = await this.repository.findEntryById(id);
-    if (!existing) throw new EntryNotFoundError(`entrée introuvable: ${id}`);
+    const existing = await this.entries.findById(id);
+    if (!existing) throw new EntryNotFoundError(`entry not found: ${id}`);
     const definition = await this.getDefinition(existing.collectionId);
-    // Iso legacy: $pull inverse à la suppression.
+    // Remove the inverse links too.
     await this.linkRelations(definition, id, relationIds(definition.fields, existing.data), []);
-    await this.repository.deleteEntry(id);
+    await this.entries.delete(id);
   }
 
-  // ── Public payloads (iso legacy) ───────────────────────────────────────────
+  // ── Public payloads ────────────────────────────────────────────────────────
 
   /**
-   * Iso legacy `parseDataAttributes`: hidden fields excluded, rich text
-   * resolved (mediaRecord + signed src) then STRINGIFIED, steps content
-   * resolved+stringified per step, media fields → arrays of signed legacy
-   * media records.
+   * Hidden fields excluded; rich text resolved then STRINGIFIED; media fields
+   * turned into arrays of media records.
    */
   private async resolveEntryData(
     definition: CollectionDefinition,
@@ -298,8 +291,7 @@ export class CollectionsService {
           const records = await Promise.all(
             ids
               .filter((v): v is string => typeof v === 'string' && v.length > 0)
-              // Iso legacy `Media.find({_id: {$in}})` : Mongo renvoie les
-              // documents triés par _id CROISSANT, pas dans l'ordre du champ.
+              // Records come back sorted by id, NOT in the order of the field.
               .sort()
               .map((mediaId) => this.media.toLegacyMedia(mediaId)),
           );
@@ -313,7 +305,7 @@ export class CollectionsService {
     return data;
   }
 
-  /** Iso legacy `populateWysiwygMedia`: image/file nodes get `mediaRecord` + signed `src`. */
+  /** Image and file nodes get their `mediaRecord` and a resolved `src`. */
   private async resolveRichTextMedia(node: unknown): Promise<unknown> {
     if (Array.isArray(node)) {
       return Promise.all(node.map((child) => this.resolveRichTextMedia(child)));
@@ -337,66 +329,7 @@ export class CollectionsService {
     return copy;
   }
 
-  /**
-   * Retire les instantanés de média FIGÉS des nœuds de rich-text
-   * (`attrs.data`) — dette héritée du legacy, à supprimer avec la tâche
-   * `sanitize:media` une fois les clients migrés.
-   *
-   * L'éditeur legacy recopiait l'enregistrement média complet dans le nœud au
-   * moment de l'insertion. Cette copie n'est JAMAIS rafraîchie : elle
-   * transporte indéfiniment des URLs signées périmées vers le bucket legacy,
-   * qui n'existera plus après le décommissionnement. Personne ne la lit —
-   * `@poulpus/prose` n'utilise que `attrs.src`, et le générateur du SSG
-   * `attrs.mediaRecord` — et ces deux valeurs-là sont, elles, recalculées à
-   * chaque lecture par `resolveRichTextMedia`. L'instantané est donc du poids
-   * mort porteur d'adresses mortes.
-   *
-   * `updatedAt` et `updatedBy` sont PRÉSERVÉS : c'est une opération de
-   * maintenance, elle ne doit pas se faire passer pour une modification
-   * éditoriale dans l'admin.
-   */
-  async sanitizeLegacyMediaSnapshots(): Promise<{ entries: number; nodes: number }> {
-    let entriesTouched = 0;
-    let nodesCleaned = 0;
-
-    const strip = (node: unknown): boolean => {
-      if (Array.isArray(node)) return node.map(strip).some(Boolean);
-      if (node === null || typeof node !== 'object') return false;
-      const record = node as Record<string, unknown>;
-      let changed = false;
-      const attrs = record.attrs as Record<string, unknown> | undefined;
-      if (
-        (record.type === 'image' || record.type === 'file') &&
-        attrs &&
-        attrs.data !== null &&
-        typeof attrs.data === 'object'
-      ) {
-        delete attrs.data;
-        nodesCleaned += 1;
-        changed = true;
-      }
-      for (const value of Object.values(record)) {
-        if (strip(value)) changed = true;
-      }
-      return changed;
-    };
-
-    for (const definition of await this.repository.listDefinitions()) {
-      for (const entry of await this.repository.listEntries(definition.id)) {
-        const data = structuredClone(entry.data);
-        if (!strip(data)) continue;
-        await this.repository.updateEntry(entry.id, {
-          data,
-          updatedAt: entry.updatedAt,
-          updatedBy: entry.updatedBy,
-        });
-        entriesTouched += 1;
-      }
-    }
-    return { entries: entriesTouched, nodes: nodesCleaned };
-  }
-
-  /** Iso legacy: les events sans période d'agenda ne sont pas publiés. */
+  /** Events with no scheduled period are never published. */
   private hasEmptySchedules(entry: Entry): boolean {
     const schedules = (entry.data.schedules ?? entry.legacyExtra?.schedules) as
       | { periods?: unknown[] }
@@ -405,27 +338,24 @@ export class CollectionsService {
   }
 
   /**
-   * Legacy-compat payload of `GET /api/v1/content/records`: ONE flat map of
-   * every published entry across all collections, keyed by id.
+   * ONE flat map of every published entry across all collections, keyed by id.
    */
   async legacyRecordsPayload(): Promise<Record<string, Record<string, unknown>>> {
     const records: Record<string, Record<string, unknown>> = {};
-    for (const definition of await this.repository.listDefinitions()) {
-      const published = await this.repository.listPublishedEntries(definition.id);
+    for (const definition of await this.definitions.list()) {
+      const published = await this.entries.listPublished(definition.id);
       for (const entry of published) {
         if (definition.slug === 'events' && this.hasEmptySchedules(entry)) continue;
-        // Iso legacy `select('-status -path')` : status exclu du payload public.
+        // status is excluded from the public payload.
         records[entry.id] = {
           _id: entry.id,
           title: entry.title,
           slug: entry.slug,
           relatedCollection: definition.slug,
-          // Iso Mongoose toJSON : champ omis quand absent (records publiés
-          // sans publishedAt existent dans le dump).
+          // Omitted when absent — published entries without a stamp do exist.
           ...(entry.publishedAt != null ? { publishedAt: entry.publishedAt } : {}),
           ...(await this.resolveEntryData(definition, entry)),
-          // Iso legacy `records[]` (relations, entretenues bidirectionnellement) —
-          // APRÈS le spread : prime sur un éventuel champ de données homonyme.
+          // AFTER the spread: wins over a data field of the same name.
           records: entry.related ?? [],
         };
       }
@@ -436,9 +366,9 @@ export class CollectionsService {
   /** Public slugs of every published entry (`/collection/entry`), for the deployment payload. */
   async publishedSlugs(): Promise<string[]> {
     const slugs: string[] = [];
-    for (const definition of await this.repository.listDefinitions()) {
-      const published = await this.repository.listPublishedEntries(definition.id);
-      // Iso legacy : le filtre des events sans période ne s'applique QU'À
+    for (const definition of await this.definitions.list()) {
+      const published = await this.entries.listPublished(definition.id);
+      // The empty-schedule filter applies ONLY TO
       // content/records — les slugs du deployment listent tout le publié.
       slugs.push(...published.map((entry) => `/${definition.slug}/${entry.slug}`));
     }
@@ -463,7 +393,7 @@ export class CollectionsService {
   /** Iso legacy: suffixe incrémental -1/-2… jusqu'à unicité dans la collection. */
   private async uniqueEntrySlug(collectionId: string, base: string): Promise<string> {
     let candidate = base;
-    for (let suffix = 1; await this.repository.findEntryBySlug(collectionId, candidate); suffix++) {
+    for (let suffix = 1; await this.entries.findBySlug(collectionId, candidate); suffix++) {
       candidate = `${base}-${suffix}`;
     }
     return candidate;
@@ -471,7 +401,7 @@ export class CollectionsService {
 
   private async uniqueDefinitionSlug(base: string): Promise<string> {
     let candidate = base;
-    for (let suffix = 1; await this.repository.findDefinitionBySlug(candidate); suffix++) {
+    for (let suffix = 1; await this.definitions.findBySlug(candidate); suffix++) {
       candidate = `${base}-${suffix}`;
     }
     return candidate;
@@ -487,16 +417,16 @@ export class CollectionsService {
     const added = after.filter((id) => !before.includes(id));
     const removed = before.filter((id) => !after.includes(id));
     for (const targetId of added) {
-      const target = await this.repository.findEntryById(targetId);
+      const target = await this.entries.findById(targetId);
       if (!target) continue;
       const related = new Set(target.related ?? []);
       related.add(entryId);
-      await this.repository.updateEntry(targetId, { related: [...related] });
+      await this.entries.update(targetId, { related: [...related] });
     }
     for (const targetId of removed) {
-      const target = await this.repository.findEntryById(targetId);
+      const target = await this.entries.findById(targetId);
       if (!target) continue;
-      await this.repository.updateEntry(targetId, {
+      await this.entries.update(targetId, {
         related: (target.related ?? []).filter((id) => id !== entryId),
       });
     }

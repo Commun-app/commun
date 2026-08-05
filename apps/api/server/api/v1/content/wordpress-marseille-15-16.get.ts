@@ -4,12 +4,9 @@ import staticJson from '../../../data/politicus-mairie-marseille-15-16.json';
 import { useCore } from '../../../utils/core.ts';
 
 /**
- * Legacy-compat plane (iso `service-records`
- * `GET /api/v1/content/wordpress-marseille-15-16`, still consumed — review
- * decision of Quentin): serves the static WordPress JSON. When THIS instance
- * is the marseille15-16 organization, the collaborator avatars are overlaid
- * with signed URLs (matched by the legacy `order` field = WordPress user id).
- * Unauthenticated, exactly like the legacy route.
+ * Serves a static WordPress payload, still consumed by one site. On the
+ * marseille15-16 instance, collaborator avatars are overlaid with real media
+ * URLs, matched on the legacy `order` field. Unauthenticated, as before.
  */
 export default defineHandler(async (event) => {
   const payload = structuredClone(staticJson) as {

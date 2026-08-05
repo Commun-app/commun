@@ -2,10 +2,11 @@ import { defineHandler, HTTPError } from 'h3';
 import { runTask } from 'nitro/task';
 
 /**
- * Exécution HTTP d'une tâche Nitro — l'endpoint `/_nitro/tasks` n'existe que
- * dans le preset dev, or la suite E2E boote le bundle de production. Route
- * INTERNE, morte sans opt-in explicite : seul le harness E2E pose
- * COMMUN_TASKS_HTTP=1 (ni le Dockerfile, ni le smoke CI, ni la prod).
+ * Runs a Nitro task over HTTP, for the E2E suite only: Nitro's own task
+ * endpoint exists in the dev preset, and the suite boots the production bundle.
+ *
+ * DEAD unless COMMUN_TASKS_HTTP=1, which only the E2E harness sets — never the
+ * Docker image, the CI smoke test, or a deployed instance.
  */
 export default defineHandler(async (event) => {
   if (process.env.COMMUN_TASKS_HTTP !== '1') {
@@ -13,7 +14,7 @@ export default defineHandler(async (event) => {
   }
   const name = event.context.params?.name;
   if (!name) {
-    throw new HTTPError({ status: 400, message: 'nom de tâche manquant' });
+    throw new HTTPError({ status: 400, message: 'missing task name' });
   }
   return runTask(name);
 });
