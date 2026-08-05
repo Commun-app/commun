@@ -1,32 +1,21 @@
 import { createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 import { z } from 'zod';
+import { WRITE_OMIT } from '../../../common/dtos/index.ts';
 import { entries } from '../schema.ts';
 
-// System columns are never accepted from the outside; `data` is validated
-// separately against the definition's generated schema (see service.ts).
-// `related` and audit columns are system-managed.
-const OMIT = {
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  legacyExtra: true,
-  related: true,
-  createdBy: true,
-  updatedBy: true,
-} as const;
+// `data` is validated separately, against the schema generated from the
+// collection definition (see service.ts). `related` is system-managed on create.
+const OMIT = { ...WRITE_OMIT, related: true, collectionId: true } as const;
 
-// Slug optional — iso legacy: généré depuis le titre (slugify fr) + suffixe incrémental.
+// Slug optional: derived from the title, with an incremental suffix on collision.
 export const entryCreateDto = createInsertSchema(entries)
   .omit(OMIT)
-  .omit({ collectionId: true })
   .extend({ slug: z.string().optional() });
 
-// `related` est ré-ouvert à l'UPDATE uniquement : les liens libres entre
-// entrées (iso legacy `records[]`, onglet Relations de l'admin) sont édités
-// directement — le serveur maintient la symétrie (voir service.updateEntry).
+// `related` reopens on UPDATE only: free links between entries are edited
+// directly, and the server keeps them symmetric (see service.updateEntry).
 export const entryUpdateDto = createUpdateSchema(entries)
   .omit(OMIT)
-  .omit({ collectionId: true })
   .extend({ related: z.array(z.string()).optional() });
 
 export type EntryCreateDto = z.infer<typeof entryCreateDto>;

@@ -190,7 +190,7 @@ export class UsersService {
   async revokeOwnSession(userId: string, sessionId: string): Promise<void> {
     const session = await this.repository.findSessionById(sessionId);
     if (!session || session.userId !== userId) {
-      throw new SessionNotFoundError(`session introuvable: ${sessionId}`);
+      throw new SessionNotFoundError(`session not found: ${sessionId}`);
     }
     await this.repository.revokeSession(sessionId, nowIso());
   }
@@ -276,7 +276,7 @@ export class UsersService {
 
   async getUser(id: string): Promise<User> {
     const user = await this.repository.findUserById(id);
-    if (!user) throw new UserNotFoundError(`utilisateur introuvable: ${id}`);
+    if (!user) throw new UserNotFoundError(`user not found: ${id}`);
     return user;
   }
 
@@ -296,7 +296,7 @@ export class UsersService {
     input: { name?: string; role?: 'admin' | 'redacteur'; email?: string },
   ): Promise<User> {
     const updated = await this.repository.updateUser(id, input);
-    if (!updated) throw new UserNotFoundError(`utilisateur introuvable: ${id}`);
+    if (!updated) throw new UserNotFoundError(`user not found: ${id}`);
     return updated;
   }
 

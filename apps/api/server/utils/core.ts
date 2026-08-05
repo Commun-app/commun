@@ -1,11 +1,9 @@
 import { createCore, type Core } from '@commun/core';
 
 /**
- * Le Core câblé, en singleton (revue PR #1, 28/07 — remplace l'ancien hook
- * `request` qui attachait le core à chaque event) : les handlers appellent
- * simplement `useCore()`. Le plugin `plugins/core.ts` fait le premier appel
- * au démarrage du serveur — migrations fail-fast + ménage jouent au boot,
- * pas au premier appel HTTP/tRPC.
+ * The wired Core, as a singleton. `plugins/core.ts` makes the first call at
+ * server start, so migrations and housekeeping run at boot rather than on the
+ * first request.
  */
 let core: Core | undefined;
 
