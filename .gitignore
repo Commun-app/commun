@@ -46,3 +46,10 @@ packages/legacy-migrate/
 
 # Admin statique déposé au build de l'image d'instance (jamais committé)
 /apps/api/public/
+
+# Specs vivantes et outillage d'agents : conservés EN LOCAL, hors du dépôt
+# public. Celui-ci est ce qu'on auto-héberge — il documente le produit, pas la
+# conduite de nos chantiers ni la migration de nos clients. La documentation
+# destinée aux utilisateurs vit dans docs/.
+/openspec/
+/.claude/
