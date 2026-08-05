@@ -16,7 +16,6 @@
 | `packages/core` | Domaines métier, schéma Drizzle (SQLite via `bun:sqlite`), router tRPC |
 | `docs/` | Documentation (UnDocs) — auto-hébergement, configuration, contribution |
 | `e2e/` | Tests de bout en bout (Playwright + Gherkin) |
-| `openspec/` | Specs vivantes du projet (workflow OpenSpec) |
 
 ## Développement
 
