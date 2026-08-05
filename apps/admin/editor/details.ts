@@ -1,86 +1,34 @@
-import { Node } from '@tiptap/core'
+import {
+  Details as TiptapDetails,
+  DetailsSummary as TiptapDetailsSummary,
+  DetailsContent as TiptapDetailsContent,
+} from '@tiptap/extension-details'
 
 /**
- * Accordéon — réimplémentation SANS TipTap Pro du trio
- * details/detailsSummary/detailsContent (D3). C'était la dernière dépendance
- * Pro structurelle : 523 accordéons en base, grigny seul, dont 246 IMBRIQUÉS
- * et 1 587 nœuds `file` à l'intérieur (les arrêtés municipaux).
+ * Accordéon — les extensions Details OFFICIELLES, passées MIT avec TipTap 3
+ * (elles étaient TipTap Pro à l'époque de @poulpus/prose). On reproduit le
+ * geste exact de prose : `Details.extend` avec un attr `toggle` qui REMPLACE
+ * l'attr `open` du composant (les 523 accordéons en base — grigny, dont 246
+ * imbriqués — ne portent que `toggle`).
  *
  * Contrat JSON vérifié sur les données :
- * - details       : attrs { toggle } (booléen, défaut true) — l'attr `open`
- *                   du Pro n'existe pas dans nos données, prose l'écrasait
- * - detailsSummary: contenu `text*`, aucun attr
- * - detailsContent: contenu `block+` (paragraphes, listes, files, images,
- *                   embeds, callouts… et details imbriqués), aucun attr
+ * - details       : attrs { toggle } (booléen, défaut true)
+ * - detailsSummary: contenu texte, aucun attr
+ * - detailsContent: contenu `block+` (files, listes, callouts… et details
+ *   imbriqués), aucun attr
+ *
+ * Les node views Vue s'attachent dans index.ts (l'état ouvert/replié y est
+ * un état d'ÉDITION local, jamais écrit dans le document — D9).
  */
-export const Details = Node.create({
-  name: 'details',
-  group: 'block',
-  content: 'detailsSummary detailsContent',
-  draggable: true,
-  selectable: true,
-  isolating: true,
-
+export const Details = TiptapDetails.extend({
   addAttributes() {
+    // REMPLACE les attrs du parent : l'attr `open` (persistance d'état
+    // d'ouverture) n'existe pas dans nos données, exactement comme prose.
     return {
       toggle: { default: true },
     }
   },
-
-  parseHTML() {
-    return [{ tag: 'details' }]
-  },
-
-  renderHTML() {
-    return ['details', { open: '' }, 0]
-  },
-
-  addCommands() {
-    return {
-      setDetails:
-        () =>
-        ({ commands, state }: any) => {
-          const { schema } = state
-          return commands.insertContent({
-            type: this.name,
-            content: [
-              { type: 'detailsSummary' },
-              { type: 'detailsContent', content: [{ type: 'paragraph' }] },
-            ],
-          })
-        },
-    } as any
-  },
 })
 
-export const DetailsSummary = Node.create({
-  name: 'detailsSummary',
-  content: 'text*',
-  defining: true,
-  selectable: false,
-  isolating: true,
-
-  parseHTML() {
-    return [{ tag: 'summary' }]
-  },
-
-  renderHTML() {
-    return ['summary', 0]
-  },
-})
-
-export const DetailsContent = Node.create({
-  name: 'detailsContent',
-  content: 'block+',
-  defining: true,
-  selectable: false,
-  isolating: true,
-
-  parseHTML() {
-    return [{ tag: 'div[data-type="detailsContent"]' }]
-  },
-
-  renderHTML() {
-    return ['div', { 'data-type': 'detailsContent' }, 0]
-  },
-})
+export const DetailsSummary = TiptapDetailsSummary
+export const DetailsContent = TiptapDetailsContent

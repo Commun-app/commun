@@ -4,6 +4,7 @@ import Highlight from '@tiptap/extension-highlight'
 import Typography from '@tiptap/extension-typography'
 import Link from '@tiptap/extension-link'
 import { OrderedList } from '@tiptap/extension-list'
+import FileHandler from '@tiptap/extension-file-handler'
 import { Uid } from './uid.ts'
 import { Callout } from './callout.ts'
 import { FileNode, type FileNodeOptions } from './file.ts'
@@ -78,10 +79,40 @@ export interface CommunEditorMedia {
  * ses nœuds par défaut portent les mêmes noms que les nôtres (`image`) ou
  * n'existent pas dans nos données (`mention`).
  */
+/**
+ * Glisser-déposer et collage de fichiers (D4) — l'extension FileHandler
+ * OFFICIELLE (ex-Pro, MIT avec TipTap 3), branchée sur le MÊME chemin
+ * d'upload que la barre d'outils : téléversement puis insertion d'un nœud
+ * `image` ou `file` selon le mime. Sans handler d'upload (laboratoire,
+ * harnais), l'extension n'est pas montée.
+ */
+function communFileHandler(upload: NonNullable<CommunEditorMedia['upload']>) {
+  const insert = async (editor: any, files: File[], pos?: number) => {
+    for (const file of files) {
+      const { id, src, title } = await upload(file)
+      const node = {
+        type: file.type.startsWith('image/') ? 'image' : 'file',
+        attrs: { id, src, title },
+      }
+      if (pos == null) editor.chain().focus().insertContent(node).run()
+      else editor.chain().insertContentAt(pos, node).run()
+    }
+  }
+  return FileHandler.configure({
+    onDrop: (editor: any, files: File[], pos: number) => {
+      void insert(editor, files, pos)
+    },
+    onPaste: (editor: any, files: File[]) => {
+      void insert(editor, files)
+    },
+  })
+}
+
 export function communSchemaExtensions(media: Partial<CommunEditorMedia> = {}) {
   const handlers = { upload: media.upload ?? null, fetch: media.fetch ?? null }
   return [
     Uid,
+    ...(media.upload ? [communFileHandler(media.upload)] : []),
     CommunLink,
     CommunOrderedList,
     TextAlign.configure({ types: ['heading', 'paragraph'] }),

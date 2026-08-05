@@ -1,15 +1,10 @@
 import { VueNodeViewRenderer } from '@tiptap/vue-3'
-import { Uid, UID_TYPES, assignMissingUids } from './uid.ts'
-import { Callout } from './callout.ts'
-import { FileNode, type FileNodeOptions } from './file.ts'
-import { ImageNode } from './image.ts'
-import { Embed } from './embed.ts'
-import { Details, DetailsSummary, DetailsContent } from './details.ts'
-import { communStarterKit, type CommunEditorMedia } from './schema.ts'
-import TextAlign from '@tiptap/extension-text-align'
-import { TextStyle } from '@tiptap/extension-text-style'
-import Highlight from '@tiptap/extension-highlight'
-import Typography from '@tiptap/extension-typography'
+import {
+  communStarterKit,
+  communSchemaExtensions,
+  type CommunEditorMedia,
+} from './schema.ts'
+import { UID_TYPES } from './uid.ts'
 import CalloutView from './views/CalloutView.vue'
 import FileView from './views/FileView.vue'
 import ImageView from './views/ImageView.vue'
@@ -18,8 +13,19 @@ import DetailsView from './views/DetailsView.vue'
 import DetailsSummaryView from './views/DetailsSummaryView.vue'
 import DetailsContentView from './views/DetailsContentView.vue'
 
-export { communStarterKit, Uid, UID_TYPES, assignMissingUids }
+export { communStarterKit, UID_TYPES }
 export type { CommunEditorMedia }
+
+/** Vues Vue par nom de nœud — attachées par-dessus l'assemblage de schema.ts. */
+const VIEWS: Record<string, any> = {
+  callout: CalloutView,
+  file: FileView,
+  image: ImageView,
+  embed: EmbedView,
+  details: DetailsView,
+  detailsSummary: DetailsSummaryView,
+  detailsContent: DetailsContentView,
+}
 
 /**
  * Point d'entrée NAVIGATEUR de l'éditeur : le jeu d'extensions de parité
@@ -27,33 +33,10 @@ export type { CommunEditorMedia }
  * importent `schema.ts` directement — jamais ce fichier.
  */
 export function communExtensions(media: Partial<CommunEditorMedia> = {}) {
-  const handlers = { upload: media.upload ?? null, fetch: media.fetch ?? null }
-  return [
-    Uid,
-    TextAlign.configure({ types: ['heading', 'paragraph'] }),
-    TextStyle,
-    Highlight.configure({ multicolor: true }),
-    Typography,
-    Callout.extend({
-      addNodeView: () => VueNodeViewRenderer(CalloutView),
-    }),
-    FileNode.extend({
-      addNodeView: () => VueNodeViewRenderer(FileView),
-    }).configure(handlers as any),
-    ImageNode.extend({
-      addNodeView: () => VueNodeViewRenderer(ImageView),
-    }).configure(handlers as any),
-    Embed.extend({
-      addNodeView: () => VueNodeViewRenderer(EmbedView),
-    }),
-    Details.extend({
-      addNodeView: () => VueNodeViewRenderer(DetailsView),
-    }),
-    DetailsSummary.extend({
-      addNodeView: () => VueNodeViewRenderer(DetailsSummaryView),
-    }),
-    DetailsContent.extend({
-      addNodeView: () => VueNodeViewRenderer(DetailsContentView),
-    }),
-  ]
+  return communSchemaExtensions(media).map((extension: any) => {
+    const view = VIEWS[extension.name]
+    return view
+      ? extension.extend({ addNodeView: () => VueNodeViewRenderer(view) })
+      : extension
+  })
 }
