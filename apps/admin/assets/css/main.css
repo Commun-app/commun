@@ -1,0 +1,27 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/* L'ancien éditeur (@poulpus/prose) est compilé avec des classes Tailwind :
+   la config v3 scannait son dist dans node_modules, la v4 ne scanne pas
+   node_modules par défaut. Cette directive meurt avec prose (groupe 4). */
+@source "../../../../node_modules/@poulpus/prose/dist/runtime";
+
+/* Thème porté de tailwind.config.js (v3) — tailles maison sous text-xs. */
+@theme {
+  --text-7xs: 0.125rem;
+  --text-6xs: 0.25rem;
+  --text-5xs: 0.375rem;
+  --text-4xs: 0.5rem;
+  --text-3xs: 0.625rem;
+  --text-2xs: 0.75rem;
+}
+
+/* L'admin legacy est monochrome (primary: '#000'). Les écrans migrés vers
+   Nuxt UI adopteront ses couleurs sémantiques ; en attendant, les utilitaires
+   `*-primary` existants restent noirs. */
+:root {
+  --ui-primary: #000;
+}
+.dark {
+  --ui-primary: #fff;
+}

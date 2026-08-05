@@ -46,8 +46,9 @@ export default defineNuxtConfig({
       mapBoxToken: process.env.NUXT_ENV_MAPBOX_TOKEN,
     }
   },
+  css: ['~/assets/css/main.css'],
   modules: [
-    '@nuxtjs/tailwindcss',
+    '@nuxt/ui',
     '@sidebase/nuxt-auth',
     '@pinia/nuxt',
     '@pinia-orm/nuxt',
