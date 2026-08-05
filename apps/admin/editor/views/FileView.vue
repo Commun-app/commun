@@ -1,24 +1,43 @@
 <template>
   <NodeViewWrapper
     as="div"
-    class="my-2 flex items-center gap-3 rounded-md border border-neutral-300 p-3 dark:border-neutral-700"
+    class="my-2 rounded-md border border-neutral-300 dark:border-neutral-700"
     :class="{ 'ring-2 ring-neutral-400': selected }"
   >
-    <UIcon name="iconoir:page" class="size-6 shrink-0 text-neutral-500" />
-    <div class="min-w-0 flex-1">
-      <p class="truncate text-sm font-medium">{{ title || 'Fichier' }}</p>
-      <p v-if="resolving" class="text-2xs text-neutral-400">résolution…</p>
+    <div class="flex items-center gap-3 p-3">
+      <UIcon name="iconoir:page" class="size-6 shrink-0 text-neutral-500" />
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-sm font-medium">{{ title || 'Fichier' }}</p>
+        <p v-if="resolving" class="text-2xs text-neutral-400">résolution…</p>
+      </div>
+      <UButton
+        v-if="isPdf && src"
+        :icon="preview ? 'iconoir:eye-closed' : 'iconoir:eye'"
+        variant="ghost"
+        color="neutral"
+        size="xs"
+        :aria-label="preview ? 'Masquer l’aperçu' : 'Aperçu du PDF'"
+        @click="preview = !preview"
+      />
+      <UButton
+        v-if="src"
+        :to="src"
+        target="_blank"
+        icon="iconoir:open-new-window"
+        variant="ghost"
+        color="neutral"
+        size="xs"
+        aria-label="Ouvrir le fichier"
+      />
     </div>
-    <UButton
-      v-if="src"
-      :to="src"
-      target="_blank"
-      icon="iconoir:open-new-window"
-      variant="ghost"
-      color="neutral"
-      size="xs"
-      aria-label="Ouvrir le fichier"
-    />
+    <!-- Aperçu PDF par la visionneuse NATIVE du navigateur (D12) : zéro
+         dépendance — pdfjs-dist (~1 Mo) n'est pas embarqué. -->
+    <embed
+      v-if="preview && isPdf && src"
+      :src="src"
+      type="application/pdf"
+      class="h-96 w-full rounded-b-md"
+    >
   </NodeViewWrapper>
 </template>
 
@@ -33,9 +52,13 @@ import { NodeViewWrapper, nodeViewProps } from '@tiptap/vue-3'
 const props = defineProps(nodeViewProps)
 const resolving = ref(false)
 const resolved = ref(null)
+const preview = ref(false)
 
 const title = computed(() => resolved.value?.title ?? props.node.attrs.title)
 const src = computed(() => resolved.value?.src ?? props.node.attrs.src)
+const isPdf = computed(() =>
+  /\.pdf($|\?)/i.test(src.value ?? '') || /\.pdf$/i.test(title.value ?? ''),
+)
 
 onMounted(async () => {
   const { id } = props.node.attrs

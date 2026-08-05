@@ -15,21 +15,40 @@
       class="w-full rounded-md"
       sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-forms"
     />
-    <div
+    <form
       v-else
-      class="flex items-center gap-3 rounded-md border border-dashed border-neutral-300 p-6 text-neutral-400"
+      contenteditable="false"
+      class="flex items-center gap-3 rounded-md border border-dashed border-neutral-300 p-4 text-neutral-400"
+      @submit.prevent="applyUrl"
     >
-      <UIcon :name="node.attrs.icon || 'iconoir:code'" class="size-6" />
-      <span class="text-sm">{{ node.attrs.placeholder || 'Intégration sans source' }}</span>
-    </div>
+      <UIcon :name="node.attrs.icon || 'iconoir:youtube'" class="size-6 shrink-0" />
+      <UInput
+        v-model="url"
+        :placeholder="node.attrs.placeholder || 'Collez l’url de la vidéo…'"
+        class="flex-1"
+        size="sm"
+      />
+      <UButton type="submit" size="sm" color="neutral" variant="soft" :disabled="!url">
+        Ajouter
+      </UButton>
+    </form>
   </NodeViewWrapper>
 </template>
 
 <script setup>
-// Iframe de service externe. Le sandbox borne ce qu'un embed peut faire
-// dans l'admin (l'éditeur affiche du contenu tiers) sans gêner YouTube,
-// Maps ou Typeform.
+// Iframe de service externe. Le sandbox borne ce qu'un embed peut faire dans
+// l'admin (contenu tiers). Sans source, le nœud affiche un champ de collage
+// d'URL — l'insertion depuis « Ajouter un bloc » crée un embed vide que
+// l'auteur complète ici (UX iso prose, en node view plutôt qu'en modale).
+import { ref } from 'vue'
 import { NodeViewWrapper, nodeViewProps } from '@tiptap/vue-3'
+import { toVideoEmbedSrc } from '../schema'
 
-defineProps(nodeViewProps)
+const props = defineProps(nodeViewProps)
+const url = ref('')
+
+function applyUrl() {
+  if (!url.value) return
+  props.updateAttributes({ src: toVideoEmbedSrc(url.value.trim()) })
+}
 </script>

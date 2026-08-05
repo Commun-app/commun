@@ -74,6 +74,58 @@ export interface CommunEditorMedia {
 }
 
 /**
+ * Répare un document ProseMirror invalide hérité de la migration : 31
+ * documents (grigny) contiennent des nœuds `{"type":"text"}` SANS champ
+ * `text` — rejetés par ProseMirror v2 comme v3 (documents inéditables dans
+ * l'admin actuel aussi), rendus comme du vide par les thèmes. Les écarter ne
+ * change donc RIEN au rendu. Renvoie le document intact (même référence) si
+ * rien à réparer. Une réparation en base une fois pour toutes est proposée à
+ * part — ceci est le filet à l'ouverture.
+ */
+export function sanitizeDoc<T extends { type?: string; content?: any[] }>(doc: T): T {
+  let repaired = false
+  const clean = (node: any): any | null => {
+    if (!node || typeof node !== 'object') return node
+    if (node.type === 'text' && !node.text) {
+      repaired = true
+      return null
+    }
+    if (Array.isArray(node.content)) {
+      const content = node.content.map(clean).filter(Boolean)
+      if (content.length !== node.content.length) return { ...node, content }
+      // Réutilise les fils nettoyés (certains ont pu changer en profondeur).
+      return content.some((c: any, i: number) => c !== node.content[i])
+        ? { ...node, content }
+        : node
+    }
+    return node
+  }
+  const out = clean(doc)
+  if (repaired && typeof console !== 'undefined') {
+    console.warn('[editor] document réparé : nœud(s) texte vide(s) écarté(s) (reliquat de migration)')
+  }
+  return out
+}
+
+/**
+ * Le seul service d'intégration réellement utilisé (47/48 embeds en base) :
+ * la vidéo YouTube, stockée `service: "video"`. Les presets iso prose.
+ */
+export const EMBED_VIDEO = {
+  service: 'video',
+  icon: 'iconoir:youtube',
+  placeholder: "Collez l'url https://www.youtube.com/watch…",
+  title: 'YouTube video player',
+  height: 315,
+} as const
+
+/** `https://www.youtube.com/watch?v=ID` → URL d'embed. Sinon, l'URL telle quelle. */
+export function toVideoEmbedSrc(url: string): string {
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/)
+  return match ? `https://www.youtube.com/embed/${match[1]}` : url
+}
+
+/**
  * Le jeu d'extensions de parité avec @poulpus/prose, SANS node views.
  * L'UEditor doit AUSSI recevoir `:image="false"` et `:mention="false"` :
  * ses nœuds par défaut portent les mêmes noms que les nôtres (`image`) ou

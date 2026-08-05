@@ -2,6 +2,9 @@ import { VueNodeViewRenderer } from '@tiptap/vue-3'
 import {
   communStarterKit,
   communSchemaExtensions,
+  sanitizeDoc,
+  EMBED_VIDEO,
+  toVideoEmbedSrc,
   type CommunEditorMedia,
 } from './schema.ts'
 import { UID_TYPES } from './uid.ts'
@@ -13,7 +16,7 @@ import DetailsView from './views/DetailsView.vue'
 import DetailsSummaryView from './views/DetailsSummaryView.vue'
 import DetailsContentView from './views/DetailsContentView.vue'
 
-export { communStarterKit, UID_TYPES }
+export { communStarterKit, UID_TYPES, sanitizeDoc, EMBED_VIDEO, toVideoEmbedSrc }
 export type { CommunEditorMedia }
 
 /** Vues Vue par nom de nœud — attachées par-dessus l'assemblage de schema.ts. */
