@@ -1,15 +1,10 @@
-// @commun/core — public entrypoint + IoC root.
+// @commun/core — public entrypoint and composition root.
 //
-// `createCore({ env })` is the single composition root: it instantiates the
-// infrastructure adapters, the repositories and the services, and returns the
-// wired `Core`. It is the ONLY place concrete implementations are chosen.
+// `createCore({ env })` is the ONLY place concrete implementations are chosen.
 // Layering: trpc/REST → services → repositories → Drizzle.
 //
-// Deux surfaces d'usage (revue PR #1) :
-// - `appRouter` (tRPC) : le plan admin, consommé par l'adaptateur HTTP et le
-//   client de l'admin (type `AppRouter`).
-// - `services` : consommés par le plan REST legacy-compat, les tâches
-//   planifiées et l'outillage — même logique, sans transport.
+// Two consumption surfaces: `appRouter` (tRPC) for the admin plane, `services`
+// for the REST plane, scheduled tasks and tooling — same logic, no transport.
 
 import type { Core, CoreEnv } from './common/types/index.ts';
 import { parseEnv } from './common/env/index.ts';
@@ -35,11 +30,6 @@ export function createCore({ env }: { env?: CoreEnv } = {}): Core {
   // mal configurée refuse de démarrer plutôt que d'échouer à l'usage.
   const storage = createStorage(e);
   const email = EmailService.fromEnv(e);
-  if (!e.COMMUN_JWT_SECRET) {
-    throw new Error(
-      'COMMUN_JWT_SECRET non configuré — requis pour signer les sessions (le serveur refuse de démarrer sans)',
-    );
-  }
 
   const users = new UsersService(new UsersRepository(db), {
     email,
