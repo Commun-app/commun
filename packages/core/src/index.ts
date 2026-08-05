@@ -16,7 +16,11 @@ import { healthRouter, router } from './infrastructure/trpc/index.ts';
 import { UsersRepository, UsersService } from './domains/users/index.ts';
 import { OrganizationRepository, OrganizationService } from './domains/organization/index.ts';
 import { MediaRepository, MediaService } from './domains/media/index.ts';
-import { CollectionsRepository, CollectionsService } from './domains/collections/index.ts';
+import {
+  CollectionsService,
+  DefinitionRepository,
+  EntryRepository,
+} from './domains/collections/index.ts';
 import { organizationRouter } from './domains/organization/index.ts';
 import { authRouter, usersRouter, apiTokensRouter } from './domains/users/index.ts';
 import { mediaRouter } from './domains/media/index.ts';
@@ -38,8 +42,11 @@ export function createCore({ env }: { env?: CoreEnv } = {}): Core {
   });
   const mediaRepository = new MediaRepository(db);
   const media = new MediaService(mediaRepository, storage);
-  const collectionsRepository = new CollectionsRepository(db);
-  const collections = new CollectionsService(collectionsRepository, media);
+  const collections = new CollectionsService(
+    new DefinitionRepository(db),
+    new EntryRepository(db),
+    media,
+  );
   const organization = new OrganizationService(new OrganizationRepository(db));
   const services = {
     health: new HealthService(db),

@@ -1,7 +1,8 @@
 import { consola } from 'consola';
 import type {
   CollectionDefinition,
-  CollectionsRepository,
+  DefinitionRepository,
+  EntryRepository,
   CollectionsService,
   Entry,
   FieldDefinition,
@@ -19,7 +20,8 @@ const MEDIA_DOWNLOAD_TIMEOUT_MS = 600_000; // iso legacy
 
 export interface SinkDeps {
   collections: CollectionsService;
-  collectionsRepository: CollectionsRepository;
+  definitionRepository: DefinitionRepository;
+  entryRepository: EntryRepository;
   media: MediaService;
   mediaRepository: MediaRepository;
 }
@@ -128,7 +130,7 @@ export class ApidaeSink {
     }
 
     if (updateCollection) {
-      const updated = await this.deps.collectionsRepository.updateDefinition(this.definition.id, {
+      const updated = await this.deps.definitionRepository.update(this.definition.id, {
         legacyExtra: { ...(this.definition.legacyExtra ?? {}), enumItems },
       });
       if (updated) this.definition = updated;
@@ -225,7 +227,7 @@ export class ApidaeSink {
       throw new Error('E_MISSING_REFERENCE_ATTRIBUTE');
     }
 
-    const existing = await this.deps.collectionsRepository.findEntryByDataField(
+    const existing = await this.deps.entryRepository.findByDataField(
       this.definition.id,
       'apidaeId',
       apidaeId as string | number,
@@ -250,7 +252,7 @@ export class ApidaeSink {
     this.seenEntryIds.push(entry.id);
 
     if (related) {
-      await this.deps.collectionsRepository.updateEntry(entry.id, { related });
+      await this.deps.entryRepository.update(entry.id, { related });
     }
     return entry;
   }
@@ -270,9 +272,7 @@ export class ApidaeSink {
       consola.warn(`[apidae-sync] collecte en échec sur ${this.definition.slug} — unlink annulé`);
       return;
     }
-    const published = await this.deps.collectionsRepository.listPublishedEntries(
-      this.definition.id,
-    );
+    const published = await this.deps.entryRepository.listPublished(this.definition.id);
     const seen = new Set(this.seenEntryIds);
     for (const entry of published) {
       if (seen.has(entry.id)) continue;
@@ -295,7 +295,7 @@ export class ApidaeSink {
       if (collectionSlug && refName && refId !== undefined) {
         try {
           const targetDefinition = await this.deps.collections.getDefinition(collectionSlug);
-          target = await this.deps.collectionsRepository.findEntryByDataField(
+          target = await this.deps.entryRepository.findByDataField(
             targetDefinition.id,
             refName,
             refId,

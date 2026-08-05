@@ -6,7 +6,7 @@
 import { join } from 'node:path';
 // Relative import: e2e/ is not a workspace package, @commun/core is unresolvable here.
 import {
-  CollectionsRepository,
+  DefinitionRepository,
   createCore,
   OrganizationRepository,
   parseEnv,
@@ -196,13 +196,13 @@ switch (command) {
     });
 
     const collections = core.services.collections;
-    const repository = new CollectionsRepository(core.db);
+    const repository = new DefinitionRepository(core.db);
     const existingSlugs = new Set(
       (await collections.listDefinitions()).map((definition) => definition.slug),
     );
     for (const seedDefinition of APIDAE_DEFINITIONS) {
       if (existingSlugs.has(seedDefinition.slug)) continue;
-      const definition = await repository.insertDefinition({
+      const definition = await repository.insert({
         name: seedDefinition.name,
         slug: seedDefinition.slug,
         fields: structuredClone(seedDefinition.fields) as never,

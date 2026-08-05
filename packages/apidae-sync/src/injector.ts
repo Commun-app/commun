@@ -111,12 +111,11 @@ async function runPipeline(
     unlinkSkipped: false,
   };
 
-  // La config legacy référence la collection par son ObjectId Mongo — résolu
-  // via le legacyExtra.legacyId posé par la CLI de migration (fallback id/slug
-  // pour une config écrite à la main).
+  // The sync config references a collection by its legacy id, resolved through
+  // the one the migration CLI recorded; id or slug as a fallback.
   const definition =
     (pipeline.collection
-      ? await deps.collectionsRepository.findDefinitionByLegacyId(pipeline.collection)
+      ? await deps.definitionRepository.findByLegacyId(pipeline.collection)
       : undefined) ??
     (await deps.collections.getDefinition(pipeline.collection ?? '').catch(() => undefined));
   if (!definition) {

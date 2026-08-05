@@ -6,7 +6,7 @@ import {
   InvalidEntryDataError,
 } from './errors.ts';
 import { slugify } from '../../common/utils/slug.ts';
-import type { CollectionsRepository } from './repository.ts';
+import type { DefinitionRepository, EntryRepository } from './repositories/index.ts';
 import type { MediaService } from '../media/service.ts';
 import type { CollectionDefinition, Entry, FieldDefinition, FieldType } from './schema.ts';
 import type {
@@ -75,20 +75,20 @@ function relationIds(fields: FieldDefinition[], data: Record<string, unknown>): 
  */
 export class CollectionsService {
   constructor(
-    private readonly repository: CollectionsRepository,
+    private readonly definitions: DefinitionRepository,
+    private readonly entries: EntryRepository,
     private readonly media: MediaService,
   ) {}
 
   // ── Definitions ────────────────────────────────────────────────────────────
 
   async listDefinitions(): Promise<CollectionDefinition[]> {
-    return this.repository.listDefinitions();
+    return this.definitions.list();
   }
 
   async getDefinition(idOrSlug: string): Promise<CollectionDefinition> {
     const found =
-      (await this.repository.findDefinitionBySlug(idOrSlug)) ??
-      (await this.repository.findDefinitionById(idOrSlug));
+      (await this.definitions.findBySlug(idOrSlug)) ?? (await this.definitions.findById(idOrSlug));
     if (!found) throw new CollectionNotFoundError(`collection not found: ${idOrSlug}`);
     return found;
   }
@@ -97,7 +97,7 @@ export class CollectionsService {
     input: DefinitionCreateDto,
     actorId?: string,
   ): Promise<CollectionDefinition> {
-    return this.repository.insertDefinition({
+    return this.definitions.insert({
       ...input,
       slug: input.slug || (await this.uniqueDefinitionSlug(slugify(input.name))),
       createdBy: actorId ?? null,
@@ -110,7 +110,7 @@ export class CollectionsService {
     input: DefinitionUpdateDto,
     actorId?: string,
   ): Promise<CollectionDefinition> {
-    const updated = await this.repository.updateDefinition(id, {
+    const updated = await this.definitions.update(id, {
       ...input,
       updatedBy: actorId ?? null,
     });
@@ -119,7 +119,7 @@ export class CollectionsService {
   }
 
   async removeDefinition(id: string): Promise<void> {
-    if (!(await this.repository.deleteDefinition(id))) {
+    if (!(await this.definitions.delete(id))) {
       throw new CollectionNotFoundError(`collection not found: ${id}`);
     }
   }
@@ -138,11 +138,11 @@ export class CollectionsService {
   }
 
   async listEntries(collectionIdOrSlug: string): Promise<Entry[]> {
-    return this.repository.listEntries((await this.getDefinition(collectionIdOrSlug)).id);
+    return this.entries.list((await this.getDefinition(collectionIdOrSlug)).id);
   }
 
   async getEntry(id: string): Promise<Entry> {
-    const found = await this.repository.findEntryById(id);
+    const found = await this.entries.findById(id);
     if (!found) throw new EntryNotFoundError(`entry not found: ${id}`);
     return found;
   }
@@ -153,14 +153,14 @@ export class CollectionsService {
     options: { skip?: number; limit?: number } = {},
   ): Promise<Entry[]> {
     const definition = await this.getDefinition(collectionIdOrSlug);
-    return this.repository.listEntriesPaginated(definition.id, {
+    return this.entries.listPaginated(definition.id, {
       skip: options.skip ?? 0,
       limit: options.limit ?? 20,
     });
   }
 
   async listPublishedEntries(collectionIdOrSlug: string): Promise<Entry[]> {
-    return this.repository.listPublishedEntries((await this.getDefinition(collectionIdOrSlug)).id);
+    return this.entries.listPublished((await this.getDefinition(collectionIdOrSlug)).id);
   }
 
   async createEntry(
@@ -172,7 +172,7 @@ export class CollectionsService {
     const data = this.validateData(definition, input.data);
     // Slug derived from the title, with an incremental suffix on collision.
     const slug = await this.uniqueEntrySlug(definition.id, input.slug || slugify(input.title));
-    const entry = await this.repository.insertEntry({
+    const entry = await this.entries.insert({
       ...input,
       slug,
       data,
@@ -191,7 +191,7 @@ export class CollectionsService {
 
   /** PARTIAL update: `data` is merged field by field with what already exists. */
   async updateEntry(id: string, input: EntryUpdateDto, actorId?: string): Promise<Entry> {
-    const existing = await this.repository.findEntryById(id);
+    const existing = await this.entries.findById(id);
     if (!existing) throw new EntryNotFoundError(`entry not found: ${id}`);
     const definition = await this.getDefinition(existing.collectionId);
 
@@ -221,7 +221,7 @@ export class CollectionsService {
     }
 
     try {
-      const updated = (await this.repository.updateEntry(id, patch))!;
+      const updated = (await this.entries.update(id, patch))!;
       if (data) {
         await this.linkRelations(
           definition,
@@ -242,12 +242,12 @@ export class CollectionsService {
   }
 
   async removeEntry(id: string): Promise<void> {
-    const existing = await this.repository.findEntryById(id);
+    const existing = await this.entries.findById(id);
     if (!existing) throw new EntryNotFoundError(`entry not found: ${id}`);
     const definition = await this.getDefinition(existing.collectionId);
     // Remove the inverse links too.
     await this.linkRelations(definition, id, relationIds(definition.fields, existing.data), []);
-    await this.repository.deleteEntry(id);
+    await this.entries.delete(id);
   }
 
   // ── Public payloads ────────────────────────────────────────────────────────
@@ -342,8 +342,8 @@ export class CollectionsService {
    */
   async legacyRecordsPayload(): Promise<Record<string, Record<string, unknown>>> {
     const records: Record<string, Record<string, unknown>> = {};
-    for (const definition of await this.repository.listDefinitions()) {
-      const published = await this.repository.listPublishedEntries(definition.id);
+    for (const definition of await this.definitions.list()) {
+      const published = await this.entries.listPublished(definition.id);
       for (const entry of published) {
         if (definition.slug === 'events' && this.hasEmptySchedules(entry)) continue;
         // status is excluded from the public payload.
@@ -366,8 +366,8 @@ export class CollectionsService {
   /** Public slugs of every published entry (`/collection/entry`), for the deployment payload. */
   async publishedSlugs(): Promise<string[]> {
     const slugs: string[] = [];
-    for (const definition of await this.repository.listDefinitions()) {
-      const published = await this.repository.listPublishedEntries(definition.id);
+    for (const definition of await this.definitions.list()) {
+      const published = await this.entries.listPublished(definition.id);
       // The empty-schedule filter applies ONLY TO
       // content/records — les slugs du deployment listent tout le publié.
       slugs.push(...published.map((entry) => `/${definition.slug}/${entry.slug}`));
@@ -393,7 +393,7 @@ export class CollectionsService {
   /** Iso legacy: suffixe incrémental -1/-2… jusqu'à unicité dans la collection. */
   private async uniqueEntrySlug(collectionId: string, base: string): Promise<string> {
     let candidate = base;
-    for (let suffix = 1; await this.repository.findEntryBySlug(collectionId, candidate); suffix++) {
+    for (let suffix = 1; await this.entries.findBySlug(collectionId, candidate); suffix++) {
       candidate = `${base}-${suffix}`;
     }
     return candidate;
@@ -401,7 +401,7 @@ export class CollectionsService {
 
   private async uniqueDefinitionSlug(base: string): Promise<string> {
     let candidate = base;
-    for (let suffix = 1; await this.repository.findDefinitionBySlug(candidate); suffix++) {
+    for (let suffix = 1; await this.definitions.findBySlug(candidate); suffix++) {
       candidate = `${base}-${suffix}`;
     }
     return candidate;
@@ -417,16 +417,16 @@ export class CollectionsService {
     const added = after.filter((id) => !before.includes(id));
     const removed = before.filter((id) => !after.includes(id));
     for (const targetId of added) {
-      const target = await this.repository.findEntryById(targetId);
+      const target = await this.entries.findById(targetId);
       if (!target) continue;
       const related = new Set(target.related ?? []);
       related.add(entryId);
-      await this.repository.updateEntry(targetId, { related: [...related] });
+      await this.entries.update(targetId, { related: [...related] });
     }
     for (const targetId of removed) {
-      const target = await this.repository.findEntryById(targetId);
+      const target = await this.entries.findById(targetId);
       if (!target) continue;
-      await this.repository.updateEntry(targetId, {
+      await this.entries.update(targetId, {
         related: (target.related ?? []).filter((id) => id !== entryId),
       });
     }
