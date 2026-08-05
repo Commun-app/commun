@@ -93,7 +93,54 @@ export default defineNuxtConfig({
       // la clé de l'alias boucle à l'infini → OOM).
       alias: {
         ...(devtoolsApiEsm ? { '@vue/devtools-api': devtoolsApiEsm } : {})
-      }
+      },
+      // TipTap ne supporte pas deux copies de ProseMirror dans le même
+      // éditeur (« Adding different instances of a keyed plugin ») : le
+      // store isolé de bun donne à @nuxt/ui SA copie de @tiptap/* (hash de
+      // peers différent de la nôtre). On force une résolution unique.
+      dedupe: [
+        '@tiptap/core',
+        '@tiptap/pm',
+        '@tiptap/vue-3',
+        'prosemirror-state',
+        'prosemirror-model',
+        'prosemirror-view',
+        'prosemirror-transform'
+      ]
+    },
+    // Le dedupe ci-dessus ne suffit pas seul : l'optimiseur (esbuild) IGNORE
+    // resolve.dedupe et inline sa propre copie de @tiptap/core dans les
+    // chunks pré-bundlés (@tiptap/starter-kit, etc.). On exclut tout @tiptap
+    // du pré-bundle pour que la résolution dédupliquée s'applique.
+    optimizeDeps: {
+      exclude: [
+        '@tiptap/core',
+        '@tiptap/pm',
+        '@tiptap/vue-3',
+        '@tiptap/starter-kit',
+        '@tiptap/markdown',
+        '@tiptap/suggestion',
+        '@tiptap/extension-bubble-menu',
+        '@tiptap/extension-code',
+        '@tiptap/extension-collaboration',
+        '@tiptap/extension-details',
+        '@tiptap/extension-drag-handle',
+        '@tiptap/extension-drag-handle-vue-3',
+        '@tiptap/extension-file-handler',
+        '@tiptap/extension-floating-menu',
+        '@tiptap/extension-highlight',
+        '@tiptap/extension-horizontal-rule',
+        '@tiptap/extension-image',
+        '@tiptap/extension-link',
+        '@tiptap/extension-list',
+        '@tiptap/extension-mention',
+        '@tiptap/extension-node-range',
+        '@tiptap/extension-placeholder',
+        '@tiptap/extension-text-align',
+        '@tiptap/extension-text-style',
+        '@tiptap/extension-typography',
+        '@tiptap/extension-unique-id'
+      ]
     },
     // optimizeDeps.esbuildOptions supprimé : Vite 8 optimise via Rolldown
     // (option dépréciée, cible moderne par défaut).
