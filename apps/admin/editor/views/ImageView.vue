@@ -23,8 +23,8 @@
 </template>
 
 <script setup>
-// Image. Même contrat de résolution que FileView : fetch au montage,
-// réécriture des attrs seulement en cas de différence réelle (D9).
+// Same resolution contract as FileView: fetch on mount, attrs rewritten
+// only when values actually differ.
 import { computed, onMounted, ref } from 'vue'
 import { NodeViewWrapper, nodeViewProps } from '@tiptap/vue-3'
 
@@ -48,7 +48,7 @@ onMounted(async () => {
     if (media?.title && media.title !== props.node.attrs.title) next.title = media.title
     if (Object.keys(next).length) props.updateAttributes(next)
   } catch {
-    // Échec : l'attr stocké reste affiché, nouvelle tentative au prochain montage.
+    // Stored attrs remain displayed; resolution retries on next mount.
   } finally {
     resolving.value = false
   }

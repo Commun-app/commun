@@ -8,17 +8,15 @@ import {
   isUuidV4,
   sameDoc,
 } from './harness/assembly.ts'
-import { sanitizeDoc } from './schema.ts'
+import { sanitizeDoc } from './sanitize.ts'
 
 /**
- * Harnais de conservation du contenu (D9, spec admin-editor) : chaque
- * document du corpus est chargé dans un VRAI éditeur (happy-dom) — même
- * assemblage que l'UEditor de production — puis relu sans intervention.
- * Zéro écart hors familles documentées, sinon le test nomme le document,
- * le chemin, le type et la nature de l'écart.
- *
- * CI : corpus synthétique committé (jamais de donnée client — dépôt public).
- * Le balayage des 4 vraies bases est local : `bun editor/harness/sweep-bases.mjs`.
+ * Content-conservation harness. It does not re-test TipTap: it pins OUR
+ * assembly — uid configuration, disabled StarterKit parts, custom node
+ * attribute sets — so stored client documents round-trip unchanged.
+ * TipTap upgrades tend to add attributes or reorder marks silently; zero
+ * unexplained diff is the contract (spec admin-editor). CI runs the
+ * synthetic corpus; harness/sweep-bases.mjs covers the real databases.
  */
 
 beforeAll(() => {
@@ -33,15 +31,15 @@ const roundTrip = (doc: unknown) => {
   return { out, errors }
 }
 
-describe('conservation du contenu (D9)', () => {
+describe('content conservation', () => {
   for (const { name, expect: expectation, doc } of CORPUS) {
     if (expectation === 'invalid') {
-      test(`${name} — signalé, jamais silencieux`, () => {
+      test(`${name} — reported, never silent`, () => {
         const { errors } = roundTrip(doc)
         expect(errors.length).toBeGreaterThan(0)
       })
 
-      test(`${name} — réparé par sanitizeDoc puis conservé`, () => {
+      test(`${name} — repaired by sanitizeDoc then conserved`, () => {
         const repaired = sanitizeDoc(structuredClone(doc))
         const { out, errors } = roundTrip(repaired)
         expect(errors).toHaveLength(0)
@@ -56,22 +54,21 @@ describe('conservation du contenu (D9)', () => {
 
       if (expectation === 'identical' && sameDoc(doc, out)) return
 
-      // Écarts : seules les familles documentées (inventaire-extensions.md)
-      // sont admises — et uniquement pour les documents `normalized`.
+      // Only documented families are allowed, and only for normalized docs.
       const diffs = [...diffNode(doc, out)]
       const unexpected = diffs.filter((line) => !isAllowedDiff(line))
       expect(unexpected).toEqual([])
       if (expectation === 'identical') {
-        // Un document complet ne doit même pas produire d'écart admis.
+        // A complete document must not even produce allowed diffs.
         expect(diffs).toEqual([])
       }
     })
   }
 
-  test('uid existants : jamais régénérés, même après édition (invariant D2)', () => {
+  test('existing uids are never regenerated, even after editing', () => {
     const source = CORPUS[0].doc
     const editor = createHarnessEditor(source)
-    // Une édition réelle : du texte ajouté en fin de premier paragraphe.
+    // A real edit: text appended to the first paragraph.
     editor.commands.insertContentAt(editor.state.doc.child(0).nodeSize - 1, ' (édité)')
     const out = editor.getJSON()
     editor.destroy()
@@ -88,7 +85,7 @@ describe('conservation du contenu (D9)', () => {
     }
   })
 
-  test('un bloc créé par édition reçoit un uid v4 neuf', () => {
+  test('a newly created block receives a fresh v4 uid', () => {
     const editor = createHarnessEditor(CORPUS[0].doc)
     editor.commands.insertContentAt(editor.state.doc.content.size, {
       type: 'paragraph',

@@ -1,11 +1,8 @@
 import { Node } from '@tiptap/core'
 
 /**
- * Iframe de service externe (YouTube, Google Maps, Typeform…) — portage iso
- * du nœud `embed` de @poulpus/prose. Contrat JSON (48 nœuds en base) :
- * attrs { service, icon, placeholder, src, title, height, frameborder,
- * allow, allowfullscreen } — PAS d'uid (liste fermée de l'extension uid).
- * `frameborder` est une CHAÎNE ("0"), défauts iso prose.
+ * External-service iframe. Attrs mirror stored content exactly: embeds carry
+ * no uid and `frameborder` is a string.
  */
 export const Embed = Node.create({
   name: 'embed',
@@ -49,3 +46,18 @@ export const Embed = Node.create({
     } as any
   },
 })
+
+/** The one embed service present in stored content. */
+export const EMBED_VIDEO = {
+  service: 'video',
+  icon: 'iconoir:youtube',
+  placeholder: "Collez l'url https://www.youtube.com/watch…",
+  title: 'YouTube video player',
+  height: 315,
+} as const
+
+/** `youtube.com/watch?v=ID` or `youtu.be/ID` to an embeddable URL; anything else passes through. */
+export function toVideoEmbedSrc(url: string): string {
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/)
+  return match ? `https://www.youtube.com/embed/${match[1]}` : url
+}

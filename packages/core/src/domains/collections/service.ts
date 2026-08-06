@@ -1,4 +1,4 @@
-import { buildDataSchema } from './fields.ts';
+import { buildDataSchema } from './utils.ts';
 import { z } from 'zod';
 import {
   CollectionNotFoundError,

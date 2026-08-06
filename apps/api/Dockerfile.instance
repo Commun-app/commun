@@ -1,9 +1,5 @@
-# Image d'INSTANCE Commun (silent-migration, D1/D3) : API + admin statique
-# sur la même origine — une image COMMUNE à tous les clients (l'admin appelle
-# /api/trpc en relatif, rien de client-spécifique n'est cuit au build).
-# Depuis la sortie de @poulpus/prose (refonte-admin-ui) : plus aucun registre
-# privé, plus de licence TipTap Pro — l'image est PUBLIABLE. Sa fusion avec
-# l'image API (une seule image publique) est l'affaire du change 2.
+# Instance image: API + statically built admin on one origin. One image
+# shared by every client — nothing client-specific is baked at build time.
 #
 #   docker build -f Dockerfile.instance -t commun-instance .
 FROM oven/bun:1 AS build
@@ -18,10 +14,9 @@ COPY apps/portal/package.json apps/portal/
 RUN bun install --frozen-lockfile
 
 COPY . .
-# ORDRE CRITIQUE : l'admin est généré AVANT le build de l'API et déposé dans
-# son dossier `public/`. Nitro fige la liste de ses assets publics AU BUILD —
-# copier les fichiers après coup les rendrait invisibles (il les servirait en
-# text/html via le fallback SPA, cassant tous les imports de modules).
+# CRITICAL ORDER: the admin is generated BEFORE the API build and dropped in
+# its public/ folder. Nitro freezes its public-asset manifest at build time —
+# files copied afterwards get served as text/html through the SPA fallback.
 RUN cd apps/admin && bun run generate
 RUN mkdir -p apps/api/public && cp -R apps/admin/.output/public/. apps/api/public/
 RUN bun --filter @commun/api build
@@ -32,7 +27,7 @@ ENV NODE_ENV=production
 ENV COMMUN_DATA_DIR=/data
 ENV COMMUN_MIGRATIONS_DIR=/app/drizzle
 
-# .output contient déjà l'admin (public/ intégré au manifeste Nitro au build).
+# .output already embeds the admin (public/ is in the Nitro manifest).
 COPY --from=build /app/apps/api/.output ./.output
 COPY --from=build /app/packages/core/drizzle ./drizzle
 

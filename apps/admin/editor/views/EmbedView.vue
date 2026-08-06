@@ -36,13 +36,11 @@
 </template>
 
 <script setup>
-// Iframe de service externe. Le sandbox borne ce qu'un embed peut faire dans
-// l'admin (contenu tiers). Sans source, le nœud affiche un champ de collage
-// d'URL — l'insertion depuis « Ajouter un bloc » crée un embed vide que
-// l'auteur complète ici (UX iso prose, en node view plutôt qu'en modale).
+// The sandbox bounds third-party content. Without a source the node shows
+// an URL form the author completes in place.
 import { ref } from 'vue'
 import { NodeViewWrapper, nodeViewProps } from '@tiptap/vue-3'
-import { toVideoEmbedSrc } from '../schema'
+import { toVideoEmbedSrc } from '../embed'
 
 const props = defineProps(nodeViewProps)
 const url = ref('')

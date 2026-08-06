@@ -131,10 +131,6 @@ import inputLocation from '~/components/forms/inputs/input-location'
 import inputFilesMedia from '~/components/forms/inputs/input-files-media'
 import inputText from '~/components/forms/inputs/input-text'
 import inputTextArea from '~/components/forms/inputs/input-text-area'
-// BASCULE refonte-admin-ui (06/08) : le WYSIWYG est désormais le nouvel
-// éditeur (UEditor Nuxt UI + extensions de parité, harnais D9 vert sur les
-// 4 bases). REPLI : repointer cet import sur input-wysiwyg (prose) — le
-// module prose reste installé jusqu'au groupe 4.
 import inputWYSIWYG from '~/components/forms/inputs/input-editor'
 // import inputTimeSchedules from '@/components/forms/attributes/input-time-schedules'
 import inputToggle from '~/components/forms/inputs/input-toggle'

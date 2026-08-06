@@ -1,46 +1,13 @@
 import { z } from 'zod';
+import { FIELD_TYPES, type FieldType } from './constants.ts';
 
 /**
- * Contrat des champs de collection — module PUR (zod seul, aucune dépendance
- * serveur), importable par l'ADMIN comme par le serveur : c'est le point
- * d'extension qui permet aux formulaires de valider avec EXACTEMENT la règle
- * que le serveur applique (refonte-admin-ui, D6). Exposé au navigateur via
- * l'export `@commun/core/fields` ; le schéma Drizzle et le service
- * l'importent d'ici — une seule vérité.
+ * Field validation contract — pure module (zod only), importable by the admin
+ * bundle through the `@commun/core/collections/utils` export so forms validate
+ * with EXACTLY the rule the server applies. The Drizzle schema and the service
+ * import from here; it cannot live in schema.ts, whose table re-exports would
+ * create an import cycle with the database module.
  */
-
-/**
- * Publication lifecycle shared by every publishable table. The editorial flow
- * is driven from the admin; only `published` reaches the public plane.
- */
-export const PUBLICATION_STATUSES = [
-  'draft',
-  'waiting',
-  'ready',
-  'scheduled',
-  'published',
-] as const;
-
-export type PublicationStatus = (typeof PUBLICATION_STATUSES)[number];
-
-// The CLOSED set of field types. Extending it is a spec-level decision:
-// arbitrary field types are the free-for-all this design replaces.
-export const FIELD_TYPES = [
-  'text',
-  'rich-text',
-  'number',
-  'boolean',
-  'date',
-  'media',
-  'relation',
-  'select',
-  // Ordered steps whose content is rich text.
-  'steps',
-  // Raw JSON attributes (location, socials, schedules…), served as-is.
-  'json',
-] as const;
-
-export type FieldType = (typeof FIELD_TYPES)[number];
 
 export const fieldDefinitionSchema = z
   .object({
@@ -81,13 +48,13 @@ const stepSchema = z.record(z.string(), z.unknown());
 export const FIELD_VALUE_SCHEMAS: Record<FieldType, z.ZodType> = {
   text: z.string(),
   'rich-text': z.record(z.string(), z.unknown()),
-  number: z.number().or(z.string()), // iso legacy : souvent stocké/servi en string
+  number: z.number().or(z.string()), // often stored/served as string (legacy data)
   boolean: z.boolean(),
   date: z.iso.datetime({ offset: true }).or(z.iso.date()),
-  media: z.string().or(z.array(z.string())), // media id(s) — iso legacy, un champ media peut être multiple
+  media: z.string().or(z.array(z.string())), // media id(s) — a media field may be multiple
   relation: z.string().or(z.array(z.string())), // target entry id(s)
   select: z.string(),
-  steps: z.array(stepSchema), // iso legacy array-of-steps
+  steps: z.array(stepSchema),
   // Raw JSON: anything but undefined — real content also holds scalars.
   json: z.union([
     z.record(z.string(), z.unknown()),
@@ -100,8 +67,8 @@ export const FIELD_VALUE_SCHEMAS: Record<FieldType, z.ZodType> = {
 
 /**
  * Build the Zod schema validating an entry's `data` from a collection
- * definition — the generated-validation requirement of the spec. Exported
- * standalone: the offline migration CLI and the admin forms use it too.
+ * definition. Standalone on purpose: the migration CLI and the admin forms
+ * use it too.
  */
 export function buildDataSchema(fields: FieldDefinition[]): z.ZodType<Record<string, unknown>> {
   const shape: Record<string, z.ZodType> = {};

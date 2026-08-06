@@ -12,13 +12,11 @@
 </template>
 
 <script setup>
-// Encart d'information : icône + texte directement éditable (contenu text*).
 import { computed } from 'vue'
 import { NodeViewWrapper, NodeViewContent, nodeViewProps } from '@tiptap/vue-3'
 
 const props = defineProps(nodeViewProps)
 
-// En base : des noms Iconify complets (`iconoir:megaphone`, `lucide:bus`…,
-// 30+ collections) — UIcon les accepte tels quels.
+// Stored icons are full Iconify names; UIcon takes them as-is.
 const icon = computed(() => props.node.attrs.icon || 'iconoir:megaphone')
 </script>

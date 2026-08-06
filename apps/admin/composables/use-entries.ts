@@ -2,14 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed, unref, type MaybeRef } from 'vue'
 
 /**
- * Entrées de collections — composable de domaine (refonte-admin-ui, D5).
- * Clés : ['entries', <collectionId>] pour les listes,
- * ['entries', 'byId', <id>] pour une entrée. Une écriture invalide le
- * préfixe de SA collection — toutes les listes qui l'affichent se
- * rafraîchissent, sans clé exacte à tenir à la main.
- *
- * Le contenu riche circule en OBJET ProseMirror de bout en bout (D13) —
- * aucun stringify/parse ici ni ailleurs.
+ * Entries domain composable. Keys: ['entries', collectionId] for lists,
+ * ['entries', 'byId', id] for one entry; a write invalidates its
+ * collection's prefix so every list refreshes without hand-kept keys.
+ * Rich content travels as ProseMirror OBJECTS end to end.
  */
 export default function useEntries() {
   const trpc = useTrpc()

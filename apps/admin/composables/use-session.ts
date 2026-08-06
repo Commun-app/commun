@@ -1,22 +1,19 @@
 import { computed, ref } from 'vue'
 
 /**
- * Session de l'admin (refonte-admin-ui, D7) — remplace @sidebase/nuxt-auth :
- * un token Bearer émis par `auth.login`, porté en en-tête par use-trpc,
- * restauré au démarrage (plugin 01.session), gardé par le middleware
- * 00.auth. Aucun cookie de session, aucune requête credentialed.
+ * Bearer-token session over the tRPC auth procedures. No cookies, no
+ * credentialed requests; the guard is middleware/00.auth.global.
  */
 
 const TOKEN_KEY = 'commun.session.token'
 
-// État module : une seule session par app, partagée par tous les appelants.
 const token = ref<string | null>(null)
 const user = ref<Record<string, unknown> | null>(null)
 
 export default function useSession() {
   const isAuthenticated = computed(() => Boolean(token.value && user.value))
 
-  const adopt = (value: string) => {
+  const setToken = (value: string) => {
     token.value = value
     localStorage.setItem(TOKEN_KEY, value)
   }
@@ -27,7 +24,7 @@ export default function useSession() {
     localStorage.removeItem(TOKEN_KEY)
   }
 
-  /** Recharge l'utilisateur depuis `auth.me` ; purge la session si le token est mort. */
+  /** Reloads the user from auth.me; clears the session on a dead token. */
   const refresh = async () => {
     if (!token.value) return null
     try {
@@ -41,9 +38,8 @@ export default function useSession() {
   }
 
   /**
-   * Restauration au démarrage : localStorage, puis — une fois, pour la
-   * transition — le cookie de l'ancien nuxt-auth, pour que les sessions
-   * ouvertes avant la refonte survivent au déploiement sans re-login.
+   * Boot restore: localStorage first, then — once, transitional — the old
+   * auth-module cookie so sessions opened before the refonte survive.
    */
   const restore = async () => {
     let saved = localStorage.getItem(TOKEN_KEY)
@@ -65,20 +61,20 @@ export default function useSession() {
 
   const login = async (email: string, password: string) => {
     const result = await useTrpc().auth.login.mutate({ email, password })
-    adopt(result.token)
+    setToken(result.token)
     user.value = result.user
     return result.user
   }
 
-  /** Révoque la session côté serveur (au mieux), puis purge localement. */
+  /** Best-effort server-side revocation, then local clear. */
   const logout = async () => {
     try {
       await useTrpc().auth.logout.mutate()
     } catch {
-      // Token déjà mort ou API injoignable : la purge locale suffit.
+      // Dead token or unreachable API: the local clear is enough.
     }
     clear()
   }
 
-  return { token, user, isAuthenticated, login, logout, adopt, clear, refresh, restore }
+  return { token, user, isAuthenticated, login, logout, setToken, clear, refresh, restore }
 }

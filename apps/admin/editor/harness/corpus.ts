@@ -1,13 +1,7 @@
 /**
- * Corpus SYNTHÉTIQUE du harnais de conservation (D9, tâche 3.1) — committé
- * et exécuté en CI. Chaque document reproduit une FORME observée dans les
- * 4 bases clients (relevés des 05-06/08), sans aucune donnée client : le
- * dépôt est public, `.dump/` n'y entre jamais. Le balayage des vraies bases
- * est l'affaire de `sweep-bases.mjs`, exécuté en local seulement.
- *
- * Couverture : chaque type de nœud, chaque marque, les combinaisons d'ordre
- * de marques, et les cas dégénérés découverts (uid manquants, attr `data`
- * legacy, nœud texte vide, document finissant par un bloc non textuel).
+ * Synthetic conservation corpus: every node type, mark and degenerate shape
+ * observed in client databases, with NO client data — this repository is
+ * public. The sweep against real databases is sweep-bases.mjs, local only.
  */
 
 const uid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
@@ -20,14 +14,14 @@ const p = (n: number, text?: string, marks?: any[]) => ({
 
 export interface CorpusDoc {
   name: string
-  /** `identical` : zéro écart exigé. `normalized` : seules les familles admises. `invalid` : contentError attendu sans sanitation. */
+  /** identical: zero diff. normalized: allowed families only. invalid: contentError expected before sanitation. */
   expect: 'identical' | 'normalized' | 'invalid'
   doc: any
 }
 
 export const CORPUS: CorpusDoc[] = [
   {
-    name: 'complet — tous les types de nœuds et de marques',
+    name: 'complete — every node type and mark',
     expect: 'identical',
     doc: {
       type: 'doc',
@@ -137,7 +131,7 @@ export const CORPUS: CorpusDoc[] = [
               content: [
                 p(13, 'Contenu replié.'),
                 {
-                  // Accordéon IMBRIQUÉ — 246 occurrences chez grigny.
+                  // Nested accordion.
                   type: 'details',
                   attrs: { toggle: true },
                   content: [
@@ -146,7 +140,7 @@ export const CORPUS: CorpusDoc[] = [
                       type: 'detailsContent',
                       content: [
                         {
-                          // 1 587 files vivent DANS des accordéons (arrêtés).
+                          // Files live inside accordions in real content.
                           type: 'file',
                           attrs: {
                             id: '000000000000000000000003',
@@ -174,7 +168,7 @@ export const CORPUS: CorpusDoc[] = [
     },
   },
   {
-    name: 'ordre des marques — link avant bold avant textStyle (rang v2)',
+    name: 'mark order — link before bold before textStyle',
     expect: 'identical',
     doc: {
       type: 'doc',
@@ -207,7 +201,7 @@ export const CORPUS: CorpusDoc[] = [
     },
   },
   {
-    name: 'document finissant par un bloc non textuel — trailingNode interdit',
+    name: 'document ending on a block node — no trailing paragraph',
     expect: 'identical',
     doc: {
       type: 'doc',
@@ -227,7 +221,7 @@ export const CORPUS: CorpusDoc[] = [
     },
   },
   {
-    name: 'uid manquants — remplis à l’ouverture en v4 (famille admise, iso prose)',
+    name: 'missing uids — filled on open with v4 (allowed family)',
     expect: 'normalized',
     doc: {
       type: 'doc',
@@ -239,7 +233,7 @@ export const CORPUS: CorpusDoc[] = [
     },
   },
   {
-    name: 'attr data legacy sur file/image — écarté (famille admise, iso prose)',
+    name: 'legacy data attr on file/image — dropped (allowed family)',
     expect: 'normalized',
     doc: {
       type: 'doc',
@@ -270,7 +264,7 @@ export const CORPUS: CorpusDoc[] = [
     },
   },
   {
-    name: 'nœud texte sans texte — invalide (31 documents grigny), réparé par sanitizeDoc',
+    name: 'text node without text — invalid, repaired by sanitizeDoc',
     expect: 'invalid',
     doc: {
       type: 'doc',

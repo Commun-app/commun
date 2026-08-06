@@ -1,21 +1,12 @@
 name: Images
 
-# Build + push des images sur ghcr.io (silent-migration : Dokploy TIRE les
-# images, il ne builde pas — décision option B, 29/07).
+# Dokploy pulls these images; it never builds.
 #
-# Visibilité des packages (réglée à la main au premier push, GitHub crée en
-# PRIVÉ par défaut) :
-#   - commun-api → PUBLIQUE : c'est l'artefact self-hosting (AGPL pur).
-#   - commun-portal → PRIVÉE : AGPL certes, mais c'est notre outillage de
-#     migration, personne d'autre n'en a l'usage (review PR #6) ; sortira du
-#     monorepo avec la vraie app portail du cloud.
-#   - commun-instance → PUBLIABLE depuis la sortie de @poulpus/prose
-#     (refonte-admin-ui) : plus de TipTap Pro. Basculer la visibilité est un
-#     geste manuel (Quentin) ; la fusion avec commun-api en une seule image
-#     publique est l'affaire du change 2 (fusion-admin-api).
-#
-# Plus AUCUN secret de registre privé requis : PROSE_GITHUB_TOKEN et
-# TIPTAP_PRO_TOKEN peuvent être supprimés des secrets du dépôt (Quentin).
+# Package visibility (set manually on first push; GitHub defaults to private):
+#   - commun-api: public — the self-hosting artifact.
+#   - commun-portal: private — migration tooling nobody else can use.
+#   - commun-instance: publishable (no more TipTap Pro); merging it into
+#     commun-api is planned with the compose work.
 
 on:
   workflow_dispatch:

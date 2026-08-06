@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { buildDataSchema, type FieldDefinition } from '@commun/core/fields'
+import { buildDataSchema, type FieldDefinition } from '@commun/core/collections/utils'
 import { computed, unref, type MaybeRef } from 'vue'
 
 /**
- * Définitions de collections — composable de domaine (refonte-admin-ui, D5) :
- * la SEULE surface d'accès aux données des pages. État serveur dans le cache
- * de query, invalidation par préfixe ['definitions'].
+ * Collection-definition domain composable — the only data surface pages use.
+ * Server state lives in the query cache; writes invalidate the
+ * ['definitions'] prefix.
  */
 export default function useDefinitions() {
   const trpc = useTrpc()
@@ -44,9 +44,8 @@ export default function useDefinitions() {
     })
 
   /**
-   * Le schéma Zod des données d'une entrée, généré depuis la définition —
-   * EXACTEMENT la règle que le serveur applique (D6) : à passer tel quel au
-   * `:schema` d'un UForm, aucune règle réécrite côté admin.
+   * Zod schema of an entry's data, generated from the definition — exactly
+   * the rule the server applies. Pass as-is to a UForm `:schema`.
    */
   const dataSchema = (fields: MaybeRef<FieldDefinition[] | undefined>) =>
     computed(() => {

@@ -5,7 +5,6 @@
 </template>
 
 <script setup>
-// Corps de l'accordéon — blocs libres, accordéons imbriqués compris.
 import { NodeViewWrapper, NodeViewContent, nodeViewProps } from '@tiptap/vue-3'
 
 defineProps(nodeViewProps)

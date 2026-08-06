@@ -72,7 +72,6 @@ const _openForm = () => {
 const _signIn = async () => {
   isLoading.value = true
   try {
-    // Payload iso procédure tRPC auth.login : { email, password }.
     await session.login(emailAddress.value, password.value)
     notificationsStore.add({ icon: 'iconoir:password-pass', type: 'success', title: 'Authentification réussie.' })
     await navigateTo('/overview')

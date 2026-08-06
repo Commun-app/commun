@@ -1,6 +1,5 @@
-// Restaure la session AVANT le routage (les middlewares lisent son état) —
-// l'équivalent du getSession bloquant de l'ancien nuxt-auth : un aller
-// `auth.me` au démarrage quand un token est présent.
+// Restores the session BEFORE routing (the guard reads its state): one
+// blocking auth.me on boot when a token is present.
 export default defineNuxtPlugin(async () => {
   await useSession().restore()
 })

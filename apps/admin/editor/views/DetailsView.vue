@@ -22,12 +22,8 @@
 </template>
 
 <script setup>
-// Accordéon (ex-TipTap Pro Details) — affichage iso legacy : rangée bordée,
-// bouton rond +/− à droite, FERMÉ par défaut. L'état ouvert/replié est un
-// état d'ÉDITION local (ref), jamais écrit dans le document : l'attr
-// `toggle` du contrat reste intact et l'ouverture ne mute rien (D9).
-// Exception : un accordéon fraîchement inséré (vide) s'ouvre pour que
-// l'auteur puisse écrire dedans.
+// Open state is local editing state, never written to the document. Closed
+// by default; a freshly inserted (empty) accordion opens for writing.
 import { ref } from 'vue'
 import { NodeViewWrapper, NodeViewContent, nodeViewProps } from '@tiptap/vue-3'
 
@@ -36,8 +32,7 @@ const open = ref(!props.node.textContent?.length)
 </script>
 
 <style scoped>
-/* Replié : seul le résumé reste visible, où que soit le detailsContent
-   dans le DOM rendu par NodeViewContent. */
+/* Collapsed: only the summary stays visible. */
 .details-body.closed :deep([data-type='detailsContent']) {
   display: none;
 }

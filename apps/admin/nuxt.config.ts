@@ -34,8 +34,7 @@ export default defineNuxtConfig({
     }
   },
   css: ['~/assets/css/main.css'],
-  // Auth : plus de module — composable de session maison (use-session) +
-  // middleware 00.auth.global, branchés sur les procédures tRPC auth.* (D7).
+  // Session auth lives in use-session + middleware/00.auth (no auth module).
   modules: [
     '@nuxt/ui',
     '@pinia/nuxt',
@@ -51,10 +50,8 @@ export default defineNuxtConfig({
       alias: {
         ...(devtoolsApiEsm ? { '@vue/devtools-api': devtoolsApiEsm } : {})
       },
-      // TipTap ne supporte pas deux copies de ProseMirror dans le même
-      // éditeur (« Adding different instances of a keyed plugin ») : le
-      // store isolé de bun donne à @nuxt/ui SA copie de @tiptap/* (hash de
-      // peers différent de la nôtre). On force une résolution unique.
+      // One ProseMirror instance is mandatory (keyed plugins): bun's store
+      // gives @nuxt/ui and our direct @tiptap deps distinct copies.
       dedupe: [
         '@tiptap/core',
         '@tiptap/pm',
@@ -65,11 +62,8 @@ export default defineNuxtConfig({
         'prosemirror-transform'
       ]
     },
-    // Correctif OFFICIEL Nuxt UI (doc Editor, encadré ProseMirror) : sans
-    // ceci, deux copies de prosemirror cohabitent (« Adding different
-    // instances of a keyed plugin ») — le store isolé de bun donne à
-    // @nuxt/ui sa copie, nos extensions la nôtre. Le pré-bundle partagé des
-    // paquets prosemirror réunifie tout le monde.
+    // Prescribed by the Nuxt UI Editor docs (ProseMirror warning): share a
+    // single pre-bundled prosemirror across @nuxt/ui and our extensions.
     optimizeDeps: {
       include: [
         '@nuxt/ui > prosemirror-state',

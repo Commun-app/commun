@@ -2,7 +2,7 @@
   <div class="mx-auto max-w-4xl space-y-6 p-8">
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-semibold">
-        Laboratoire UEditor — parité @poulpus/prose
+        Laboratoire éditeur
       </h1>
       <UBadge :color="roundTripOk ? 'success' : 'error'" variant="subtle">
         {{ roundTripOk ? 'structure conservée' : 'STRUCTURE ALTÉRÉE' }}
@@ -44,19 +44,16 @@
 </template>
 
 <script setup>
-// Page LABORATOIRE (refonte-admin-ui, tâche 1.2) : l'UEditor de Nuxt UI face
-// aux structures réelles des bases clients. C'est l'établi du groupe 2 — les
-// extensions s'y branchent une à une jusqu'à ce que le badge reste vert.
-// Dev seul : jamais atteignable en production.
+// Editor lab: the assembled editor against a sample shaped like real client
+// content, with a live conservation badge. Dev only.
 definePageMeta({ auth: false })
 
 if (!import.meta.dev) {
   await navigateTo('/', { replace: true })
 }
 
-// Échantillon calqué sur l'inventaire du 05/08 (types, attrs et marques
-// relevés dans les 4 bases). Tout nœud non porté doit déclencher
-// onContentError — jamais une perte silencieuse.
+// Sample mirroring stored client structures. Any unported node must raise
+// onContentError — never a silent drop.
 const SAMPLE = {
   type: 'doc',
   content: [
@@ -164,15 +161,13 @@ const contentErrors = ref([])
 
 import { communExtensions, communStarterKit } from '~/editor'
 
-// L'assemblage de parité réel (groupe 2) — sans branchement médias ici.
 const extensions = communExtensions()
 
 function onContentError({ error }) {
   contentErrors.value.push(error?.message ?? String(error))
 }
 
-// Vert = l'aller-retour chargement → sortie n'a rien altéré (préfiguration
-// du harnais D9). Depuis la parité (2.3-2.6), rouge = régression.
+// Green: load → output altered nothing. Red is a regression.
 const roundTripOk = computed(
   () => JSON.stringify(doc.value) === JSON.stringify(SAMPLE)
 )

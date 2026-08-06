@@ -36,17 +36,15 @@ const updatedAt = () =>
 const legacyExtra = () =>
   text('legacy_extra', { mode: 'json' }).$type<Record<string, unknown> | null>();
 
-// Contrat des champs et statuts : module PUR partagé avec l'admin
-// (@commun/core/fields) — voir domains/collections/fields.ts.
-import { PUBLICATION_STATUSES, type FieldDefinition } from '../../domains/collections/fields.ts';
+import { PUBLICATION_STATUSES } from '../../domains/collections/constants.ts';
+import type { FieldDefinition } from '../../domains/collections/utils.ts';
 
 export {
   PUBLICATION_STATUSES,
   FIELD_TYPES,
-  fieldDefinitionSchema,
   type FieldType,
-  type FieldDefinition,
-} from '../../domains/collections/fields.ts';
+} from '../../domains/collections/constants.ts';
+export { fieldDefinitionSchema, type FieldDefinition } from '../../domains/collections/utils.ts';
 const publicationStatus = () =>
   text('status', { enum: PUBLICATION_STATUSES }).notNull().default('draft');
 

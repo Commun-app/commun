@@ -1,23 +1,19 @@
 import { mergeAttributes, Node, nodeInputRule } from '@tiptap/core'
 
-/** Syntaxe markdown `![titre](src)` — comportement conservé de prose. */
+/** Markdown-style `![title](src)` input rule, kept from the previous editor. */
 export const fileInputRegex = /(?:^|\s)(!\[(.+|:?)]\((\S+)(?:(?:\s+)["'](\S+)["'])?\))$/
 
 export interface FileNodeOptions {
-  /** Téléverse un File du navigateur, renvoie { id, src, title }. */
+  /** Uploads a browser File, resolves to { id, src, title }. */
   upload: ((file: File) => Promise<{ id: string; src: string; title: string }>) | null
-  /** Résout un média par id, renvoie { src, title } (cache + concurrence bornée). */
+  /** Resolves a media by id to { src, title } (shared cache, bounded concurrency). */
   fetch: ((attrs: { id: string }) => Promise<{ src?: string; title?: string }>) | null
 }
 
 /**
- * Fichier joint (PDF d'arrêté municipal, document…) — portage iso du nœud
- * `file` de @poulpus/prose. Contrat JSON (1 937 nœuds en base) :
- * attrs { src, id, alt, title, uid }.
- *
- * L'attr legacy `data` (33 nœuds, objets média des buckets S3 legacy) est
- * SCIEMMENT non déclaré : le prose actuel ne le déclare plus non plus et le
- * perd à l'édition — exception documentée du harnais de conservation (D9).
+ * Attached-file block (attrs src/id/alt/title). The residual legacy `data`
+ * attr is intentionally NOT declared: the schema drops it on save, as the
+ * previous editor already did — a documented harness exception.
  */
 export const FileNode = Node.create<FileNodeOptions>({
   name: 'file',

@@ -16,8 +16,6 @@ jobs:
         with:
           bun-version: latest
 
-      # Plus aucun registre privé depuis la sortie de @poulpus/prose
-      # (refonte-admin-ui) : l'install frozen redevient la norme.
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
@@ -27,11 +25,9 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
-      # Harnais de conservation du contenu (refonte-admin-ui, D9) : chaque
-      # document du corpus synthétique traverse un VRAI éditeur TipTap
-      # (happy-dom) et doit ressortir identique — hors familles documentées.
-      # Le balayage des bases clientes réelles reste local (sweep-bases.mjs).
-      - name: Éditeur — harnais de conservation
+      # Synthetic documents must round-trip the real editor unchanged; the
+      # sweep against client databases stays local (see editor/harness).
+      - name: Editor conservation harness
         run: bun test editor
         working-directory: apps/admin
 

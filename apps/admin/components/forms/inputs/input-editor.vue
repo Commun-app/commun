@@ -4,65 +4,99 @@
       {{ label }}
     </label>
     <UEditor
-      v-slot="{ editor }"
+      v-slot="{ editor, handlers }"
       v-model="doc"
       :image="false"
       :mention="false"
       :starter-kit="communStarterKit"
       :extensions="extensions"
+      :handlers="customHandlers"
       :enable-content-check="true"
       :on-content-error="onContentError"
-      :placeholder="placeHolder || 'Ecrivez le contenu ici'"
+      :placeholder="placeHolder || 'Écrivez, tapez « / » pour les commandes…'"
       :class="{ 'mt-1': !!label }"
-      class="min-h-40 rounded-md border border-neutral-200 p-3 dark:border-neutral-800"
+      class="min-h-40 rounded-md border border-neutral-200 px-10 py-3 dark:border-neutral-800"
     >
-      <div class="mb-2 flex flex-wrap items-center gap-1 border-b border-neutral-100 pb-2 dark:border-neutral-900">
-        <UDropdownMenu :items="blockItems(editor)">
+      <!-- Selection bubble: marks, alignment, link. -->
+      <UEditorToolbar
+        :editor="editor"
+        :items="bubbleItems"
+        layout="bubble"
+        :should-show="({ editor: e, view, state }) => {
+          if (e.isActive('image') || e.isActive('file') || e.isActive('embed')) return false
+          return view.hasFocus() && !state.selection.empty
+        }"
+      >
+        <template #link>
+          <UPopover v-model:open="linkOpen">
+            <UButton
+              icon="iconoir:link"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              :active="editor.isActive('link')"
+              aria-label="Lien"
+              @click="linkUrl = editor.getAttributes('link').href ?? ''"
+            />
+            <template #content>
+              <form class="flex items-center gap-2 p-2" @submit.prevent="applyLink(editor)">
+                <UInput v-model="linkUrl" placeholder="https://…" size="sm" class="w-64" autofocus />
+                <UButton type="submit" size="sm" color="neutral" label="OK" />
+                <UButton
+                  v-if="editor.isActive('link')"
+                  size="sm"
+                  color="neutral"
+                  variant="ghost"
+                  icon="iconoir:trash"
+                  aria-label="Retirer le lien"
+                  @click="removeLink(editor)"
+                />
+              </form>
+            </template>
+          </UPopover>
+        </template>
+      </UEditorToolbar>
+
+      <!-- Slash commands: standard blocks plus ours. -->
+      <UEditorSuggestionMenu :editor="editor" :items="slashItems" />
+
+      <!-- Block handle: plus opens the slash menu, grip moves blocks. -->
+      <UEditorDragHandle
+        v-slot="{ ui, onClick }"
+        :editor="editor"
+        @node-change="selectedNode = $event"
+      >
+        <UButton
+          icon="iconoir:plus"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          :class="ui.handle()"
+          aria-label="Ajouter un bloc"
+          @click="(e) => {
+            e.stopPropagation()
+            const selected = onClick()
+            handlers.suggestion?.execute(editor, { pos: selected?.pos }).run()
+          }"
+        />
+        <UDropdownMenu
+          :modal="false"
+          :items="blockMenuItems(editor)"
+          :content="{ side: 'left' }"
+          :ui="{ content: 'w-44' }"
+          @update:open="editor.chain().setMeta('lockDragHandle', $event).run()"
+        >
           <UButton
-            label="Ajouter un bloc"
-            icon="iconoir:plus-square"
-            color="neutral"
-            variant="soft"
-            size="sm"
-          />
-        </UDropdownMenu>
-        <USeparator orientation="vertical" class="mx-1 h-5" />
-        <!-- Lien : popover iso legacy (sélection → URL), extendMarkRange -->
-        <UPopover v-model:open="linkOpen">
-          <UButton
-            label="Lien"
-            icon="iconoir:link"
             color="neutral"
             variant="ghost"
             size="sm"
-            :active="editor.isActive('link')"
-            @click="linkUrl = editor.getAttributes('link').href ?? ''"
+            icon="iconoir:drag"
+            :class="ui.handle()"
+            aria-label="Déplacer le bloc"
           />
-          <template #content>
-            <form class="flex items-center gap-2 p-2" @submit.prevent="applyLink(editor)">
-              <UInput
-                v-model="linkUrl"
-                placeholder="https://…"
-                size="sm"
-                class="w-64"
-                autofocus
-              />
-              <UButton type="submit" size="sm" color="neutral" label="OK" />
-              <UButton
-                v-if="editor.isActive('link')"
-                size="sm"
-                color="neutral"
-                variant="ghost"
-                icon="iconoir:trash"
-                aria-label="Retirer le lien"
-                @click="removeLink(editor)"
-              />
-            </form>
-          </template>
-        </UPopover>
-        <!-- B / I / alignements : items UEditorToolbar, iso barre legacy -->
-        <UEditorToolbar :editor="editor" :items="toolbarItems" />
-      </div>
+        </UDropdownMenu>
+      </UEditorDragHandle>
+
       <input
         ref="filePicker"
         type="file"
@@ -75,22 +109,16 @@
 </template>
 
 <script setup>
-// L'éditeur de contenu riche NOUVELLE GÉNÉRATION (refonte-admin-ui) :
-// UEditor de Nuxt UI + le jeu d'extensions de parité + le contrat de médias
-// (cache partagé, concurrence bornée). Remplace prose-editor dans
-// input-wysiwyg une fois le harnais de conservation (groupe 3) vert.
+// Rich-text input on UEditor with the parity extension set and the media
+// contract (shared cache, bounded resolution). Editing surface is
+// Notion-like: selection bubble, slash commands, per-block drag handle.
 //
-// Contrat de valeur TOLÉRANT pour la transition : accepte l'objet ProseMirror
-// (cible, D13) OU la chaîne JSON du contrat legacy — et émet DANS LE MÊME
-// FORMAT que ce qu'il a reçu. L'adaptateur chaîne meurt avec models/_commun
-// (groupe 5).
-import { computed, ref, watch } from 'vue'
-import {
-  communExtensions,
-  communStarterKit,
-  sanitizeDoc,
-  EMBED_VIDEO,
-} from '~/editor'
+// TRANSITIONAL value contract: accepts the ProseMirror object (target) or
+// the legacy stringified JSON, and emits IN THE SAME SHAPE it received —
+// the string adapter dies with models/_commun.
+import { ref, watch } from 'vue'
+import { mapEditorItems } from '@nuxt/ui/utils/editor'
+import { communExtensions, communStarterKit, sanitizeDoc, EMBED_VIDEO } from '~/editor'
 
 const $emitters = defineEmits(['change'])
 const $props = defineProps({
@@ -100,11 +128,11 @@ const $props = defineProps({
   value: { type: [String, Object], default: '' },
 })
 
-const media = useEditorMedia()
-const extensions = communExtensions(media)
+const media = useMedia()
+const extensions = communExtensions(media.forEditor())
 const toast = useToast()
 
-// ── Contrat de valeur ───────────────────────────────────────────────────────
+// ── Value contract ──────────────────────────────────────────────────────────
 const receivedAsString = typeof $props.value === 'string'
 const parse = (value) => {
   if (!value) return { type: 'doc', content: [] }
@@ -118,15 +146,13 @@ watch(doc, (next) => {
   $emitters('change', receivedAsString ? JSON.stringify(next) : next)
 }, { deep: true })
 
-// La valeur peut arriver après le montage (chargement de l'écran).
 watch(() => $props.value, (next) => {
   const parsed = parse(next)
   if (JSON.stringify(parsed) !== JSON.stringify(doc.value)) doc.value = parsed
 })
 
 function onContentError({ error }) {
-  // Jamais de perte silencieuse : l'auteur est prévenu qu'un contenu n'a pas
-  // pu être chargé tel quel (spec admin-editor).
+  // Never a silent drop: the author is told when content cannot load as-is.
   toast.add({
     title: 'Contenu partiellement illisible',
     description: error?.message ?? String(error),
@@ -134,38 +160,41 @@ function onContentError({ error }) {
   })
 }
 
-// ── Barre d'outils — parité avec la barre de prose ──────────────────────────
-const toolbarItems = [
-  [
-    { kind: 'mark', mark: 'bold', icon: 'iconoir:bold-square-outline' },
-    { kind: 'mark', mark: 'italic', icon: 'iconoir:italic-square-outline' },
-  ],
-  [
-    { kind: 'textAlign', align: 'justify', icon: 'iconoir:align-justify' },
-    { kind: 'textAlign', align: 'left', icon: 'iconoir:align-left' },
-    { kind: 'textAlign', align: 'center', icon: 'iconoir:align-center' },
-    { kind: 'textAlign', align: 'right', icon: 'iconoir:align-right' },
-  ],
-]
-
-const linkOpen = ref(false)
-const linkUrl = ref('')
-
-function applyLink(editor) {
-  const href = linkUrl.value.trim()
-  if (href) {
-    editor.chain().focus().extendMarkRange('link').setLink({ href }).run()
-  }
-  linkOpen.value = false
-}
-
-function removeLink(editor) {
-  editor.chain().focus().extendMarkRange('link').unsetLink().run()
-  linkOpen.value = false
-}
-
-// ── « Ajouter un bloc » — parité avec le menu de prose ──────────────────────
+// ── Custom handlers: our blocks, addressable from every menu ────────────────
 const filePicker = ref(null)
+
+const customHandlers = {
+  callout: {
+    canExecute: (editor) => editor.can().setCallout(),
+    execute: (editor) => editor.chain().focus().setCallout({ icon: 'iconoir:megaphone' }),
+    isActive: (editor) => editor.isActive('callout'),
+  },
+  details: {
+    canExecute: (editor) => editor.can().setDetails(),
+    execute: (editor) => editor.chain().focus().setDetails(),
+    isActive: (editor) => editor.isActive('details'),
+  },
+  video: {
+    canExecute: () => true,
+    execute: (editor) =>
+      editor.chain().focus().setEmbed({
+        service: EMBED_VIDEO.service,
+        icon: EMBED_VIDEO.icon,
+        placeholder: EMBED_VIDEO.placeholder,
+        title: EMBED_VIDEO.title,
+        height: EMBED_VIDEO.height,
+      }),
+    isActive: (editor) => editor.isActive('embed'),
+  },
+  filePick: {
+    canExecute: () => true,
+    execute: (editor) => {
+      filePicker.value?.click()
+      return editor.chain()
+    },
+    isActive: () => false,
+  },
+}
 
 async function onFilesPicked(editor, event) {
   const files = [...(event.target.files ?? [])]
@@ -187,39 +216,72 @@ async function onFilesPicked(editor, event) {
   }
 }
 
-const blockItems = (editor) => [
+// ── Menus ───────────────────────────────────────────────────────────────────
+const bubbleItems = [
   [
-    { label: 'Texte', icon: 'iconoir:text', onSelect: () => editor.chain().focus().setParagraph().run() },
-    ...[1, 2, 3].map((level) => ({
-      label: `Titre ${level}`,
-      icon: `iconoir:text-size`,
-      onSelect: () => editor.chain().focus().toggleHeading({ level }).run(),
-    })),
-    { label: 'Liste à puces', icon: 'iconoir:list', onSelect: () => editor.chain().focus().toggleBulletList().run() },
-    { label: 'Liste numérotée', icon: 'iconoir:numbered-list-left', onSelect: () => editor.chain().focus().toggleOrderedList().run() },
-    { label: 'Citation', icon: 'iconoir:quote-message', onSelect: () => editor.chain().focus().toggleBlockquote().run() },
-    { label: 'Séparateur', icon: 'iconoir:minus', onSelect: () => editor.chain().focus().setHorizontalRule().run() },
+    { kind: 'mark', mark: 'bold', icon: 'iconoir:bold-square-outline', tooltip: { text: 'Gras' } },
+    { kind: 'mark', mark: 'italic', icon: 'iconoir:italic-square-outline', tooltip: { text: 'Italique' } },
   ],
+  [{ slot: 'link', icon: 'iconoir:link' }],
   [
-    { label: 'Encart', icon: 'iconoir:megaphone', onSelect: () => editor.chain().focus().setCallout({ icon: 'iconoir:megaphone' }).run() },
-    { label: 'Accordéon', icon: 'lucide:list-collapse', onSelect: () => editor.chain().focus().setDetails().run() },
-    {
-      label: 'Vidéo',
-      icon: EMBED_VIDEO.icon,
-      onSelect: () =>
-        editor
-          .chain()
-          .focus()
-          .setEmbed({
-            service: EMBED_VIDEO.service,
-            icon: EMBED_VIDEO.icon,
-            placeholder: EMBED_VIDEO.placeholder,
-            title: EMBED_VIDEO.title,
-            height: EMBED_VIDEO.height,
-          })
-          .run(),
-    },
-    { label: 'Fichier ou image', icon: 'iconoir:page', onSelect: () => filePicker.value?.click() },
+    { kind: 'textAlign', align: 'justify', icon: 'iconoir:align-justify', tooltip: { text: 'Justifié' } },
+    { kind: 'textAlign', align: 'left', icon: 'iconoir:align-left', tooltip: { text: 'Aligné à gauche' } },
+    { kind: 'textAlign', align: 'center', icon: 'iconoir:align-center', tooltip: { text: 'Centré' } },
+    { kind: 'textAlign', align: 'right', icon: 'iconoir:align-right', tooltip: { text: 'Aligné à droite' } },
   ],
 ]
+
+const slashItems = [
+  [
+    { type: 'label', label: 'Blocs de base' },
+    { kind: 'paragraph', label: 'Texte', icon: 'iconoir:text', description: 'Écrivez du texte. Tout simplement' },
+    { kind: 'heading', level: 1, label: 'Titre 1', icon: 'iconoir:text-size', description: 'Titre de grande taille' },
+    { kind: 'heading', level: 2, label: 'Titre 2', icon: 'iconoir:text-size', description: 'Titre de taille moyenne' },
+    { kind: 'heading', level: 3, label: 'Titre 3', icon: 'iconoir:text-size', description: 'Titre de petite taille' },
+    { kind: 'bulletList', label: 'Liste à puces', icon: 'iconoir:list', description: 'Créez une liste à puces' },
+    { kind: 'orderedList', label: 'Liste numérotée', icon: 'iconoir:numbered-list-left', description: 'Créez une liste numérotée' },
+    { kind: 'blockquote', label: 'Citation', icon: 'iconoir:quote-message', description: 'Affichez une citation' },
+    { kind: 'horizontalRule', label: 'Séparateur', icon: 'iconoir:minus', description: 'Séparez deux blocs' },
+  ],
+  [
+    { type: 'label', label: 'Blocs riches' },
+    { kind: 'callout', label: 'Encart', icon: 'iconoir:megaphone', description: 'Mettez une information en avant' },
+    { kind: 'details', label: 'Accordéon', icon: 'lucide:list-collapse', description: 'Contenu repliable' },
+    { kind: 'video', label: 'Vidéo', icon: EMBED_VIDEO.icon, description: 'Intégrez une vidéo YouTube' },
+    { kind: 'filePick', label: 'Fichier ou image', icon: 'iconoir:page', description: 'Téléversez depuis votre poste' },
+  ],
+]
+
+const selectedNode = ref()
+
+const blockMenuItems = (editor) =>
+  mapEditorItems(
+    editor,
+    [
+      [
+        { kind: 'moveUp', pos: selectedNode.value?.pos, label: 'Monter', icon: 'iconoir:arrow-up' },
+        { kind: 'moveDown', pos: selectedNode.value?.pos, label: 'Descendre', icon: 'iconoir:arrow-down' },
+        { kind: 'duplicate', pos: selectedNode.value?.pos, label: 'Dupliquer', icon: 'iconoir:copy' },
+      ],
+      [{ kind: 'delete', pos: selectedNode.value?.pos, label: 'Supprimer', icon: 'iconoir:trash' }],
+    ],
+    customHandlers,
+  )
+
+// ── Link popover ────────────────────────────────────────────────────────────
+const linkOpen = ref(false)
+const linkUrl = ref('')
+
+function applyLink(editor) {
+  const href = linkUrl.value.trim()
+  if (href) {
+    editor.chain().focus().extendMarkRange('link').setLink({ href }).run()
+  }
+  linkOpen.value = false
+}
+
+function removeLink(editor) {
+  editor.chain().focus().extendMarkRange('link').unsetLink().run()
+  linkOpen.value = false
+}
 </script>

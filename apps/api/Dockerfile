@@ -1,8 +1,5 @@
-# Image API OPEN SOURCE (spec self-hosting) : l'API seule, 100 % AGPL —
-# c'est l'image publique que n'importe qui peut self-hoster (ghcr
-# commun-api), celle du smoke CI et du docker-compose. L'image d'INSTANCE
-# (API + admin, publiable elle aussi depuis la sortie de prose/TipTap Pro)
-# est à côté : Dockerfile.instance.
+# Public API-only image: the self-hosting artifact, CI smoke target and
+# docker-compose default. Dockerfile.instance adds the admin on top.
 FROM oven/bun:1 AS build
 WORKDIR /app
 

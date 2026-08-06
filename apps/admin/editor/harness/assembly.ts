@@ -2,16 +2,11 @@ import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Code from '@tiptap/extension-code'
 import HorizontalRule from '@tiptap/extension-horizontal-rule'
-import { communStarterKit, communSchemaExtensions } from '../schema.ts'
+import { communStarterKit, communSchemaExtensions } from '../extensions.ts'
 
 /**
- * Harnais de conservation (D9) — assemblage HEADLESS strictement équivalent
- * à ce que l'UEditor monte en production : StarterKit (défauts UEditor + la
- * config communStarterKit) + les Code/HorizontalRule retouchés que l'UEditor
- * ajoute + le jeu d'extensions de parité. Un vrai `Editor` est instancié
- * (happy-dom) : contrairement au contrôle de schéma, il exerce AUSSI les
- * plugins (remplissage d'uid, input rules…) — là où vivent les mutations
- * silencieuses.
+ * Headless editor built with the exact production assembly, plugins
+ * included — plugin-level mutations are invisible to a schema-only check.
  */
 export function createHarnessEditor(
   content: unknown,
@@ -33,9 +28,9 @@ export function createHarnessEditor(
 }
 
 /**
- * Canonisation pour comparaison : clés triées, et équivalence ProseMirror —
- * un attr à `null` et une clé absente désignent le MÊME document (toJSON
- * matérialise les défauts). `attrs` vide ≡ absent.
+ * Canonical form for comparison. ProseMirror equivalence: a null attribute
+ * and an absent key denote the same document (toJSON materializes defaults),
+ * and an empty `attrs` equals no `attrs`.
  */
 export function canon(value: any, isAttrs = false): any {
   if (Array.isArray(value)) return value.map((v) => canon(v))
@@ -56,7 +51,7 @@ export function canon(value: any, isAttrs = false): any {
 export const sameDoc = (a: unknown, b: unknown) =>
   JSON.stringify(canon(a)) === JSON.stringify(canon(b))
 
-/** Diff structurel lisible : chemin(type) → clé perdue/ajoutée/changée. */
+/** Readable structural diff: path(type) with lost/added/changed keys. */
 export function* diffNode(a: any, b: any, path = '$'): Generator<string> {
   if (a === undefined || b === undefined || a?.type !== b?.type) {
     yield `${path} type: ${a?.type} → ${b?.type}`
@@ -86,22 +81,18 @@ export const isUuidV4 = (value: unknown): boolean =>
   typeof value === 'string' && UUID_V4.test(value)
 
 /**
- * Écarts ADMIS entre l'original et le ré-enregistrement — chaque famille est
- * documentée dans inventaire-extensions.md et correspond au comportement de
- * l'admin ACTUEL (prose) :
- * - `+uid` avec un UUID v4 là où l'original n'en avait pas (remplissage à
- *   l'ouverture, ~209 reliquats de migration) ;
- * - `-data` sur file/image (clé legacy morte, non déclarée par le schéma —
- *   le prose actuel la perd pareil).
- * Toute autre différence est une RÉGRESSION.
+ * Differences allowed between a stored document and its unmodified resave.
+ * Each family matches the previous editor's behavior; the inventory in
+ * openspec/changes/refonte-admin-ui documents them. Anything else is a
+ * regression.
  */
 export function isAllowedDiff(line: string): boolean {
-  // Matérialisation d'un défaut null (équivalence PM : attr null ≡ absent).
+  // Null default materialized (PM equivalence).
   if (/attr \+\w+=null$/.test(line)) return true
-  // Remplissage d'un uid manquant à l'ouverture, en UUID v4 (iso prose).
+  // Missing uid filled on open with a v4 UUID.
   const uidAdd = line.match(/attr \+uid="([0-9a-f-]+)"$/)
   if (uidAdd) return isUuidV4(uidAdd[1])
-  // Clé legacy morte, non déclarée par le schéma (le prose actuel la perd pareil).
+  // Dead legacy key the schema no longer declares.
   if (/\((file|image)\) attr -data$/.test(line)) return true
   return false
 }

@@ -2,11 +2,10 @@ import { VueNodeViewRenderer } from '@tiptap/vue-3'
 import {
   communStarterKit,
   communSchemaExtensions,
-  sanitizeDoc,
-  EMBED_VIDEO,
-  toVideoEmbedSrc,
   type CommunEditorMedia,
-} from './schema.ts'
+} from './extensions.ts'
+import { sanitizeDoc } from './sanitize.ts'
+import { EMBED_VIDEO, toVideoEmbedSrc } from './embed.ts'
 import { UID_TYPES } from './uid.ts'
 import CalloutView from './views/CalloutView.vue'
 import FileView from './views/FileView.vue'
@@ -19,7 +18,6 @@ import DetailsContentView from './views/DetailsContentView.vue'
 export { communStarterKit, UID_TYPES, sanitizeDoc, EMBED_VIDEO, toVideoEmbedSrc }
 export type { CommunEditorMedia }
 
-/** Vues Vue par nom de nœud — attachées par-dessus l'assemblage de schema.ts. */
 const VIEWS: Record<string, any> = {
   callout: CalloutView,
   file: FileView,
@@ -31,9 +29,8 @@ const VIEWS: Record<string, any> = {
 }
 
 /**
- * Point d'entrée NAVIGATEUR de l'éditeur : le jeu d'extensions de parité
- * (schema.ts) avec les node views Vue attachées. Le harnais et les tests
- * importent `schema.ts` directement — jamais ce fichier.
+ * Browser entry: the parity extension set with Vue node views attached.
+ * Harness and tests import extensions.ts directly (no DOM needed).
  */
 export function communExtensions(media: Partial<CommunEditorMedia> = {}) {
   return communSchemaExtensions(media).map((extension: any) => {

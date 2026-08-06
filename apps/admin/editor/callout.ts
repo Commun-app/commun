@@ -1,10 +1,8 @@
 import { Node } from '@tiptap/core'
 
 /**
- * Encart d'information — portage iso du nœud `callout` de @poulpus/prose.
- * Contrat JSON (314 nœuds en base) : attrs { icon, uid }, contenu `text*`
- * (du texte directement, PAS de paragraphes — vérifié sur les 4 bases :
- * 426 enfants, tous `text`).
+ * Info callout block. Content is bare text (no paragraphs) and `icon` holds
+ * a full Iconify name — both fixed by stored client content.
  */
 export const Callout = Node.create({
   name: 'callout',

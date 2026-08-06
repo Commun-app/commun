@@ -1,11 +1,10 @@
-// Balayage LOCAL des bases clients à travers le VRAI éditeur (happy-dom) —
-// le second étage du harnais de conservation (D9). Jamais en CI : les dumps
-// clients (.dump/, gitignoré) ne quittent pas la machine.
+// LOCAL sweep of the client databases through the real editor. Never in CI:
+// client dumps (.dump/, gitignored) stay on this machine.
 //
-//   bun editor/harness/sweep-bases.mjs [chemin des bases]
+//   bun editor/harness/sweep-bases.mjs [databases root]
 //
-// Par défaut : ../../.dump/migrated/<client>/commun.db (les 4 clients).
-// Avant une bascule d'écrans : le repasser sur des dumps de PROD frais.
+// Defaults to ../../.dump/migrated/<client>/commun.db. Re-run against fresh
+// production dumps before switching any screen to the new editor.
 import { Database } from 'bun:sqlite'
 import { GlobalRegistrator } from '@happy-dom/global-registrator'
 
@@ -14,7 +13,7 @@ GlobalRegistrator.register()
 const { createHarnessEditor, sameDoc, diffNode, isAllowedDiff } = await import(
   './assembly.ts'
 )
-const { sanitizeDoc } = await import('../schema.ts')
+const { sanitizeDoc } = await import('../sanitize.ts')
 
 const ROOT = process.argv[2] ?? new URL('../../../../.dump/migrated', import.meta.url).pathname
 const CLIENTS = ['grigny', 'cmar-paca', 'lcss', 'ot-pertuis']
@@ -39,7 +38,7 @@ let normalized = 0
 let repaired = 0
 const regressions = []
 
-// Les warn de sanitizeDoc pollueraient le rapport : compteur silencieux.
+// sanitizeDoc warns would flood the report.
 const originalWarn = console.warn
 console.warn = () => {}
 
@@ -89,10 +88,10 @@ for (const client of CLIENTS) {
 
 console.warn = originalWarn
 
-console.log(`\n${total} documents (éditeur réel, plugins actifs)`)
-console.log(`  ${identical} identiques`)
-console.log(`  ${normalized} normalisés (familles admises : +uid rempli, -data legacy)`)
-console.log(`  ${repaired} réparés à l'ouverture (nœuds texte vides)`)
-console.log(`  ${regressions.length} RÉGRESSION(S)`)
+console.log(`\n${total} documents (real editor, plugins active)`)
+console.log(`  ${identical} identical`)
+console.log(`  ${normalized} normalized (allowed families)`)
+console.log(`  ${repaired} repaired on open (empty text nodes)`)
+console.log(`  ${regressions.length} REGRESSION(S)`)
 for (const line of regressions.slice(0, 30)) console.log(`    ✗ ${line}`)
 process.exit(regressions.length ? 1 : 0)

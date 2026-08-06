@@ -30,8 +30,7 @@
         aria-label="Ouvrir le fichier"
       />
     </div>
-    <!-- Aperçu PDF par la visionneuse NATIVE du navigateur (D12) : zéro
-         dépendance — pdfjs-dist (~1 Mo) n'est pas embarqué. -->
+    <!-- Native browser PDF viewer: no bundled viewer library. -->
     <embed
       v-if="preview && isPdf && src"
       :src="src"
@@ -42,10 +41,9 @@
 </template>
 
 <script setup>
-// Fichier joint. Résolution du média au montage via l'option `fetch` de
-// l'extension (cache partagé + concurrence bornée, branchés par l'écran).
-// Parité prose : le src résolu est réécrit dans les attrs — mais SEULEMENT
-// s'il diffère, pour qu'un simple affichage ne mute jamais le document (D9).
+// Media resolves on mount through the extension's `fetch` option. Resolved
+// values only rewrite attrs when they actually differ, so displaying a
+// document never mutates it.
 import { computed, onMounted, ref } from 'vue'
 import { NodeViewWrapper, nodeViewProps } from '@tiptap/vue-3'
 
@@ -73,7 +71,7 @@ onMounted(async () => {
     if (media?.title && media.title !== props.node.attrs.title) next.title = media.title
     if (Object.keys(next).length) props.updateAttributes(next)
   } catch {
-    // Échec de résolution : on affiche les attrs stockés, sans casser l'édition.
+    // Stored attrs remain displayed; resolution retries on next mount.
   } finally {
     resolving.value = false
   }
