@@ -59,6 +59,16 @@ export class S3Storage implements StorageDriver {
       region: config.region,
       ...(config.endpoint ? { endpoint: config.endpoint, forcePathStyle: true } : {}),
       credentials: { accessKeyId: config.accessKey, secretAccessKey: config.secretKey },
+      // Depuis @aws-sdk/client-s3 3.729, le SDK ajoute par DÉFAUT un checksum
+      // aux commandes — y compris aux URL PRÉSIGNÉES, où il cuit dans la
+      // signature le crc32 d'un corps VIDE (`x-amz-checksum-crc32=AAAAAA==`).
+      // Un PUT navigateur avec un vrai fichier est alors rejeté (403) par les
+      // fournisseurs qui valident (Scaleway) — MinIO tolère, ce qui rendait
+      // les E2E aveugles. Panne réelle : upload impossible dans l'admin
+      // (Grigny, 06/08/2026). WHEN_REQUIRED = checksum seulement quand
+      // l'opération l'exige, jamais implicite.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
     });
   }
 
