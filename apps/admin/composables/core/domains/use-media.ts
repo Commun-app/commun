@@ -1,4 +1,4 @@
-import type { CommunEditorMedia } from '~/editor'
+import type { CommunEditorMedia } from '@commun/editor'
 
 /**
  * Media domain composable: tRPC calls plus the direct-to-S3 upload step.

@@ -2,11 +2,11 @@ import { VueNodeViewRenderer } from '@tiptap/vue-3'
 import {
   communStarterKit,
   communSchemaExtensions,
+  sanitizeDoc,
+  EMBED_SERVICES,
+  UID_TYPES,
   type CommunEditorMedia,
-} from './extensions.ts'
-import { sanitizeDoc } from './sanitize.ts'
-import { EMBED_SERVICES } from './embed.ts'
-import { UID_TYPES } from './uid.ts'
+} from '@commun/editor'
 import CalloutView from './views/CalloutView.vue'
 import FileView from './views/FileView.vue'
 import ImageView from './views/ImageView.vue'
@@ -31,8 +31,8 @@ const VIEWS: Record<string, any> = {
 }
 
 /**
- * Browser entry: the parity extension set with Vue node views attached.
- * Harness and tests import extensions.ts directly (no DOM needed).
+ * Browser entry: the shared extension set (@commun/editor) with the admin's
+ * Vue node views attached.
  */
 export function communExtensions(media: Partial<CommunEditorMedia> = {}) {
   return communSchemaExtensions(media).map((extension: any) => {

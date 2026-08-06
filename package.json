@@ -6,6 +6,7 @@
   "workspaces": [
     "packages/core",
     "packages/apidae-sync",
+    "packages/editor",
     "apps/*"
   ],
   "scripts": {

@@ -19,6 +19,7 @@
       "dependencies": {
         "@casl/ability": "^7.0.1",
         "@commun/core": "workspace:*",
+        "@commun/editor": "workspace:*",
         "@pinia-orm/nuxt": "^2.0.0",
         "@pinia/nuxt": "^1.0.1",
         "@tanstack/vue-query": "^5.101.4",
@@ -30,30 +31,14 @@
         "pinia-orm": "^2.0.0",
       },
       "devDependencies": {
-        "@happy-dom/global-registrator": "^20",
         "@iconify/vue": "^5.0.1",
         "@nuxt/kit": "^4.5.1",
         "@nuxt/ui": "^4.3.0",
-        "@tiptap/core": "^3.27.3",
-        "@tiptap/extension-code": "^3.27.3",
-        "@tiptap/extension-details": "^3.27.3",
-        "@tiptap/extension-file-handler": "^3.27.3",
-        "@tiptap/extension-highlight": "^3.27.3",
-        "@tiptap/extension-horizontal-rule": "^3.27.3",
-        "@tiptap/extension-image": "^3.27.3",
-        "@tiptap/extension-link": "^3.27.3",
-        "@tiptap/extension-list": "^3.27.3",
-        "@tiptap/extension-text-align": "^3.27.3",
-        "@tiptap/extension-text-style": "^3.27.3",
-        "@tiptap/extension-typography": "^3.27.3",
-        "@tiptap/extension-unique-id": "^3.27.3",
         "@tiptap/pm": "^3.27.3",
-        "@tiptap/starter-kit": "^3.27.3",
         "@tiptap/vue-3": "^3.27.3",
         "@types/node": "^18",
         "@vueuse/core": "^14.4.0",
         "@vueuse/nuxt": "^14.4.0",
-        "happy-dom": "^20",
         "nuxt": "^4.5.1",
         "tailwindcss": "^4.3.2",
       },
@@ -116,6 +101,31 @@
         "@types/node": "^26.1.0",
         "drizzle-kit": "^0.31.1",
         "typescript": "^7.0.2",
+      },
+    },
+    "packages/editor": {
+      "name": "@commun/editor",
+      "dependencies": {
+        "@tiptap/core": "^3.27.3",
+        "@tiptap/extension-code": "^3.27.3",
+        "@tiptap/extension-details": "^3.27.3",
+        "@tiptap/extension-file-handler": "^3.27.3",
+        "@tiptap/extension-highlight": "^3.27.3",
+        "@tiptap/extension-horizontal-rule": "^3.27.3",
+        "@tiptap/extension-image": "^3.27.3",
+        "@tiptap/extension-link": "^3.27.3",
+        "@tiptap/extension-list": "^3.27.3",
+        "@tiptap/extension-text-align": "^3.27.3",
+        "@tiptap/extension-text-style": "^3.27.3",
+        "@tiptap/extension-typography": "^3.27.3",
+        "@tiptap/extension-unique-id": "^3.27.3",
+        "@tiptap/pm": "^3.27.3",
+        "@tiptap/starter-kit": "^3.27.3",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^20",
+        "@types/bun": "^1",
+        "typescript": "^5",
       },
     },
   },
@@ -260,6 +270,8 @@
     "@commun/apidae-sync": ["@commun/apidae-sync@workspace:packages/apidae-sync"],
 
     "@commun/core": ["@commun/core@workspace:packages/core"],
+
+    "@commun/editor": ["@commun/editor@workspace:packages/editor"],
 
     "@commun/portal": ["@commun/portal@workspace:apps/portal"],
 
@@ -1972,6 +1984,8 @@
     "@commun/api/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
     "@commun/apidae-sync/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
+
+    "@commun/editor/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "@commun/portal/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 

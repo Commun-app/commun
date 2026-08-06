@@ -1,7 +1,7 @@
-import { Node, mergeAttributes } from '@tiptap/core'
+import { Node, mergeAttributes } from '@tiptap/core';
 
 export interface UploadPlaceholderOptions {
-  upload: ((file: File) => Promise<{ id: string; src: string; title: string }>) | null
+  upload: ((file: File) => Promise<{ id: string; src: string; title: string }>) | null;
 }
 
 /**
@@ -16,15 +16,15 @@ export const UploadPlaceholder = Node.create<UploadPlaceholderOptions>({
   draggable: true,
 
   addOptions() {
-    return { upload: null } as any
+    return { upload: null } as any;
   },
 
   parseHTML() {
-    return [{ tag: 'div[data-type="image-upload"]' }]
+    return [{ tag: 'div[data-type="image-upload"]' }];
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'image-upload' })]
+    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'image-upload' })];
   },
 
   addCommands() {
@@ -33,6 +33,6 @@ export const UploadPlaceholder = Node.create<UploadPlaceholderOptions>({
         () =>
         ({ commands }: any) =>
           commands.insertContent({ type: this.name }),
-    } as any
+    } as any;
   },
-})
+});

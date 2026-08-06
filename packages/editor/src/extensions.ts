@@ -1,17 +1,17 @@
-import TextAlign from '@tiptap/extension-text-align'
-import { TextStyle } from '@tiptap/extension-text-style'
-import Highlight from '@tiptap/extension-highlight'
-import Typography from '@tiptap/extension-typography'
-import Link from '@tiptap/extension-link'
-import { OrderedList } from '@tiptap/extension-list'
-import FileHandler from '@tiptap/extension-file-handler'
-import { Uid } from './uid.ts'
-import { Callout } from './callout.ts'
-import { FileNode, type FileNodeOptions } from './file.ts'
-import { ImageNode } from './image.ts'
-import { Embed } from './embed.ts'
-import { Details, DetailsSummary, DetailsContent } from './details.ts'
-import { UploadPlaceholder } from './upload.ts'
+import TextAlign from '@tiptap/extension-text-align';
+import { TextStyle } from '@tiptap/extension-text-style';
+import Highlight from '@tiptap/extension-highlight';
+import Typography from '@tiptap/extension-typography';
+import Link from '@tiptap/extension-link';
+import { OrderedList } from '@tiptap/extension-list';
+import FileHandler from '@tiptap/extension-file-handler';
+import { Uid } from './uid.ts';
+import { Callout } from './callout.ts';
+import { FileNode, type FileNodeOptions } from './file.ts';
+import { ImageNode } from './image.ts';
+import { Embed } from './embed.ts';
+import { Details, DetailsSummary, DetailsContent } from './details.ts';
+import { UploadPlaceholder } from './upload.ts';
 
 /**
  * View-less extension assembly, importable outside the browser (conservation
@@ -33,30 +33,30 @@ export const communStarterKit = {
   trailingNode: false,
   link: false,
   orderedList: false,
-}
+} as const;
 
 /** Link without v3's `title` attr: declaring it would add a null key to every stored link on save. */
 export const CommunLink = Link.extend({
   addAttributes() {
-    const { title: _title, ...parent } = (this as any).parent?.() ?? {}
-    return parent
+    const { title: _title, ...parent } = (this as any).parent?.() ?? {};
+    return parent;
   },
 }).configure({
   openOnClick: false,
   HTMLAttributes: { class: 'underline text-primary', target: '_blank' },
-})
+});
 
 /** OrderedList without v3's `type` attr (same rationale as CommunLink). */
 export const CommunOrderedList = OrderedList.extend({
   addAttributes() {
-    const { type: _type, ...parent } = (this as any).parent?.() ?? {}
-    return parent
+    const { type: _type, ...parent } = (this as any).parent?.() ?? {};
+    return parent;
   },
-})
+});
 
 export interface CommunEditorMedia {
-  upload: FileNodeOptions['upload']
-  fetch: FileNodeOptions['fetch']
+  upload: FileNodeOptions['upload'];
+  fetch: FileNodeOptions['fetch'];
 }
 
 /**
@@ -66,23 +66,23 @@ export interface CommunEditorMedia {
 function communFileHandler(upload: NonNullable<CommunEditorMedia['upload']>) {
   const insert = async (editor: any, files: File[], pos?: number) => {
     for (const file of files) {
-      const { id, src, title } = await upload(file)
+      const { id, src, title } = await upload(file);
       const node = {
         type: file.type.startsWith('image/') ? 'image' : 'file',
         attrs: { id, src, title },
-      }
-      if (pos == null) editor.chain().focus().insertContent(node).run()
-      else editor.chain().insertContentAt(pos, node).run()
+      };
+      if (pos == null) editor.chain().focus().insertContent(node).run();
+      else editor.chain().insertContentAt(pos, node).run();
     }
-  }
+  };
   return FileHandler.configure({
     onDrop: (editor: any, files: File[], pos: number) => {
-      void insert(editor, files, pos)
+      void insert(editor, files, pos);
     },
     onPaste: (editor: any, files: File[]) => {
-      void insert(editor, files)
+      void insert(editor, files);
     },
-  })
+  });
 }
 
 /**
@@ -90,7 +90,7 @@ function communFileHandler(upload: NonNullable<CommunEditorMedia['upload']>) {
  * `:mention="false"`: its defaults collide with our node names.
  */
 export function communSchemaExtensions(media: Partial<CommunEditorMedia> = {}) {
-  const handlers = { upload: media.upload ?? null, fetch: media.fetch ?? null }
+  const handlers = { upload: media.upload ?? null, fetch: media.fetch ?? null };
   return [
     Uid,
     ...(media.upload ? [communFileHandler(media.upload)] : []),
@@ -110,5 +110,5 @@ export function communSchemaExtensions(media: Partial<CommunEditorMedia> = {}) {
     Details,
     DetailsSummary,
     DetailsContent,
-  ]
+  ];
 }

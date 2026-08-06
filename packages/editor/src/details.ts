@@ -2,7 +2,7 @@ import {
   Details as TiptapDetails,
   DetailsSummary as TiptapDetailsSummary,
   DetailsContent as TiptapDetailsContent,
-} from '@tiptap/extension-details'
+} from '@tiptap/extension-details';
 
 /**
  * Accordion trio on the official Details extensions. `toggle` REPLACES the
@@ -13,9 +13,9 @@ export const Details = TiptapDetails.extend({
   addAttributes() {
     return {
       toggle: { default: true },
-    }
+    };
   },
-})
+});
 
-export const DetailsSummary = TiptapDetailsSummary
-export const DetailsContent = TiptapDetailsContent
+export const DetailsSummary = TiptapDetailsSummary;
+export const DetailsContent = TiptapDetailsContent;

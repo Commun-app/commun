@@ -4,19 +4,19 @@
  * public. The sweep against real databases lives outside this repository.
  */
 
-const uid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
+const uid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
 const p = (n: number, text?: string, marks?: any[]) => ({
   type: 'paragraph',
   attrs: { textAlign: 'left', uid: uid(n) },
   content: text ? [{ type: 'text', text, ...(marks ? { marks } : {}) }] : [],
-})
+});
 
 export interface CorpusDoc {
-  name: string
+  name: string;
   /** identical: zero diff. normalized: allowed families only. invalid: contentError expected before sanitation. */
-  expect: 'identical' | 'normalized' | 'invalid'
-  doc: any
+  expect: 'identical' | 'normalized' | 'invalid';
+  doc: any;
 }
 
 export const CORPUS: CorpusDoc[] = [
@@ -56,13 +56,21 @@ export const CORPUS: CorpusDoc[] = [
               text: 'lien',
             },
             { type: 'text', text: ', du ' },
-            { type: 'text', marks: [{ type: 'highlight', attrs: { color: null } }], text: 'surligné' },
+            {
+              type: 'text',
+              marks: [{ type: 'highlight', attrs: { color: null } }],
+              text: 'surligné',
+            },
             { type: 'text', text: ' et un ' },
             { type: 'text', marks: [{ type: 'textStyle' }], text: 'span nu' },
             { type: 'text', text: '.' },
           ],
         },
-        { type: 'paragraph', attrs: { textAlign: 'left', uid: uid(3) }, content: [{ type: 'hardBreak' }] },
+        {
+          type: 'paragraph',
+          attrs: { textAlign: 'left', uid: uid(3) },
+          content: [{ type: 'hardBreak' }],
+        },
         {
           type: 'bulletList',
           attrs: { uid: uid(4) },
@@ -77,9 +85,7 @@ export const CORPUS: CorpusDoc[] = [
         {
           type: 'orderedList',
           attrs: { start: 3, uid: uid(7) },
-          content: [
-            { type: 'listItem', attrs: { uid: uid(8) }, content: [p(9, 'Item numéroté')] },
-          ],
+          content: [{ type: 'listItem', attrs: { uid: uid(8) }, content: [p(9, 'Item numéroté')] }],
         },
         {
           type: 'callout',
@@ -182,14 +188,23 @@ export const CORPUS: CorpusDoc[] = [
               marks: [
                 {
                   type: 'link',
-                  attrs: { href: 'https://exemple.fr', target: '_blank', rel: 'noopener noreferrer nofollow', class: 'underline text-primary' },
+                  attrs: {
+                    href: 'https://exemple.fr',
+                    target: '_blank',
+                    rel: 'noopener noreferrer nofollow',
+                    class: 'underline text-primary',
+                  },
                 },
                 { type: 'bold' },
                 { type: 'textStyle' },
               ],
               text: 'lien gras stylé',
             },
-            { type: 'text', marks: [{ type: 'bold' }, { type: 'italic' }, { type: 'textStyle' }], text: ' — gras italique span' },
+            {
+              type: 'text',
+              marks: [{ type: 'bold' }, { type: 'italic' }, { type: 'textStyle' }],
+              text: ' — gras italique span',
+            },
           ],
         },
         {
@@ -226,9 +241,20 @@ export const CORPUS: CorpusDoc[] = [
     doc: {
       type: 'doc',
       content: [
-        { type: 'paragraph', attrs: { textAlign: 'left' }, content: [{ type: 'text', text: 'Sans uid.' }] },
-        { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Titre sans uid ni textAlign' }] },
-        { type: 'blockquote', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Citation nue.' }] }] },
+        {
+          type: 'paragraph',
+          attrs: { textAlign: 'left' },
+          content: [{ type: 'text', text: 'Sans uid.' }],
+        },
+        {
+          type: 'heading',
+          attrs: { level: 3 },
+          content: [{ type: 'text', text: 'Titre sans uid ni textAlign' }],
+        },
+        {
+          type: 'blockquote',
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Citation nue.' }] }],
+        },
       ],
     },
   },
@@ -277,4 +303,4 @@ export const CORPUS: CorpusDoc[] = [
       ],
     },
   },
-]
+];

@@ -6,14 +6,14 @@
 // Defaults to ../.dump/migrated/<client>/commun.db. Re-run against fresh
 // production dumps before switching any screen to the new editor.
 import { Database } from 'bun:sqlite';
-import GlobalRegistrator from '../apps/admin/node_modules/@happy-dom/global-registrator/lib/GlobalRegistrator.js';
+import GlobalRegistrator from '../packages/editor/node_modules/@happy-dom/global-registrator/lib/GlobalRegistrator.js';
 
 GlobalRegistrator.register();
 
 const { createHarnessEditor, sameDoc, diffNode, isAllowedDiff } = await import(
-  '../apps/admin/editor/harness/assembly.ts'
+  '../packages/editor/test/harness/assembly.ts'
 );
-const { sanitizeDoc } = await import('../apps/admin/editor/sanitize.ts');
+const { sanitizeDoc } = await import('../packages/editor/src/sanitize.ts');
 
 const ROOT = process.argv[2] ?? new URL('../.dump/migrated', import.meta.url).pathname;
 const CLIENTS = ['grigny', 'cmar-paca', 'lcss', 'ot-pertuis'];

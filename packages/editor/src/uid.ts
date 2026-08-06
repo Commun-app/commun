@@ -1,4 +1,4 @@
-import UniqueID from '@tiptap/extension-unique-id'
+import UniqueID from '@tiptap/extension-unique-id';
 
 /**
  * Stable block ids matching stored content: attribute `uid`, UUID v4.
@@ -16,9 +16,9 @@ export const UID_TYPES = [
   'callout',
   'file',
   'image',
-] as const
+] as const;
 
 export const Uid = UniqueID.configure({
   attributeName: 'uid',
   types: [...UID_TYPES],
-})
+});

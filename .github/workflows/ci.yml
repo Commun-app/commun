@@ -28,8 +28,8 @@ jobs:
       # Synthetic documents must round-trip the real editor unchanged; the
       # sweep against client databases stays local (see editor/harness).
       - name: Editor conservation harness
-        run: bun test editor
-        working-directory: apps/admin
+        run: bun test
+        working-directory: packages/editor
 
       # La suite E2E est LA spécification exécutable du produit (décision
       # 27/07) : elle boote l'API buildée + un MinIO (docker) et rejoue les

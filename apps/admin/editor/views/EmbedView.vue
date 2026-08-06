@@ -40,7 +40,7 @@
 // an URL form the author completes in place.
 import { computed, ref } from 'vue'
 import { NodeViewWrapper, nodeViewProps } from '@tiptap/vue-3'
-import { EMBED_SERVICES } from '../embed'
+import { EMBED_SERVICES } from '@commun/editor'
 
 const props = defineProps(nodeViewProps)
 const url = ref('')

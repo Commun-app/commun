@@ -1,4 +1,4 @@
-import { Node } from '@tiptap/core'
+import { Node } from '@tiptap/core';
 
 /**
  * External-service iframe. Attrs mirror stored content exactly: embeds carry
@@ -26,15 +26,15 @@ export const Embed = Node.create({
           'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
       },
       allowfullscreen: { default: true },
-    }
+    };
   },
 
   parseHTML() {
-    return [{ tag: 'iframe[src]' }]
+    return [{ tag: 'iframe[src]' }];
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['div', ['iframe', HTMLAttributes, 0]]
+    return ['div', ['iframe', HTMLAttributes, 0]];
   },
 
   addCommands() {
@@ -43,21 +43,21 @@ export const Embed = Node.create({
         (options: Record<string, unknown>) =>
         ({ commands }: any) =>
           commands.insertContent({ type: this.name, attrs: options }),
-    } as any
+    } as any;
   },
-})
+});
 
 /**
  * Embed services. Stored content only uses `video`; new services extend this
  * table without touching the node contract (same attrs for every service).
  */
 export interface EmbedService {
-  label: string
-  icon: string
-  placeholder: string
-  title: string
-  height: number
-  toSrc: (url: string) => string
+  label: string;
+  icon: string;
+  placeholder: string;
+  title: string;
+  height: number;
+  toSrc: (url: string) => string;
 }
 
 export const EMBED_SERVICES: Record<string, EmbedService> = {
@@ -68,11 +68,11 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     title: 'Lecteur vidéo',
     height: 315,
     toSrc: (url) => {
-      const youtube = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/)
-      if (youtube) return `https://www.youtube.com/embed/${youtube[1]}`
-      const vimeo = url.match(/vimeo\.com\/(\d+)/)
-      if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`
-      return url
+      const youtube = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+      if (youtube) return `https://www.youtube.com/embed/${youtube[1]}`;
+      const vimeo = url.match(/vimeo\.com\/(\d+)/);
+      if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
+      return url;
     },
   },
   map: {
@@ -83,4 +83,4 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 400,
     toSrc: (url) => url,
   },
-}
+};

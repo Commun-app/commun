@@ -1,4 +1,4 @@
-import { Node } from '@tiptap/core'
+import { Node } from '@tiptap/core';
 
 /**
  * Info callout block. Content is bare text (no paragraphs) and `icon` holds
@@ -20,15 +20,15 @@ export const Callout = Node.create({
         parseHTML: (element) => element.getAttribute('data-icon'),
         renderHTML: (attributes) => ({ 'data-icon': attributes.icon }),
       },
-    }
+    };
   },
 
   parseHTML() {
-    return [{ tag: 'aside' }]
+    return [{ tag: 'aside' }];
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['aside', HTMLAttributes, 0]
+    return ['aside', HTMLAttributes, 0];
   },
 
   addCommands() {
@@ -37,6 +37,6 @@ export const Callout = Node.create({
         (options: { icon?: string | null } = {}) =>
         ({ commands }: any) =>
           commands.setNode(this.name, options),
-    } as any
+    } as any;
   },
-})
+});
