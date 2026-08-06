@@ -20,7 +20,6 @@ export default class ModelAPI {
     this.onSave = onSave || HOOK_DEFAULT
     this.repo = useRepo(model)
     this.workspace = useWorkspaceStore()
-    this.auth = useAuth()
     this.trpc = useTrpc()
   }
 

@@ -34,43 +34,14 @@ export default defineNuxtConfig({
     }
   },
   css: ['~/assets/css/main.css'],
+  // Auth : plus de module — composable de session maison (use-session) +
+  // middleware 00.auth.global, branchés sur les procédures tRPC auth.* (D7).
   modules: [
     '@nuxt/ui',
-    '@sidebase/nuxt-auth',
     '@pinia/nuxt',
     '@pinia-orm/nuxt',
     '@vueuse/nuxt'
   ],
-  // https://sidebase.io/nuxt-auth/v0.6/getting-started/quick-start
-  // Auth branchée sur le plan tRPC du monolithe Commun : les procédures
-  // auth.login / auth.me répondent dans l'enveloppe tRPC { result: { data } }.
-  auth: {
-    baseURL: `${process.env.NUXT_ENV_API_URL ?? ''}/api/trpc`,
-    provider: {
-      type: 'local',
-      endpoints: {
-        signIn: { path: '/auth.login', method: 'post' },
-        // signOut volontairement absent (iso legacy : déconnexion locale seule).
-        getSession: { path: '/auth.me', method: 'get' }
-      },
-      pages: {
-        login: '/'
-      },
-      token: {
-        signInResponseTokenPointer: '/result/data/token',
-        type: 'Bearer',
-        headerName: 'Authorization'
-      },
-      sessionDataType: {
-        data: 'json'
-      }
-    },
-    globalAppMiddleware: {
-      isEnabled: true,
-      allow404WithoutAuth: true,
-      addDefaultCallbackUrl: true
-    }
-  },
   vite: {
     resolve: {
       // Sous le layout node_modules de Bun, Vite retombe sur l'entrée CJS

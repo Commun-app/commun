@@ -6,13 +6,13 @@ import { createTRPCClient, httpLink } from '@trpc/client'
 // relit le token de session courant à chaque requête.
 export default () => {
   const { public: { apiURL } } = useRuntimeConfig()
-  const auth = useAuth()
+  const session = useSession()
 
   return createTRPCClient({
     links: [
       httpLink({
         url: `${apiURL}/api/trpc`,
-        headers: () => (auth.token.value ? { authorization: auth.token.value } : {})
+        headers: () => (session.token.value ? { authorization: `Bearer ${session.token.value}` } : {})
       })
     ]
   })
