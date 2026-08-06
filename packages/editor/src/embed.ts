@@ -7,6 +7,7 @@ import { Node } from '@tiptap/core';
 export const Embed = Node.create({
   name: 'embed',
   group: 'block',
+  atom: true,
   draggable: true,
   selectable: true,
   inline: false,
@@ -34,7 +35,7 @@ export const Embed = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['div', ['iframe', HTMLAttributes, 0]];
+    return ['div', ['iframe', HTMLAttributes]];
   },
 
   addCommands() {
@@ -81,6 +82,14 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     placeholder: "Collez l'url d'intégration Google Maps…",
     title: 'Carte',
     height: 400,
+    toSrc: (url) => url,
+  },
+  form: {
+    label: 'Formulaire',
+    icon: 'iconoir:list-select',
+    placeholder: "Collez l'url du formulaire (Typeform…)…",
+    title: 'Formulaire',
+    height: 500,
     toSrc: (url) => url,
   },
 };

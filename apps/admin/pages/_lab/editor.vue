@@ -9,28 +9,12 @@
       </UBadge>
     </div>
 
-    <UAlert
-      v-if="contentErrors.length"
-      color="error"
-      variant="subtle"
-      title="Nœuds refusés par le schéma"
-      :description="contentErrors.join(' · ')"
+    <!-- The real production input: same menus, same handlers. -->
+    <forms-inputs-input-editor
+      label="Contenu"
+      :value="doc"
+      @change="doc = $event"
     />
-
-    <UEditor
-      v-slot="{ editor }"
-      v-model="doc"
-      :image="false"
-      :mention="false"
-      :starter-kit="communStarterKit"
-      :extensions="extensions"
-      :enable-content-check="true"
-      :on-content-error="onContentError"
-      placeholder="Le corps de l'éditeur…"
-      class="min-h-64 rounded-md border border-neutral-300 p-4"
-    >
-      <UEditorToolbar :editor="editor" />
-    </UEditor>
 
     <details class="text-xs">
       <summary class="cursor-pointer font-medium">JSON courant (sortie de l'éditeur)</summary>
@@ -157,15 +141,6 @@ const SAMPLE = {
 }
 
 const doc = ref(structuredClone(SAMPLE))
-const contentErrors = ref([])
-
-import { communExtensions, communStarterKit } from '~/editor'
-
-const extensions = communExtensions()
-
-function onContentError({ error }) {
-  contentErrors.value.push(error?.message ?? String(error))
-}
 
 // Green: load → output altered nothing. Red is a regression.
 const roundTripOk = computed(

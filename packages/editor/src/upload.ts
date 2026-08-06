@@ -30,9 +30,9 @@ export const UploadPlaceholder = Node.create<UploadPlaceholderOptions>({
   addCommands() {
     return {
       insertUploadPlaceholder:
-        () =>
+        (attrs: { accept?: string } = {}) =>
         ({ commands }: any) =>
-          commands.insertContent({ type: this.name }),
+          commands.insertContent({ type: this.name, attrs }),
     } as any;
   },
 });

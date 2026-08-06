@@ -1,8 +1,8 @@
 <template>
   <NodeViewWrapper
     as="div"
-    class="my-2"
-    :class="{ 'ring-2 ring-neutral-400': selected }"
+    class="my-2 rounded-md"
+    :class="{ 'ring-2 ring-neutral-400 ring-offset-2': selected }"
   >
     <iframe
       v-if="node.attrs.src"

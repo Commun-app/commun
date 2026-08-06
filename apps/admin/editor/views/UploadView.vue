@@ -2,7 +2,8 @@
   <NodeViewWrapper as="div" class="my-2">
     <UFileUpload
       v-model="file"
-      label="Téléversez un fichier ou une image"
+      :accept="node.attrs.accept || undefined"
+      :label="node.attrs.accept ? 'Téléversez une image' : 'Téléversez un fichier'"
       description="Ou glissez-le directement dans l'éditeur"
       :preview="false"
       class="min-h-32"

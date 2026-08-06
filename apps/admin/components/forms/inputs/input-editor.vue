@@ -15,7 +15,7 @@
       :on-content-error="onContentError"
       :placeholder="placeHolder || 'Écrivez, tapez « / » pour les commandes…'"
       :class="{ 'mt-1': !!label }"
-      class="min-h-40 rounded-md border border-neutral-200 px-10 py-3 dark:border-neutral-800"
+      class="min-h-40 rounded-md border border-neutral-200 px-12 py-6 dark:border-neutral-800"
     >
       <!-- Selection bubble: marks, alignment, link. -->
       <UEditorToolbar
@@ -58,7 +58,7 @@
       </UEditorToolbar>
 
       <!-- Slash commands: standard blocks plus ours. -->
-      <UEditorSuggestionMenu :editor="editor" :items="slashItems" />
+      <UEditorSuggestionMenu :editor="editor" :items="slashItems" size="lg" :ui="{ content: 'w-80' }" />
 
       <!-- Block handle: plus opens the slash menu, grip moves blocks. -->
       <UEditorDragHandle
@@ -67,7 +67,7 @@
         @node-change="selectedNode = $event"
       >
         <UButton
-          icon="iconoir:plus"
+          icon="i-lucide-plus"
           color="neutral"
           variant="ghost"
           size="sm"
@@ -90,7 +90,7 @@
             color="neutral"
             variant="ghost"
             size="sm"
-            icon="iconoir:drag"
+            icon="i-lucide-grip-vertical"
             :class="ui.handle()"
             aria-label="Déplacer le bloc"
           />
@@ -194,7 +194,12 @@ const customHandlers = {
       },
     ]),
   ),
-  upload: {
+  uploadImage: {
+    canExecute: (editor) => editor.can().insertContent({ type: 'imageUpload' }),
+    execute: (editor) => editor.chain().focus().insertUploadPlaceholder({ accept: 'image/*' }),
+    isActive: (editor) => editor.isActive('imageUpload'),
+  },
+  uploadFile: {
     canExecute: (editor) => editor.can().insertContent({ type: 'imageUpload' }),
     execute: (editor) => editor.chain().focus().insertUploadPlaceholder(),
     isActive: (editor) => editor.isActive('imageUpload'),
@@ -238,7 +243,8 @@ const slashItems = [
       icon: preset.icon,
       description: `Intégrez : ${preset.placeholder}`,
     })),
-    { kind: 'upload', label: 'Fichier ou image', icon: 'iconoir:page', description: 'Téléversez depuis votre poste' },
+    { kind: 'uploadImage', label: 'Image', icon: 'iconoir:media-image', description: 'Téléversez une image' },
+    { kind: 'uploadFile', label: 'Fichier', icon: 'iconoir:page', description: 'Téléversez un document (PDF…)' },
   ],
 ]
 
