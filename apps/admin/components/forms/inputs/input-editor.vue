@@ -15,7 +15,7 @@
       :on-content-error="onContentError"
       :placeholder="placeHolder || 'Écrivez, tapez « / » pour les commandes…'"
       :class="{ 'mt-1': !!label }"
-      class="min-h-40 rounded-md border border-neutral-200 px-12 py-6 dark:border-neutral-800"
+      class="min-h-40 rounded-md border border-neutral-200 px-6 py-3 dark:border-neutral-800"
     >
       <!-- Selection bubble: marks, alignment, link. -->
       <UEditorToolbar
@@ -58,7 +58,7 @@
       </UEditorToolbar>
 
       <!-- Slash commands: standard blocks plus ours. -->
-      <UEditorSuggestionMenu :editor="editor" :items="slashItems" size="lg" :ui="{ content: 'w-80' }" />
+      <UEditorSuggestionMenu :editor="editor" :items="slashItems" size="lg" :ui="{ content: 'w-[40rem]' }" />
 
       <!-- Block handle: plus opens the slash menu, grip moves blocks. -->
       <UEditorDragHandle
