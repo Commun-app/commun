@@ -11,6 +11,7 @@ import { FileNode, type FileNodeOptions } from './file.ts'
 import { ImageNode } from './image.ts'
 import { Embed } from './embed.ts'
 import { Details, DetailsSummary, DetailsContent } from './details.ts'
+import { UploadPlaceholder } from './upload.ts'
 
 /**
  * View-less extension assembly, importable outside the browser (conservation
@@ -102,6 +103,7 @@ export function communSchemaExtensions(media: Partial<CommunEditorMedia> = {}) {
     Highlight.configure({ multicolor: true }),
     Typography,
     Callout,
+    UploadPlaceholder.configure({ upload: handlers.upload } as any),
     FileNode.configure(handlers as any),
     ImageNode.configure(handlers as any),
     Embed,

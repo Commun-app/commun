@@ -97,13 +97,6 @@
         </UDropdownMenu>
       </UEditorDragHandle>
 
-      <input
-        ref="filePicker"
-        type="file"
-        multiple
-        class="hidden"
-        @change="onFilesPicked(editor, $event)"
-      >
     </UEditor>
   </div>
 </template>
@@ -118,7 +111,7 @@
 // the string adapter dies with models/_commun.
 import { ref, watch } from 'vue'
 import { mapEditorItems } from '@nuxt/ui/utils/editor'
-import { communExtensions, communStarterKit, sanitizeDoc, EMBED_VIDEO } from '~/editor'
+import { communExtensions, communStarterKit, sanitizeDoc, EMBED_SERVICES } from '~/editor'
 
 const $emitters = defineEmits(['change'])
 const $props = defineProps({
@@ -128,7 +121,7 @@ const $props = defineProps({
   value: { type: [String, Object], default: '' },
 })
 
-const media = useMedia()
+const { media } = useCore()
 const extensions = communExtensions(media.forEditor())
 const toast = useToast()
 
@@ -142,8 +135,20 @@ const parse = (value) => {
 
 const doc = ref(parse($props.value))
 
+// The transient upload slot must never leave the editor.
+const stripTransient = (node) => {
+  if (!node?.content) return node
+  const content = node.content
+    .filter((child) => child.type !== 'imageUpload')
+    .map(stripTransient)
+  return content.length === node.content.length && content.every((c, i) => c === node.content[i])
+    ? node
+    : { ...node, content }
+}
+
 watch(doc, (next) => {
-  $emitters('change', receivedAsString ? JSON.stringify(next) : next)
+  const out = stripTransient(next)
+  $emitters('change', receivedAsString ? JSON.stringify(out) : out)
 }, { deep: true })
 
 watch(() => $props.value, (next) => {
@@ -161,8 +166,6 @@ function onContentError({ error }) {
 }
 
 // ── Custom handlers: our blocks, addressable from every menu ────────────────
-const filePicker = ref(null)
-
 const customHandlers = {
   callout: {
     canExecute: (editor) => editor.can().setCallout(),
@@ -174,46 +177,28 @@ const customHandlers = {
     execute: (editor) => editor.chain().focus().setDetails(),
     isActive: (editor) => editor.isActive('details'),
   },
-  video: {
-    canExecute: () => true,
-    execute: (editor) =>
-      editor.chain().focus().setEmbed({
-        service: EMBED_VIDEO.service,
-        icon: EMBED_VIDEO.icon,
-        placeholder: EMBED_VIDEO.placeholder,
-        title: EMBED_VIDEO.title,
-        height: EMBED_VIDEO.height,
-      }),
-    isActive: (editor) => editor.isActive('embed'),
+  ...Object.fromEntries(
+    Object.entries(EMBED_SERVICES).map(([service, preset]) => [
+      `embed-${service}`,
+      {
+        canExecute: () => true,
+        execute: (editor) =>
+          editor.chain().focus().setEmbed({
+            service,
+            icon: preset.icon,
+            placeholder: preset.placeholder,
+            title: preset.title,
+            height: preset.height,
+          }),
+        isActive: (editor) => editor.isActive('embed', { service }),
+      },
+    ]),
+  ),
+  upload: {
+    canExecute: (editor) => editor.can().insertContent({ type: 'imageUpload' }),
+    execute: (editor) => editor.chain().focus().insertUploadPlaceholder(),
+    isActive: (editor) => editor.isActive('imageUpload'),
   },
-  filePick: {
-    canExecute: () => true,
-    execute: (editor) => {
-      filePicker.value?.click()
-      return editor.chain()
-    },
-    isActive: () => false,
-  },
-}
-
-async function onFilesPicked(editor, event) {
-  const files = [...(event.target.files ?? [])]
-  event.target.value = ''
-  for (const file of files) {
-    try {
-      const { id, src, title } = await media.upload(file)
-      editor
-        .chain()
-        .focus()
-        .insertContent({
-          type: file.type.startsWith('image/') ? 'image' : 'file',
-          attrs: { id, src, title },
-        })
-        .run()
-    } catch {
-      toast.add({ title: `Téléversement échoué : ${file.name}`, color: 'error' })
-    }
-  }
 }
 
 // ── Menus ───────────────────────────────────────────────────────────────────
@@ -247,8 +232,13 @@ const slashItems = [
     { type: 'label', label: 'Blocs riches' },
     { kind: 'callout', label: 'Encart', icon: 'iconoir:megaphone', description: 'Mettez une information en avant' },
     { kind: 'details', label: 'Accordéon', icon: 'lucide:list-collapse', description: 'Contenu repliable' },
-    { kind: 'video', label: 'Vidéo', icon: EMBED_VIDEO.icon, description: 'Intégrez une vidéo YouTube' },
-    { kind: 'filePick', label: 'Fichier ou image', icon: 'iconoir:page', description: 'Téléversez depuis votre poste' },
+    ...Object.entries(EMBED_SERVICES).map(([service, preset]) => ({
+      kind: `embed-${service}`,
+      label: preset.label,
+      icon: preset.icon,
+      description: `Intégrez : ${preset.placeholder}`,
+    })),
+    { kind: 'upload', label: 'Fichier ou image', icon: 'iconoir:page', description: 'Téléversez depuis votre poste' },
   ],
 ]
 

@@ -38,15 +38,16 @@
 <script setup>
 // The sandbox bounds third-party content. Without a source the node shows
 // an URL form the author completes in place.
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { NodeViewWrapper, nodeViewProps } from '@tiptap/vue-3'
-import { toVideoEmbedSrc } from '../embed'
+import { EMBED_SERVICES } from '../embed'
 
 const props = defineProps(nodeViewProps)
 const url = ref('')
+const service = computed(() => EMBED_SERVICES[props.node.attrs.service] ?? EMBED_SERVICES.video)
 
 function applyUrl() {
   if (!url.value) return
-  props.updateAttributes({ src: toVideoEmbedSrc(url.value.trim()) })
+  props.updateAttributes({ src: service.value.toSrc(url.value.trim()) })
 }
 </script>

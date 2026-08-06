@@ -10,6 +10,6 @@ assembly against that.
 - `../conservation.test.ts` — CI suite over a synthetic corpus.
 - `corpus.ts` — that corpus: every node type, mark and degenerate shape seen
   in client content, with no client data (public repository).
-- `sweep-bases.mjs` — local-only sweep of the real client databases:
-  `bun editor/harness/sweep-bases.mjs`. Re-run on fresh production dumps
-  before changing anything in the editor schema.
+A full sweep against real client databases exists outside this repository
+(client data and identifiers are private); re-run it on fresh production
+dumps before changing anything in the editor schema.

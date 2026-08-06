@@ -47,17 +47,40 @@ export const Embed = Node.create({
   },
 })
 
-/** The one embed service present in stored content. */
-export const EMBED_VIDEO = {
-  service: 'video',
-  icon: 'iconoir:youtube',
-  placeholder: "Collez l'url https://www.youtube.com/watch…",
-  title: 'YouTube video player',
-  height: 315,
-} as const
+/**
+ * Embed services. Stored content only uses `video`; new services extend this
+ * table without touching the node contract (same attrs for every service).
+ */
+export interface EmbedService {
+  label: string
+  icon: string
+  placeholder: string
+  title: string
+  height: number
+  toSrc: (url: string) => string
+}
 
-/** `youtube.com/watch?v=ID` or `youtu.be/ID` to an embeddable URL; anything else passes through. */
-export function toVideoEmbedSrc(url: string): string {
-  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/)
-  return match ? `https://www.youtube.com/embed/${match[1]}` : url
+export const EMBED_SERVICES: Record<string, EmbedService> = {
+  video: {
+    label: 'Vidéo',
+    icon: 'iconoir:youtube',
+    placeholder: "Collez l'url YouTube ou Vimeo…",
+    title: 'Lecteur vidéo',
+    height: 315,
+    toSrc: (url) => {
+      const youtube = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/)
+      if (youtube) return `https://www.youtube.com/embed/${youtube[1]}`
+      const vimeo = url.match(/vimeo\.com\/(\d+)/)
+      if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`
+      return url
+    },
+  },
+  map: {
+    label: 'Carte',
+    icon: 'iconoir:map-pin',
+    placeholder: "Collez l'url d'intégration Google Maps…",
+    title: 'Carte',
+    height: 400,
+    toSrc: (url) => url,
+  },
 }

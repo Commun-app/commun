@@ -5,7 +5,7 @@ import {
   type CommunEditorMedia,
 } from './extensions.ts'
 import { sanitizeDoc } from './sanitize.ts'
-import { EMBED_VIDEO, toVideoEmbedSrc } from './embed.ts'
+import { EMBED_SERVICES } from './embed.ts'
 import { UID_TYPES } from './uid.ts'
 import CalloutView from './views/CalloutView.vue'
 import FileView from './views/FileView.vue'
@@ -14,8 +14,9 @@ import EmbedView from './views/EmbedView.vue'
 import DetailsView from './views/DetailsView.vue'
 import DetailsSummaryView from './views/DetailsSummaryView.vue'
 import DetailsContentView from './views/DetailsContentView.vue'
+import UploadView from './views/UploadView.vue'
 
-export { communStarterKit, UID_TYPES, sanitizeDoc, EMBED_VIDEO, toVideoEmbedSrc }
+export { communStarterKit, UID_TYPES, sanitizeDoc, EMBED_SERVICES }
 export type { CommunEditorMedia }
 
 const VIEWS: Record<string, any> = {
@@ -26,6 +27,7 @@ const VIEWS: Record<string, any> = {
   details: DetailsView,
   detailsSummary: DetailsSummaryView,
   detailsContent: DetailsContentView,
+  imageUpload: UploadView,
 }
 
 /**

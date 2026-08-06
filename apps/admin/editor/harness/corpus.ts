@@ -1,7 +1,7 @@
 /**
  * Synthetic conservation corpus: every node type, mark and degenerate shape
  * observed in client databases, with NO client data — this repository is
- * public. The sweep against real databases is sweep-bases.mjs, local only.
+ * public. The sweep against real databases lives outside this repository.
  */
 
 const uid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`

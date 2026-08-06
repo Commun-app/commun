@@ -16,7 +16,7 @@ import { sanitizeDoc } from './sanitize.ts'
  * attribute sets — so stored client documents round-trip unchanged.
  * TipTap upgrades tend to add attributes or reorder marks silently; zero
  * unexplained diff is the contract (spec admin-editor). CI runs the
- * synthetic corpus; harness/sweep-bases.mjs covers the real databases.
+ * synthetic corpus; a private sweep covers the real client databases.
  */
 
 beforeAll(() => {

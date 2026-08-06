@@ -34,6 +34,8 @@ export default defineNuxtConfig({
     }
   },
   css: ['~/assets/css/main.css'],
+  // Scan nested composables (composables/core/domains/*).
+  imports: { dirs: ['composables/**'] },
   // Session auth lives in use-session + middleware/00.auth (no auth module).
   modules: [
     '@nuxt/ui',
