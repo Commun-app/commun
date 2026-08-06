@@ -9,14 +9,13 @@ name: Images
 #   - commun-portal → PRIVÉE : AGPL certes, mais c'est notre outillage de
 #     migration, personne d'autre n'en a l'usage (review PR #6) ; sortira du
 #     monorepo avec la vraie app portail du cloud.
-#   - commun-instance → PRIVÉE OBLIGATOIREMENT : l'admin embarque
-#     @poulpus/prose qui bundle du code TipTap Pro (licence — pas de
-#     redistribution publique). Meurt en phase 4 avec TipTap OSS.
+#   - commun-instance → PUBLIABLE depuis la sortie de @poulpus/prose
+#     (refonte-admin-ui) : plus de TipTap Pro. Basculer la visibilité est un
+#     geste manuel (Quentin) ; la fusion avec commun-api en une seule image
+#     publique est l'affaire du change 2 (fusion-admin-api).
 #
-# Secrets requis (instance seulement) :
-#   - PROSE_GITHUB_TOKEN : PAT read:packages sur les packages @poulpus
-#     (le GITHUB_TOKEN du workflow ne lit pas les packages d'une autre org)
-#   - TIPTAP_PRO_TOKEN : registre registry.tiptap.dev
+# Plus AUCUN secret de registre privé requis : PROSE_GITHUB_TOKEN et
+# TIPTAP_PRO_TOKEN peuvent être supprimés des secrets du dépôt (Quentin).
 
 on:
   workflow_dispatch:
@@ -75,7 +74,7 @@ jobs:
             ghcr.io/commun-app/commun-portal:${{ github.sha }}
 
   instance:
-    name: commun-instance (PRIVÉE — prose/TipTap Pro)
+    name: commun-instance
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -89,9 +88,6 @@ jobs:
           context: .
           file: apps/api/Dockerfile.instance
           push: true
-          build-args: |
-            GITHUB_TOKEN=${{ secrets.PROSE_GITHUB_TOKEN }}
-            TIPTAP_PRO_TOKEN=${{ secrets.TIPTAP_PRO_TOKEN }}
           tags: |
             ghcr.io/commun-app/commun-instance:latest
             ghcr.io/commun-app/commun-instance:${{ github.sha }}

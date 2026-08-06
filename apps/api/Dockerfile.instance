@@ -1,27 +1,21 @@
 # Image d'INSTANCE Commun (silent-migration, D1/D3) : API + admin statique
 # sur la même origine — une image COMMUNE à tous les clients (l'admin appelle
 # /api/trpc en relatif, rien de client-spécifique n'est cuit au build).
-# L'image API open source reste `Dockerfile` ; celle-ci ajoute l'étage admin,
-# buildé AVEC les registres privés (prose + patch) via des build args qui ne
-# persistent pas dans l'image finale. Disparaît avec prose (phase 4).
+# Depuis la sortie de @poulpus/prose (refonte-admin-ui) : plus aucun registre
+# privé, plus de licence TipTap Pro — l'image est PUBLIABLE. Sa fusion avec
+# l'image API (une seule image publique) est l'affaire du change 2.
 #
-#   docker build -f Dockerfile.instance \
-#     --build-arg GITHUB_TOKEN=… --build-arg TIPTAP_PRO_TOKEN=… -t commun-instance .
+#   docker build -f Dockerfile.instance -t commun-instance .
 FROM oven/bun:1 AS build
-ARG GITHUB_TOKEN
-ARG TIPTAP_PRO_TOKEN
 WORKDIR /app
 
-COPY package.json bun.lock .npmrc ./
+COPY package.json bun.lock ./
 COPY apps/api/package.json apps/api/
 COPY apps/admin/package.json apps/admin/
 COPY packages/core/package.json packages/core/
 COPY packages/apidae-sync/package.json packages/apidae-sync/
 COPY apps/portal/package.json apps/portal/
-COPY patches ./patches
-# --no-save : même piège lockfile que l'image API (voir Dockerfile) ; avec les
-# tokens, prose et son patch s'installent — sans, la garde hasProse joue.
-RUN bun install --no-save
+RUN bun install --frozen-lockfile
 
 COPY . .
 # ORDRE CRITIQUE : l'admin est généré AVANT le build de l'API et déposé dans

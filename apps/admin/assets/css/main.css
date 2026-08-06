@@ -1,11 +1,6 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-/* L'ancien éditeur (@poulpus/prose) est compilé avec des classes Tailwind :
-   la config v3 scannait son dist dans node_modules, la v4 ne scanne pas
-   node_modules par défaut. Cette directive meurt avec prose (groupe 4). */
-@source "../../../../node_modules/@poulpus/prose/dist/runtime";
-
 /* Thème porté de tailwind.config.js (v3) — tailles maison sous text-xs. */
 @theme {
   --text-7xs: 0.125rem;

@@ -16,7 +16,6 @@ updates:
       - dependency-name: nitro
       - dependency-name: h3
       # Registre privé — disparaît avec la phase 4 (TipTap OSS).
-      - dependency-name: '@poulpus/prose'
 
   - package-ecosystem: github-actions
     directory: /
