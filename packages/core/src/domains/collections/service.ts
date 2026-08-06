@@ -17,7 +17,6 @@ import type {
   EntryUpdateDto,
 } from './dtos/index.ts';
 
-
 /** Ids referenced by relation-type fields of an entry (single or arrays). */
 function relationIds(fields: FieldDefinition[], data: Record<string, unknown>): string[] {
   const ids: string[] = [];

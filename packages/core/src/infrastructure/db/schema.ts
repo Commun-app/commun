@@ -38,10 +38,7 @@ const legacyExtra = () =>
 
 // Contrat des champs et statuts : module PUR partagé avec l'admin
 // (@commun/core/fields) — voir domains/collections/fields.ts.
-import {
-  PUBLICATION_STATUSES,
-  type FieldDefinition,
-} from '../../domains/collections/fields.ts';
+import { PUBLICATION_STATUSES, type FieldDefinition } from '../../domains/collections/fields.ts';
 
 export {
   PUBLICATION_STATUSES,
