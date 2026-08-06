@@ -1,6 +1,6 @@
 <template>
   <NodeViewWrapper as="div">
-    <NodeViewContent class="text-sm font-semibold" />
+    <NodeViewContent class="min-h-6 px-4 py-3 text-base" />
   </NodeViewWrapper>
 </template>
 

@@ -1,6 +1,6 @@
 <template>
   <NodeViewWrapper as="div" data-type="detailsContent">
-    <NodeViewContent class="mt-1 border-l border-neutral-200 pl-3 dark:border-neutral-800" />
+    <NodeViewContent class="border-t border-neutral-100 px-4 py-3 dark:border-neutral-900" />
   </NodeViewWrapper>
 </template>
 

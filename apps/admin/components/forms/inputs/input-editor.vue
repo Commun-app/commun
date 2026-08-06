@@ -27,7 +27,41 @@
           />
         </UDropdownMenu>
         <USeparator orientation="vertical" class="mx-1 h-5" />
-        <UEditorToolbar :editor="editor" />
+        <!-- Lien : popover iso legacy (sélection → URL), extendMarkRange -->
+        <UPopover v-model:open="linkOpen">
+          <UButton
+            label="Lien"
+            icon="iconoir:link"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :active="editor.isActive('link')"
+            @click="linkUrl = editor.getAttributes('link').href ?? ''"
+          />
+          <template #content>
+            <form class="flex items-center gap-2 p-2" @submit.prevent="applyLink(editor)">
+              <UInput
+                v-model="linkUrl"
+                placeholder="https://…"
+                size="sm"
+                class="w-64"
+                autofocus
+              />
+              <UButton type="submit" size="sm" color="neutral" label="OK" />
+              <UButton
+                v-if="editor.isActive('link')"
+                size="sm"
+                color="neutral"
+                variant="ghost"
+                icon="iconoir:trash"
+                aria-label="Retirer le lien"
+                @click="removeLink(editor)"
+              />
+            </form>
+          </template>
+        </UPopover>
+        <!-- B / I / alignements : items UEditorToolbar, iso barre legacy -->
+        <UEditorToolbar :editor="editor" :items="toolbarItems" />
       </div>
       <input
         ref="filePicker"
@@ -98,6 +132,36 @@ function onContentError({ error }) {
     description: error?.message ?? String(error),
     color: 'error',
   })
+}
+
+// ── Barre d'outils — parité avec la barre de prose ──────────────────────────
+const toolbarItems = [
+  [
+    { kind: 'mark', mark: 'bold', icon: 'iconoir:bold-square-outline' },
+    { kind: 'mark', mark: 'italic', icon: 'iconoir:italic-square-outline' },
+  ],
+  [
+    { kind: 'textAlign', align: 'justify', icon: 'iconoir:align-justify' },
+    { kind: 'textAlign', align: 'left', icon: 'iconoir:align-left' },
+    { kind: 'textAlign', align: 'center', icon: 'iconoir:align-center' },
+    { kind: 'textAlign', align: 'right', icon: 'iconoir:align-right' },
+  ],
+]
+
+const linkOpen = ref(false)
+const linkUrl = ref('')
+
+function applyLink(editor) {
+  const href = linkUrl.value.trim()
+  if (href) {
+    editor.chain().focus().extendMarkRange('link').setLink({ href }).run()
+  }
+  linkOpen.value = false
+}
+
+function removeLink(editor) {
+  editor.chain().focus().extendMarkRange('link').unsetLink().run()
+  linkOpen.value = false
 }
 
 // ── « Ajouter un bloc » — parité avec le menu de prose ──────────────────────
