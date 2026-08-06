@@ -29,7 +29,7 @@ const ROLE_PERMISSIONS = {
 }
 
 export const useWorkspaceStore = defineStore('layout/workspace', () => {
-  const $auth = useAuth()
+  const $session = useSession()
   const $models = useModels()
   const $abilities = useAbility()
 
@@ -47,8 +47,7 @@ export const useWorkspaceStore = defineStore('layout/workspace', () => {
 
   // Actions
   function updateAbilities() {
-    // Session tRPC (auth.me) : enveloppe { result: { data: { user } } }.
-    const user = $auth.data.value?.result?.data?.user
+    const user = $session.user.value
     $abilities.assignAbilities([
       'entrance:self',
       ...(ROLE_PERMISSIONS[user?.role] ?? [])

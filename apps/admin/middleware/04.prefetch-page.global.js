@@ -1,6 +1,6 @@
 // @review: c'est quoi le prefetch ? Ca me semble overengineered ça, pourquoi on gère pas ça dans le useAsyncData de nuxt js plutot ?
 export default defineNuxtRouteMiddleware(async (to) => {
-  const { status } = useAuth()
+  const session = useSession()
   const $models = useModels()
 
   if (status.value === 'authenticated' && to.meta.preFetch?.length) {

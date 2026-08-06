@@ -46,7 +46,7 @@ import ButtonTertiary from '~/components/elements/buttons/tertiary'
 
 // Prepare composables
 const notificationsStore = useNotificationsStore()
-const { signIn } = useAuth()
+const session = useSession()
 
 // Prepare reactive data
 const isLoading = ref(false)
@@ -72,9 +72,9 @@ const _openForm = () => {
 const _signIn = async () => {
   isLoading.value = true
   try {
-    // Payload iso procédure tRPC auth.login : { email, password }.
-    await signIn({ email: emailAddress.value, password: password.value }, { callbackUrl: '/overview' })
+    await session.login(emailAddress.value, password.value)
     notificationsStore.add({ icon: 'iconoir:password-pass', type: 'success', title: 'Authentification réussie.' })
+    await navigateTo('/overview')
   } catch (err) {
     console.log(err)
     notificationsStore.add({ icon: 'iconoir:password-error', type: 'warn', title: 'Identifiants incorrects.' })

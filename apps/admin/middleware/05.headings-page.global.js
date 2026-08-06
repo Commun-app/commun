@@ -2,7 +2,7 @@ import { useHeadingsStore } from '~/store/layout/headings'
 
 // @review: meme remarque ça me semble overengineered ça, pourquoi c'est pas gérer directement au niveau, des pages ça a un interet ?
 export default defineNuxtRouteMiddleware((to, from) => {
-  const { status } = useAuth()
+  const session = useSession()
   if (status.value === 'authenticated') {
     console.log('[midd.] - update headings', to.params.collection)
     const headingsStore = useHeadingsStore()

@@ -12,11 +12,9 @@ updates:
       dependencies:
         patterns: ['*']
     ignore:
-      # Nitro v3 beta / h3 v2 rc : figés par décision (montée aux jalons).
+      # Pinned by decision; upgraded at milestones only.
       - dependency-name: nitro
       - dependency-name: h3
-      # Registre privé — disparaît avec la phase 4 (TipTap OSS).
-      - dependency-name: '@poulpus/prose'
 
   - package-ecosystem: github-actions
     directory: /

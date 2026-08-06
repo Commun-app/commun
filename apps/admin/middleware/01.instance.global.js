@@ -5,8 +5,8 @@ import { useWorkspaceStore } from '~/store/layout/workspace'
 // route, l'instance EST l'organisation. Charge la collectivité une fois
 // après authentification et pose les permissions du rôle.
 export default defineNuxtRouteMiddleware(async () => {
-  const { status } = useAuth()
-  if (status.value !== 'authenticated') return
+  const session = useSession()
+  if (!session.isAuthenticated.value) return
 
   const workspaceStore = useWorkspaceStore()
   workspaceStore.updateAbilities()

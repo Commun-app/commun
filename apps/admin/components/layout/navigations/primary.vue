@@ -44,7 +44,7 @@ import dropdownPublish from '~/components/layout/navigations/primary/dropdown-pu
 // import mobileMenu from '~/components/template/navigation-section/mobile-section/Menu'
 // import profileDropdown from '~/components/template/navigation-section/ProfileDropdown'
 
-const { signOut } = useAuth()
+const session = useSession()
 const { Collection } = useModels()
 const $ability = useAbility()
 const $router = useRouter()
@@ -126,10 +126,7 @@ const _openForm = () => {
   }
 }
 const _logout = async () => {
-  try {
-    await signOut()
-  } catch {
-    $router.replace('/')
-  }
+  await session.logout()
+  $router.replace('/')
 }
 </script>

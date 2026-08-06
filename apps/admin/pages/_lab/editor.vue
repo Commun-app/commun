@@ -1,0 +1,149 @@
+<template>
+  <div class="mx-auto max-w-4xl space-y-6 p-8">
+    <div class="flex items-center justify-between">
+      <h1 class="text-xl font-semibold">
+        Laboratoire éditeur
+      </h1>
+      <UBadge :color="roundTripOk ? 'success' : 'error'" variant="subtle">
+        {{ roundTripOk ? 'structure conservée' : 'STRUCTURE ALTÉRÉE' }}
+      </UBadge>
+    </div>
+
+    <!-- The real production input: same menus, same handlers. -->
+    <forms-inputs-input-editor
+      label="Contenu"
+      :value="doc"
+      @change="doc = $event"
+    />
+
+    <details class="text-xs">
+      <summary class="cursor-pointer font-medium">JSON courant (sortie de l'éditeur)</summary>
+      <pre class="mt-2 overflow-x-auto rounded bg-neutral-100 p-3 dark:bg-neutral-900">{{ JSON.stringify(doc, null, 2) }}</pre>
+    </details>
+    <details class="text-xs">
+      <summary class="cursor-pointer font-medium">JSON d'origine (échantillon des bases clients)</summary>
+      <pre class="mt-2 overflow-x-auto rounded bg-neutral-100 p-3 dark:bg-neutral-900">{{ JSON.stringify(SAMPLE, null, 2) }}</pre>
+    </details>
+  </div>
+</template>
+
+<script setup>
+// Editor lab: the assembled editor against a sample shaped like real client
+// content, with a live conservation badge. Dev only.
+definePageMeta({ auth: false })
+
+if (!import.meta.dev) {
+  await navigateTo('/', { replace: true })
+}
+
+// Sample mirroring stored client structures. Any unported node must raise
+// onContentError — never a silent drop.
+const SAMPLE = {
+  type: 'doc',
+  content: [
+    {
+      type: 'heading',
+      attrs: { level: 2, textAlign: 'left', uid: 'c3d13996-0170-4b13-9a17-2b5eb84400c4' },
+      content: [{ type: 'text', text: 'Titre de section' }]
+    },
+    {
+      type: 'paragraph',
+      attrs: { textAlign: 'left', uid: '0d5b74a5-c4a5-4485-9d38-2c69e2d1c264' },
+      content: [
+        { type: 'text', text: 'Du texte ' },
+        { type: 'text', marks: [{ type: 'bold' }], text: 'gras' },
+        { type: 'text', text: ', de l’' },
+        { type: 'text', marks: [{ type: 'italic' }], text: 'italique' },
+        { type: 'text', text: ', un ' },
+        {
+          type: 'text',
+          marks: [{ type: 'link', attrs: { href: 'https://exemple.fr', target: '_blank', rel: 'noopener noreferrer nofollow', class: 'underline text-primary' } }],
+          text: 'lien'
+        },
+        { type: 'text', text: ' et une ' },
+        {
+          type: 'text',
+          marks: [{ type: 'textStyle' }],
+          text: 'portion neutre'
+        },
+        { type: 'text', text: '.' }
+      ]
+    },
+    { type: 'paragraph', attrs: { textAlign: 'left', uid: '7c9e8b1a-2f3d-4e5a-8b6c-1d2e3f4a5b6c' }, content: [{ type: 'hardBreak' }] },
+    {
+      type: 'bulletList',
+      attrs: { uid: '58e3399e-92e5-4a6a-b25a-039a4694e9e6' },
+      content: [
+        {
+          type: 'listItem',
+          attrs: { uid: 'f9dc0f8f-64f2-40bd-8827-d64ba9214d29' },
+          content: [{ type: 'paragraph', attrs: { textAlign: 'left', uid: 'a1b2c3d4-0000-4000-8000-000000000001' }, content: [{ type: 'text', text: 'Premier item' }] }]
+        }
+      ]
+    },
+    {
+      type: 'callout',
+      attrs: { icon: 'iconoir:megaphone', uid: 'a1b2c3d4-0000-4000-8000-000000000002' },
+      content: [{ type: 'text', text: 'Un encart d’information.' }]
+    },
+    {
+      type: 'file',
+      attrs: {
+        id: '64a1f2e3b4c5d6e7f8a9b0c1',
+        src: 'https://bucket.exemple.fr/medias/document.pdf',
+        title: 'document.pdf',
+        alt: null,
+        uid: 'a1b2c3d4-0000-4000-8000-000000000004'
+      }
+    },
+    {
+      type: 'image',
+      attrs: {
+        id: '64a1f2e3b4c5d6e7f8a9b0c2',
+        src: 'https://bucket.exemple.fr/medias/photo.jpg',
+        title: 'photo.jpg',
+        alt: 'Une photo',
+        uid: 'a1b2c3d4-0000-4000-8000-000000000005'
+      }
+    },
+    {
+      type: 'embed',
+      attrs: {
+        service: 'youtube',
+        src: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+        title: null,
+        icon: null,
+        placeholder: null,
+        allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+        allowfullscreen: true,
+        frameborder: '0',
+        height: 315
+      }
+    },
+    {
+      type: 'details',
+      attrs: { toggle: true },
+      content: [
+        { type: 'detailsSummary', content: [{ type: 'text', text: 'Titre de l’accordéon' }] },
+        {
+          type: 'detailsContent',
+          content: [{ type: 'paragraph', attrs: { textAlign: 'left', uid: 'a1b2c3d4-0000-4000-8000-000000000006' }, content: [{ type: 'text', text: 'Contenu replié.' }] }]
+        }
+      ]
+    },
+    { type: 'horizontalRule' },
+    {
+      type: 'blockquote',
+      attrs: { uid: 'a1b2c3d4-0000-4000-8000-000000000007' },
+      content: [{ type: 'paragraph', attrs: { textAlign: 'left', uid: 'a1b2c3d4-0000-4000-8000-000000000008' }, content: [{ type: 'text', text: 'Une citation.' }] }]
+    }
+  ]
+}
+
+const doc = ref(structuredClone(SAMPLE))
+
+// Green: load → output altered nothing. Red is a regression.
+const roundTripOk = computed(
+  () => JSON.stringify(doc.value) === JSON.stringify(SAMPLE)
+)
+</script>

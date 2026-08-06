@@ -1,18 +1,5 @@
 import { globSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-
-// @poulpus/prose est une dépendance OPTIONNELLE (registre privé, remplacée
-// par TipTap OSS en phase 4) : sans tokens (CI, Docker) son install est
-// sautée — on ne charge le module Nuxt que s'il est résolu.
-const hasProse = (() => {
-  try {
-    createRequire(import.meta.url).resolve('@poulpus/prose')
-    return true
-  } catch {
-    return false
-  }
-})()
 
 // L'ESM de @vue/devtools-api vit uniquement dans le store isolé de Bun
 // (node_modules/.bun/@vue+devtools-api@<version>) — introuvable par une
@@ -46,44 +33,16 @@ export default defineNuxtConfig({
       mapBoxToken: process.env.NUXT_ENV_MAPBOX_TOKEN,
     }
   },
+  css: ['~/assets/css/main.css'],
+  // Scan nested composables (composables/core/domains/*).
+  imports: { dirs: ['composables/**'] },
+  // Session auth lives in use-session + middleware/00.auth (no auth module).
   modules: [
-    '@nuxtjs/tailwindcss',
-    '@sidebase/nuxt-auth',
+    '@nuxt/ui',
     '@pinia/nuxt',
     '@pinia-orm/nuxt',
-    '@vueuse/nuxt',
-    ...(hasProse ? ['@poulpus/prose'] : [])
+    '@vueuse/nuxt'
   ],
-  // https://sidebase.io/nuxt-auth/v0.6/getting-started/quick-start
-  // Auth branchée sur le plan tRPC du monolithe Commun : les procédures
-  // auth.login / auth.me répondent dans l'enveloppe tRPC { result: { data } }.
-  auth: {
-    baseURL: `${process.env.NUXT_ENV_API_URL ?? ''}/api/trpc`,
-    provider: {
-      type: 'local',
-      endpoints: {
-        signIn: { path: '/auth.login', method: 'post' },
-        // signOut volontairement absent (iso legacy : déconnexion locale seule).
-        getSession: { path: '/auth.me', method: 'get' }
-      },
-      pages: {
-        login: '/'
-      },
-      token: {
-        signInResponseTokenPointer: '/result/data/token',
-        type: 'Bearer',
-        headerName: 'Authorization'
-      },
-      sessionDataType: {
-        data: 'json'
-      }
-    },
-    globalAppMiddleware: {
-      isEnabled: true,
-      allow404WithoutAuth: true,
-      addDefaultCallbackUrl: true
-    }
-  },
   vite: {
     resolve: {
       // Sous le layout node_modules de Bun, Vite retombe sur l'entrée CJS
@@ -92,7 +51,29 @@ export default defineNuxtConfig({
       // la clé de l'alias boucle à l'infini → OOM).
       alias: {
         ...(devtoolsApiEsm ? { '@vue/devtools-api': devtoolsApiEsm } : {})
-      }
+      },
+      // One ProseMirror instance is mandatory (keyed plugins): bun's store
+      // gives @nuxt/ui and our direct @tiptap deps distinct copies.
+      dedupe: [
+        '@tiptap/core',
+        '@tiptap/pm',
+        '@tiptap/vue-3',
+        'prosemirror-state',
+        'prosemirror-model',
+        'prosemirror-view',
+        'prosemirror-transform'
+      ]
+    },
+    // Prescribed by the Nuxt UI Editor docs (ProseMirror warning): share a
+    // single pre-bundled prosemirror across @nuxt/ui and our extensions.
+    optimizeDeps: {
+      include: [
+        '@nuxt/ui > prosemirror-state',
+        '@nuxt/ui > prosemirror-transform',
+        '@nuxt/ui > prosemirror-model',
+        '@nuxt/ui > prosemirror-view',
+        '@nuxt/ui > prosemirror-gapcursor'
+      ]
     },
     // optimizeDeps.esbuildOptions supprimé : Vite 8 optimise via Rolldown
     // (option dépréciée, cible moderne par défaut).

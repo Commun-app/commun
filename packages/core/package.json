@@ -12,6 +12,8 @@
       "import": "./src/index.ts"
     },
     "./trpc": "./src/index.ts",
+    "./collections/constants": "./src/domains/collections/constants.ts",
+    "./collections/utils": "./src/domains/collections/utils.ts",
     "./types": {
       "types": "./src/index.ts",
       "import": "./src/index.ts"

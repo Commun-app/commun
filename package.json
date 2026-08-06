@@ -6,6 +6,7 @@
   "workspaces": [
     "packages/core",
     "packages/apidae-sync",
+    "packages/editor",
     "apps/*"
   ],
   "scripts": {
@@ -41,8 +42,5 @@
     "@tailwindcss/oxide",
     "esbuild",
     "vue-demi"
-  ],
-  "patchedDependencies": {
-    "@poulpus/prose@0.24.1": "patches/@poulpus%2Fprose@0.24.1.patch"
-  }
+  ]
 }

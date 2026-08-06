@@ -1,22 +1,12 @@
 name: Images
 
-# Build + push des images sur ghcr.io (silent-migration : Dokploy TIRE les
-# images, il ne builde pas — décision option B, 29/07).
+# Dokploy pulls these images; it never builds.
 #
-# Visibilité des packages (réglée à la main au premier push, GitHub crée en
-# PRIVÉ par défaut) :
-#   - commun-api → PUBLIQUE : c'est l'artefact self-hosting (AGPL pur).
-#   - commun-portal → PRIVÉE : AGPL certes, mais c'est notre outillage de
-#     migration, personne d'autre n'en a l'usage (review PR #6) ; sortira du
-#     monorepo avec la vraie app portail du cloud.
-#   - commun-instance → PRIVÉE OBLIGATOIREMENT : l'admin embarque
-#     @poulpus/prose qui bundle du code TipTap Pro (licence — pas de
-#     redistribution publique). Meurt en phase 4 avec TipTap OSS.
-#
-# Secrets requis (instance seulement) :
-#   - PROSE_GITHUB_TOKEN : PAT read:packages sur les packages @poulpus
-#     (le GITHUB_TOKEN du workflow ne lit pas les packages d'une autre org)
-#   - TIPTAP_PRO_TOKEN : registre registry.tiptap.dev
+# Package visibility (set manually on first push; GitHub defaults to private):
+#   - commun-api: public — the self-hosting artifact.
+#   - commun-portal: private — migration tooling nobody else can use.
+#   - commun-instance: publishable (no more TipTap Pro); merging it into
+#     commun-api is planned with the compose work.
 
 on:
   workflow_dispatch:
@@ -75,7 +65,7 @@ jobs:
             ghcr.io/commun-app/commun-portal:${{ github.sha }}
 
   instance:
-    name: commun-instance (PRIVÉE — prose/TipTap Pro)
+    name: commun-instance
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -89,9 +79,6 @@ jobs:
           context: .
           file: apps/api/Dockerfile.instance
           push: true
-          build-args: |
-            GITHUB_TOKEN=${{ secrets.PROSE_GITHUB_TOKEN }}
-            TIPTAP_PRO_TOKEN=${{ secrets.TIPTAP_PRO_TOKEN }}
           tags: |
             ghcr.io/commun-app/commun-instance:latest
             ghcr.io/commun-app/commun-instance:${{ github.sha }}

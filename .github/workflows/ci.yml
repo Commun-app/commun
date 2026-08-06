@@ -16,21 +16,20 @@ jobs:
         with:
           bun-version: latest
 
-      # Sans tokens des registres privés, @poulpus/prose (optionnelle) n'est
-      # sautée par bun qu'en install NON-frozen : en frozen, une optionnelle
-      # irrésoluble (401 registre) est traitée comme une dérive de lockfile
-      # et l'install échoue ; en non-frozen bun élague son arbre du lock.
-      # --no-save installe sans jamais écrire le lock — au prix de la
-      # vérification manifestes/lock, impossible sans résoudre prose.
-      # Tout ceci disparaît avec prose (phase 4, TipTap OSS).
       - name: Install dependencies
-        run: bun install --no-save
+        run: bun install --frozen-lockfile
 
       - name: Lint (Biome)
         run: bun run lint
 
       - name: Typecheck
         run: bun run typecheck
+
+      # Synthetic documents must round-trip the real editor unchanged; the
+      # sweep against client databases stays local (see editor/harness).
+      - name: Editor conservation harness
+        run: bun test
+        working-directory: packages/editor
 
       # La suite E2E est LA spécification exécutable du produit (décision
       # 27/07) : elle boote l'API buildée + un MinIO (docker) et rejoue les

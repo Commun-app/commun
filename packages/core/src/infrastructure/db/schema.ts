@@ -36,17 +36,15 @@ const updatedAt = () =>
 const legacyExtra = () =>
   text('legacy_extra', { mode: 'json' }).$type<Record<string, unknown> | null>();
 
-/**
- * Publication lifecycle shared by every publishable table. The editorial flow
- * is driven from the admin; only `published` reaches the public plane.
- */
-export const PUBLICATION_STATUSES = [
-  'draft',
-  'waiting',
-  'ready',
-  'scheduled',
-  'published',
-] as const;
+import { PUBLICATION_STATUSES } from '../../domains/collections/constants.ts';
+import type { FieldDefinition } from '../../domains/collections/utils.ts';
+
+export {
+  PUBLICATION_STATUSES,
+  FIELD_TYPES,
+  type FieldType,
+} from '../../domains/collections/constants.ts';
+export { fieldDefinitionSchema, type FieldDefinition } from '../../domains/collections/utils.ts';
 const publicationStatus = () =>
   text('status', { enum: PUBLICATION_STATUSES }).notNull().default('draft');
 
@@ -182,59 +180,6 @@ export type Media = typeof media.$inferSelect;
 export type NewMedia = typeof media.$inferInsert;
 
 // ── Collections (content engine) ─────────────────────────────────────────────
-// The CLOSED set of field types. Extending it is a spec-level decision:
-// arbitrary field types are the free-for-all this design replaces.
-
-export const FIELD_TYPES = [
-  'text',
-  'rich-text',
-  'number',
-  'boolean',
-  'date',
-  'media',
-  'relation',
-  'select',
-  // Ordered steps whose content is rich text.
-  'steps',
-  // Raw JSON attributes (location, socials, schedules…), served as-is.
-  'json',
-] as const;
-
-export type FieldType = (typeof FIELD_TYPES)[number];
-
-export const fieldDefinitionSchema = z
-  .object({
-    /** Machine name of the field inside `data`; case is preserved. */
-    name: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/, 'nom de champ invalide'),
-    label: z.string().min(1),
-    type: z.enum(FIELD_TYPES),
-    required: z.boolean().default(false),
-    /** Hidden fields are editable in the admin but EXCLUDED from public payloads. */
-    hidden: z.boolean().default(false),
-    /** Choices — required for `select`. */
-    options: z.array(z.string().min(1)).optional(),
-    /** Target collection slug — required for `relation`. */
-    target: z.string().optional(),
-  })
-  .check((ctx) => {
-    if (ctx.value.type === 'select' && !ctx.value.options?.length) {
-      ctx.issues.push({
-        code: 'custom',
-        message: 'options requises pour un champ select',
-        input: ctx.value,
-      });
-    }
-    if (ctx.value.type === 'relation' && !ctx.value.target) {
-      ctx.issues.push({
-        code: 'custom',
-        message: 'target requis pour un champ relation',
-        input: ctx.value,
-      });
-    }
-  });
-
-export type FieldDefinition = z.infer<typeof fieldDefinitionSchema>;
-
 /** Collection definitions — the primary content model of Commun. */
 export const collectionDefinitions = sqliteTable('collection_definitions', {
   id: id(),

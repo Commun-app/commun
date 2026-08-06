@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/* Legacy text sizes still referenced by pre-refonte screens; drop once every
+   screen has moved to Nuxt UI components. */
+@theme {
+  --text-7xs: 0.125rem;
+  --text-6xs: 0.25rem;
+  --text-5xs: 0.375rem;
+  --text-4xs: 0.5rem;
+  --text-3xs: 0.625rem;
+  --text-2xs: 0.75rem;
+}
