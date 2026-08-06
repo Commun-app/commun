@@ -1,3 +1,4 @@
+import { buildDataSchema } from './fields.ts';
 import { z } from 'zod';
 import {
   CollectionNotFoundError,
@@ -16,45 +17,6 @@ import type {
   EntryUpdateDto,
 } from './dtos/index.ts';
 
-// Steps are rich objects, served as-is.
-const stepSchema = z.record(z.string(), z.unknown());
-
-const FIELD_VALUE_SCHEMAS: Record<FieldType, z.ZodType> = {
-  text: z.string(),
-  'rich-text': z.record(z.string(), z.unknown()),
-  number: z.number().or(z.string()), // iso legacy : souvent stocké/servi en string
-  boolean: z.boolean(),
-  date: z.iso.datetime({ offset: true }).or(z.iso.date()),
-  media: z.string().or(z.array(z.string())), // media id(s) — iso legacy, un champ media peut être multiple
-  relation: z.string().or(z.array(z.string())), // target entry id(s)
-  select: z.string(),
-  steps: z.array(stepSchema), // iso legacy array-of-steps
-  // Raw JSON: anything but undefined — real content also holds scalars.
-  json: z.union([
-    z.record(z.string(), z.unknown()),
-    z.array(z.unknown()),
-    z.string(),
-    z.number(),
-    z.boolean(),
-  ]),
-};
-
-/**
- * Build the Zod schema validating an entry's `data` from a collection
- * definition — the generated-validation requirement of the spec. Exported
- * standalone: the offline migration CLI uses it too.
- */
-export function buildDataSchema(fields: FieldDefinition[]): z.ZodType<Record<string, unknown>> {
-  const shape: Record<string, z.ZodType> = {};
-  for (const field of fields) {
-    let valueSchema = FIELD_VALUE_SCHEMAS[field.type];
-    if (field.type === 'select' && field.options?.length) {
-      valueSchema = z.enum(field.options as [string, ...string[]]);
-    }
-    shape[field.name] = field.required ? valueSchema : valueSchema.nullable().optional();
-  }
-  return z.strictObject(shape) as z.ZodType<Record<string, unknown>>;
-}
 
 /** Ids referenced by relation-type fields of an entry (single or arrays). */
 function relationIds(fields: FieldDefinition[], data: Record<string, unknown>): string[] {

@@ -12,6 +12,7 @@
       "import": "./src/index.ts"
     },
     "./trpc": "./src/index.ts",
+    "./fields": "./src/domains/collections/fields.ts",
     "./types": {
       "types": "./src/index.ts",
       "import": "./src/index.ts"

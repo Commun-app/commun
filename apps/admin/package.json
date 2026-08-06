@@ -39,9 +39,10 @@
   "dependencies": {
     "@casl/ability": "^7.0.1",
     "@commun/core": "workspace:*",
-    "@trpc/client": "^11.17.0",
     "@pinia-orm/nuxt": "^2.0.0",
     "@pinia/nuxt": "^1.0.1",
+    "@tanstack/vue-query": "^5.101.4",
+    "@trpc/client": "^11.17.0",
     "axios": "^1.6.7",
     "luxon": "^3.4.4",
     "mapbox-gl": "^3.2.0",
