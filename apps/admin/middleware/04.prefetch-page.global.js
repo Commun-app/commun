@@ -3,7 +3,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const session = useSession()
   const $models = useModels()
 
-  if (status.value === 'authenticated' && to.meta.preFetch?.length) {
+  if (session.isAuthenticated.value && to.meta.preFetch?.length) {
     console.log('[midd.] - prefetch page', to.params.collection, to.params.record)
     if (to.params.record && to.params.record !== 'new') {
       const [model] = to.meta.preFetch
