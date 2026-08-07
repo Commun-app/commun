@@ -4,14 +4,14 @@
 FROM oven/bun:1 AS build
 WORKDIR /app
 
-COPY package.json bun.lock .npmrc ./
+COPY package.json bun.lock ./
 COPY apps/api/package.json apps/api/
 COPY apps/admin/package.json apps/admin/
 COPY packages/core/package.json packages/core/
+COPY packages/editor/package.json packages/editor/
 COPY packages/apidae-sync/package.json packages/apidae-sync/
 COPY apps/portal/package.json apps/portal/
-COPY patches ./patches
-RUN bun install --no-save
+RUN bun install --frozen-lockfile
 
 COPY . .
 RUN cd apps/portal && bun run build
