@@ -15,6 +15,11 @@ COPY apps/portal/package.json apps/portal/
 RUN bun install --frozen-lockfile
 
 COPY . .
+# Public browser token (pk.*), platform-wide: the admin is statically
+# generated, so its runtime config freezes here — a deploy-time env cannot
+# inject it.
+ARG NUXT_ENV_MAPBOX_TOKEN
+ENV NUXT_ENV_MAPBOX_TOKEN=$NUXT_ENV_MAPBOX_TOKEN
 # CRITICAL ORDER: the admin is generated BEFORE the API build and dropped in
 # its public/ folder. Nitro freezes its public-asset manifest at build time —
 # files copied afterwards get served as text/html through the SPA fallback.

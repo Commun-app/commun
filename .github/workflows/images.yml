@@ -78,6 +78,10 @@ jobs:
         with:
           context: .
           file: apps/api/Dockerfile.instance
+          # Public browser token — the statically generated admin freezes its
+          # runtime config at build time, deploy-time env cannot inject it.
+          build-args: |
+            NUXT_ENV_MAPBOX_TOKEN=${{ secrets.MAPBOX_TOKEN }}
           push: true
           tags: |
             ghcr.io/commun-app/commun-instance:latest
